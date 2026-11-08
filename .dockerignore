@@ -40,6 +40,16 @@ db/*.db
 .git
 .gitignore
 
+# CI / repo metadata not needed in the image
+.github/
+CHANGELOG.md
+CLAUDE.md
+
+# Build-only directories (tests, tooling, docs) are not needed to build or run
+docs/
+tests/
+st-guardian/
+
 # Docker
 Dockerfile
 docker-compose.yml

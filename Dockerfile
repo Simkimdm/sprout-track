@@ -1,46 +1,87 @@
-# Use Node.js LTS as the base image
-FROM node:22-alpine
+# Stage 1: install all dependencies (incl. devDependencies) and generate Prisma clients
+FROM node:22-alpine AS deps
 
-# Build arguments
+ARG DATABASE_PROVIDER=sqlite
+
+# python3 make g++: build tools for the better-sqlite3 native module (build stage only)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+COPY scripts/prisma-provider.js ./scripts/
+
+ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
+RUN npm ci --no-audit --no-fund && \
+    npm run prisma:generate && \
+    npm run prisma:generate:log
+
+# Stage 2: build the Next.js application
+FROM node:22-alpine AS builder
+
+ARG DATABASE_PROVIDER=sqlite
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
+# Build-time placeholder database URLs (also the runtime SQLite defaults).
+# docker-startup.sh treats these exact values as placeholders, so runtime env
+# and the persisted env file always win over them.
+ENV DATABASE_URL="file:/db/baby-tracker.db"
+ENV LOG_DATABASE_URL="file:/db/baby-tracker-logs.db"
+
+# Build the application; drop the build cache, it is not needed at runtime
+RUN npm run build && rm -rf .next/cache
+
+# Stage 3: production runner without devDependencies and build cache
+FROM node:22-alpine AS runner
+
 ARG ENABLE_NOTIFICATIONS=true
 ARG DATABASE_PROVIDER=sqlite
 
-# Install system packages:
+# Runtime system packages:
 # - tzdata: timezone support
 # - openssl: ENC_HASH generation
 # - dcron: notification cron jobs
 # - curl: healthcheck
 # - postgresql-client: pg_isready for PostgreSQL healthchecks
-# - python3 make g++: build tools for better-sqlite3 native module
-RUN apk add --no-cache tzdata openssl dcron curl postgresql-client \
-    python3 make g++
+RUN apk add --no-cache tzdata openssl dcron curl postgresql-client
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
-
-# Copy prisma files first
-COPY prisma ./prisma/
-COPY prisma.config.ts ./
-
-# Copy the prisma-provider script (needed before prisma generate)
-COPY scripts/prisma-provider.js ./scripts/
-
-# Install dependencies
-RUN npm ci
-
-# Disable Next.js telemetry
-RUN npm exec next telemetry disable
-
-# Configure Prisma for the target database provider and generate clients
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
-RUN npm run prisma:generate && \
-    npm run prisma:generate:log
+ENV DATABASE_URL="file:/db/baby-tracker.db"
+ENV LOG_DATABASE_URL="file:/db/baby-tracker-logs.db"
+ENV PORT=3000
+ENV TZ=UTC
+ENV ENABLE_NOTIFICATIONS=${ENABLE_NOTIFICATIONS}
 
-# Copy application files
-COPY . .
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+# Remove devDependencies. tsx stays (it is a regular dependency): the container
+# runs `prisma db seed` and the notification cron setup via tsx at startup.
+# Native modules were already compiled in the deps stage, no compiler needed here.
+RUN npm prune --omit=dev --no-audit --no-fund
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.ts ./
+# app/ and src/ are needed at runtime: docker-startup.sh runs the seed and the
+# notification cron setup via tsx, which resolves imports from the source tree
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/prisma ./prisma/
+COPY --from=builder /app/prisma.config.ts ./
+COPY --from=builder /app/scripts ./scripts/
+# .dockerignore keeps only the CSV files here (needed for seeding)
+COPY --from=builder /app/documentation ./documentation/
 
 # Conditionally set up notification files and directories if ENABLE_NOTIFICATIONS is true
 RUN if [ "$ENABLE_NOTIFICATIONS" = "true" ]; then \
@@ -81,26 +122,6 @@ RUN mkdir -p /app/env && \
     echo "Base .env file created (ENC_HASH and JWT_SECRET are generated at startup)" && \
     # Create symlink so Next.js can find the env file at build time and runtime
     ln -sf /app/env/.env /app/.env
-
-# Build-time placeholder database URLs (also the runtime SQLite defaults).
-# docker-startup.sh treats these exact values as placeholders, so runtime env
-# and the persisted env file always win over them.
-ENV DATABASE_URL="file:/db/baby-tracker.db"
-ENV LOG_DATABASE_URL="file:/db/baby-tracker-logs.db"
-
-# Build the application
-RUN npm run build
-
-# Remove build-only dependencies to reduce image size
-RUN apk del python3 make g++
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV TZ=UTC
-
-# Set notification environment variable from build arg
-ENV ENABLE_NOTIFICATIONS=${ENABLE_NOTIFICATIONS}
 
 # Create volume mount points
 VOLUME /db
