@@ -48,8 +48,11 @@ export interface BreastFeedSession<T extends BreastFeedLike = BreastFeedLike> {
   totalDuration: number;
 }
 
-// feedDuration is in seconds; older records store minutes in amount
-function rowDurationSeconds(row: BreastFeedLike): number {
+/**
+ * Feeding duration of one row in seconds (feedDuration is in seconds; older
+ * records store minutes in amount).
+ */
+export function feedRowDurationSeconds(row: BreastFeedLike): number {
   return row.feedDuration || (row.amount ? row.amount * 60 : 0);
 }
 
@@ -61,7 +64,7 @@ function buildSession<T extends BreastFeedLike>(
   let left = 0;
   let right = 0;
   for (const row of rows) {
-    const duration = rowDurationSeconds(row);
+    const duration = feedRowDurationSeconds(row);
     if (row.side === 'LEFT') left += duration;
     else if (row.side === 'RIGHT') right += duration;
   }

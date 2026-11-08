@@ -33,6 +33,7 @@ interface ActivityTileGroupProps {
   lastSleepEndTime: Record<string, Date>;
   lastFeedTime: Record<string, Date>;
   lastFeedEndTime?: Record<string, Date>;
+  lastFeedDurationMinutes?: Record<string, number>;
   lastDiaperTime: Record<string, Date>;
   lastPumpTime: Record<string, Date>;
   lastMedicineLog?: Record<string, { time: Date; doseMinTime: string | null; medicineName?: string | null }>;
@@ -71,6 +72,7 @@ export function ActivityTileGroup({
   lastSleepEndTime,
   lastFeedTime,
   lastFeedEndTime,
+  lastFeedDurationMinutes,
   lastDiaperTime,
   lastPumpTime,
   lastMedicineLog,
@@ -571,13 +573,23 @@ export function ActivityTileGroup({
               (() => {
                 const feedEndTime = lastFeedEndTime?.[selectedBaby.id!];
                 const feedStartTimeVal = lastFeedTime[selectedBaby.id!];
-                const effectiveFeedTime = getEffectiveFeedTime(feedStartTimeVal, feedEndTime, selectedBaby?.feedTimerFrom);
+                const feedDurationMinutes = lastFeedDurationMinutes?.[selectedBaby.id!];
+                // The badge counts from the feed's start so the elapsed time
+                // includes the feeding's own duration: (now − end) + duration
+                const badgeAnchor = feedEndTime && feedDurationMinutes
+                  ? new Date(feedEndTime.getTime() - feedDurationMinutes * 60_000)
+                  : undefined;
+                const effectiveTime = getEffectiveFeedTime(
+                  badgeAnchor ?? feedStartTimeVal,
+                  feedEndTime,
+                  selectedBaby?.feedTimerFrom
+                );
 
-                return selectedBaby?.id && effectiveFeedTime && !exceeds24Hours(effectiveFeedTime) && (
+                return selectedBaby?.id && effectiveTime && !exceeds24Hours(effectiveTime) && (
                   <StatusBubble
                     status="feed"
                     durationInMinutes={0}
-                    startTime={effectiveFeedTime.toISOString()}
+                    startTime={effectiveTime.toISOString()}
                     warningTime={selectedBaby.feedWarningTime as string}
                     activityType="feed"
                   />

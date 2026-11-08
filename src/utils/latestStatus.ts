@@ -6,7 +6,7 @@
 import type { LatestStatusData } from '@/src/components/Timeline/types';
 import type { SleepLogResponse } from '@/app/api/types';
 import { FeedTimerCategory, feedCountsForTimer, foodCountsForTimer } from './feedTimerConfig';
-import { groupBreastFeedSessions } from './feedSessionUtils';
+import { groupBreastFeedSessions, feedRowDurationSeconds } from './feedSessionUtils';
 import { findLatestPumpTime } from './pumpTimer';
 
 /** Status bubbles/timers hide anything 24 h old or more (a likely-forgotten log). */
@@ -56,6 +56,7 @@ export function computeLatestStatus(
       const endMs = Math.max(...rows.map(r => new Date(r.endTime || r.time).getTime()));
       status.lastFeedTime = new Date(startMs);
       status.lastFeedEndTime = new Date(endMs);
+      status.lastFeedDurationMinutes = (session?.totalDuration ?? feedRowDurationSeconds(feedAny)) / 60;
     } else {
       status.lastFeedTime = new Date(feedAny.time);
     }

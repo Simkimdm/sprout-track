@@ -43,13 +43,18 @@ export function wakeTimer(status: Pick<LatestStatusData, 'ongoingSleep' | 'lastS
 }
 
 export function feedTimer(
-  status: Pick<LatestStatusData, 'lastFeedTime' | 'lastFeedEndTime'>,
+  status: Pick<LatestStatusData, 'lastFeedTime' | 'lastFeedEndTime' | 'lastFeedDurationMinutes'>,
   baby: FeedTimerBaby,
   now: Date,
   feeding = false
 ): FeedTimer {
   if (feeding) return { kind: 'feeding' };
-  return sinceTimer(effectiveFeedTime(status.lastFeedTime, status.lastFeedEndTime, baby.feedTimerFrom), baby.feedWarningTime, now);
+  // Anchor at the feed's start (end − duration) so the elapsed time includes
+  // the feeding's own duration; matches the log-entry page's feed badge
+  const startAnchor = status.lastFeedEndTime && status.lastFeedDurationMinutes
+    ? new Date(status.lastFeedEndTime.getTime() - status.lastFeedDurationMinutes * 60_000)
+    : status.lastFeedTime;
+  return sinceTimer(effectiveFeedTime(startAnchor, status.lastFeedEndTime, baby.feedTimerFrom), baby.feedWarningTime, now);
 }
 
 /** Time since the last diaper change, warning at diaperWarningTime like the log-entry diaper bubble. */
