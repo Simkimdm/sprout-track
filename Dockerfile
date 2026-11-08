@@ -38,6 +38,14 @@ ENV LOG_DATABASE_URL="file:/db/baby-tracker-logs.db"
 # Build the application; drop the build cache, it is not needed at runtime
 RUN npm run build && rm -rf .next/cache
 
+# Shrink node_modules BEFORE the runner copies it: pruning in the runner would
+# only delete files in a later layer, the copied layer itself would still count
+# towards the image size. Also remove the glibc variant of native binaries -
+# this image is Alpine (musl), only the musl variant is ever loaded.
+RUN npm prune --omit=dev --no-audit --no-fund && \
+    rm -rf node_modules/@next/swc-linux-x64-gnu \
+           node_modules/@img/sharp-libvips-linux-x64
+
 # Stage 3: production runner without devDependencies and build cache
 FROM node:22-alpine AS runner
 
@@ -64,11 +72,8 @@ ENV TZ=UTC
 ENV ENABLE_NOTIFICATIONS=${ENABLE_NOTIFICATIONS}
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
+# Already pruned to production dependencies and without glibc binaries (see builder)
 COPY --from=builder /app/node_modules ./node_modules
-# Remove devDependencies. tsx stays (it is a regular dependency): the container
-# runs `prisma db seed` and the notification cron setup via tsx at startup.
-# Native modules were already compiled in the deps stage, no compiler needed here.
-RUN npm prune --omit=dev --no-audit --no-fund
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
