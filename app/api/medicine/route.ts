@@ -27,6 +27,11 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
       ...medicineData
     } = body;
     
+    // Normalize empty expiry date to null
+    if (medicineData.expiryDate === '') {
+      medicineData.expiryDate = null;
+    }
+    
     // Create the medicine
     const medicine = await prisma.medicine.create({
       data: {
@@ -74,6 +79,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
       createdAt: formatForResponse(medicineWithContacts.createdAt) || '',
       updatedAt: formatForResponse(medicineWithContacts.updatedAt) || '',
       deletedAt: formatForResponse(medicineWithContacts.deletedAt),
+      expiryDate: formatForResponse(medicineWithContacts.expiryDate),
     };
 
     return NextResponse.json<ApiResponse<MedicineResponse>>({
@@ -112,6 +118,11 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     const id = searchParams.get('id');
     const body: Partial<MedicineCreate> = await req.json();
     const { contactIds, ...updateData } = body;
+
+    // Normalize empty expiry date to null
+    if (updateData.expiryDate === '') {
+      updateData.expiryDate = null;
+    }
 
     if (!id) {
       return NextResponse.json<ApiResponse<MedicineResponse>>(
@@ -186,6 +197,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       createdAt: formatForResponse(medicineWithContacts.createdAt) || '',
       updatedAt: formatForResponse(medicineWithContacts.updatedAt) || '',
       deletedAt: formatForResponse(medicineWithContacts.deletedAt),
+      expiryDate: formatForResponse(medicineWithContacts.expiryDate),
     };
 
     return NextResponse.json<ApiResponse<MedicineResponse>>({
@@ -270,6 +282,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
         createdAt: formatForResponse(medicine.createdAt) || '',
         updatedAt: formatForResponse(medicine.updatedAt) || '',
         deletedAt: formatForResponse(medicine.deletedAt),
+        expiryDate: formatForResponse(medicine.expiryDate),
       };
 
       return NextResponse.json<ApiResponse<MedicineResponse>>({
@@ -307,6 +320,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
         createdAt: formatForResponse(medicine.createdAt) || '',
         updatedAt: formatForResponse(medicine.updatedAt) || '',
         deletedAt: formatForResponse(medicine.deletedAt),
+        expiryDate: formatForResponse(medicine.expiryDate),
       }));
 
       return NextResponse.json<ApiResponse<MedicineResponse[]>>({
@@ -336,6 +350,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
       createdAt: formatForResponse(medicine.createdAt) || '',
       updatedAt: formatForResponse(medicine.updatedAt) || '',
       deletedAt: formatForResponse(medicine.deletedAt),
+      expiryDate: formatForResponse(medicine.expiryDate),
     }));
 
     return NextResponse.json<ApiResponse<MedicineResponse[]>>({

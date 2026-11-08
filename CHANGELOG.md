@@ -4,6 +4,11 @@
 
 ### Changes
 
+#### Medicines & Supplements
+
+- Medicines and supplements can now have an optional **expiry date** with an expiry/overdue timer: the manage lists show a countdown badge for packages expiring within 14 days ("Expires in X days" / "Expires today") and a red "Overdue by X days" badge once the date has passed
+- The **Medicine activity tile** now works like Diaper/Feed: it shows a status bubble with the time since the last dose, which turns red ("overdue") once the last medicine's minimum dose interval (`doseMinTime`) has elapsed
+
 #### Settings
 
 - Added **Week Start Day** option in User Settings, allowing users to choose between Sunday or Monday as the first day of the week for calendar views and reports - addresses [Oak-and-Sprout/sprout-track#304](https://github.com/Oak-and-Sprout/sprout-track/issues/304)
