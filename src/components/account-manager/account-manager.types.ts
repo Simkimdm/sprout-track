@@ -100,6 +100,7 @@ export interface BabyData {
   feedWarningTime: string;
   diaperWarningTime: string;
   pumpWarningTime: string;
+  bathWarningTime: string;
   feedTimerTypes?: string | null;
   age?: string;
 }
