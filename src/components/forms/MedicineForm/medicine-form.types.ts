@@ -170,6 +170,8 @@ export interface MedicineFormData {
   notes?: string;
   active?: boolean;
   isSupplement?: boolean;
+  /** Expiry date of the package as yyyy-MM-dd (date input value) or ISO string; null clears it */
+  expiryDate?: string | null;
   contactIds?: string[];
 }
 

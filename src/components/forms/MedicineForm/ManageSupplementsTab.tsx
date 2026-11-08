@@ -11,12 +11,14 @@ import {
   Edit,
   Plus,
   User,
+  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 import { Switch } from '@/src/components/ui/switch';
 import { Label } from '@/src/components/ui/label';
 import MedicineForm from './MedicineForm';
+import ExpiryBadge from './ExpiryBadge';
 import { useLocalization } from '@/src/context/localization';
 import { useUnit } from '@/src/hooks/useUnit';
 
@@ -238,6 +240,7 @@ const ManageSupplementsTab: React.FC<ManageSupplementsTabProps> = ({ refreshData
                     <p className={cn(styles.medicineListDose, "medicine-form-medicine-list-dose")}>
                       {t('Typical dose:')} {supplement.typicalDoseSize} {unitSymbol(supplement.unit?.unitAbbr)}
                     </p>
+                    <ExpiryBadge expiryDate={supplement.expiryDate} />
                   </div>
                   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEditSupplement(supplement); }} aria-label={t('Edit') + ' ' + supplement.name}>
                     <Edit className="h-4 w-4" aria-hidden="true" />
@@ -246,6 +249,12 @@ const ManageSupplementsTab: React.FC<ManageSupplementsTabProps> = ({ refreshData
                 {expandedSupplement === supplement.id && (
                   <div className={cn(styles.medicineListDetails, "medicine-form-medicine-list-details")}>
                     <div className={cn(styles.medicineListDetailsContent)}>
+                      {supplement.expiryDate && (
+                        <p className={cn(styles.medicineListDetailItem, "medicine-form-medicine-list-detail-item")}>
+                          <CalendarClock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
+                          {t('Expiry Date:')} <ExpiryBadge expiryDate={supplement.expiryDate} />
+                        </p>
+                      )}
                       {supplement.notes && <p className={cn(styles.medicineListNotes, "medicine-form-medicine-list-notes")}>{supplement.notes}</p>}
                       <div className={cn(styles.medicineListContactsContainer)}>
                         <User className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />

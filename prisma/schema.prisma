@@ -932,6 +932,7 @@ model Medicine {
   notes           String? // Additional notes about the medicine
   active          Boolean   @default(true)
   isSupplement    Boolean   @default(false)
+  expiryDate      DateTime? // Optional expiry date of the package (Ablaufdatum)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
@@ -948,6 +949,7 @@ model Medicine {
   @@index([name])
   @@index([active])
   @@index([isSupplement])
+  @@index([expiryDate])
   @@index([unitAbbr])
   @@index([deletedAt])
   @@index([familyId])
