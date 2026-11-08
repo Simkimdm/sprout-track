@@ -78,6 +78,37 @@ export function computeLatestStatus(
     status.lastBathTime = new Date(lastBath.time);
   }
 
+  // Next-expiring medicine: for every medicine with a per-medicine dose timer
+  // (warningTime "H:MM"), the due time is its latest dose + the timer; the
+  // smallest due time wins (MedicineLog rows are the only ones with `medicineId`)
+  const medicineLogs = activities
+    .filter((a) => 'medicineId' in a && 'time' in a)
+    .sort(byTimeDesc('time')) as any[];
+  const latestDoseByMedicine = new Map<string, any>();
+  for (const log of medicineLogs) {
+    if (!latestDoseByMedicine.has(log.medicineId)) {
+      latestDoseByMedicine.set(log.medicineId, log);
+    }
+  }
+  let nextDue: LatestStatusData['nextMedicineDue'] | undefined;
+  for (const log of latestDoseByMedicine.values()) {
+    const warningTime: string = log.medicine?.warningTime ?? '';
+    const thresholdMinutes = warningTimeToMinutes(warningTime);
+    if (thresholdMinutes === null) continue;
+    const lastDoseMs = new Date(log.time).getTime();
+    const dueAtMs = lastDoseMs + thresholdMinutes * 60000;
+    if (!nextDue || dueAtMs < nextDue.dueAt.getTime()) {
+      nextDue = {
+        medicineId: log.medicineId,
+        medicineName: log.medicine?.name ?? null,
+        lastDoseTime: new Date(lastDoseMs),
+        warningTime,
+        dueAt: new Date(dueAtMs),
+      };
+    }
+  }
+  status.nextMedicineDue = nextDue;
+
   status.lastPumpTime = findLatestPumpTime(activities);
 
   const sleepLogs = activities.filter((a) =>

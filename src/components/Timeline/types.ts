@@ -31,6 +31,14 @@ export interface LatestStatusData {
   lastSleepEndTime?: Date;
   ongoingSleep?: SleepLogResponse;
   lastEndedSleep?: SleepLogResponse & { endTime: string };
+  /** The medicine/supplement whose per-medicine dose timer expires next (smallest lastDose + warningTime) */
+  nextMedicineDue?: {
+    medicineId: string;
+    medicineName: string | null;
+    lastDoseTime: Date;
+    warningTime: string;
+    dueAt: Date;
+  };
 }
 
 // Legacy props for the old Timeline component (not actively used)

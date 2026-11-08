@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Bath, Droplets, Moon, Sun, Icon } from 'lucide-react';
+import { Bath, Droplets, Moon, Sun, Icon, Pill } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { cn } from "@/src/lib/utils";
 import { statusBubbleStyles as styles } from './status-bubble.styles';
@@ -17,7 +17,8 @@ export function StatusBubble({
   warningTime,
   className,
   startTime,
-  activityType
+  activityType,
+  label
 }: StatusBubbleProps & { startTime?: string }) {
   const { userTimezone, calculateDurationMinutes, formatDuration } = useTimezone();
   const { t } = useLocalization();
@@ -39,7 +40,8 @@ export function StatusBubble({
             (status === 'feed' && activityType === 'feed') ||
             (status === 'diaper' && activityType === 'diaper') ||
             (status === 'pump' && activityType === 'pump') ||
-            (status === 'bath' && activityType === 'bath')) {
+            (status === 'bath' && activityType === 'bath') ||
+            (status === 'medicine' && activityType === 'medicine')) {
           const diffMinutes = calculateDurationMinutes(startTime, now.toISOString());
           setCalculatedDuration(diffMinutes);
         }
@@ -119,6 +121,11 @@ export function StatusBubble({
           bgColor: isWarning ? styles.statusStyles.bath.warning : styles.statusStyles.bath.normal,
           icon: <Bath className={styles.icon} aria-hidden="true" />
         };
+      case 'medicine':
+        return {
+          bgColor: isWarning ? styles.statusStyles.medicine.warning : styles.statusStyles.medicine.normal,
+          icon: <Pill className={styles.icon} aria-hidden="true" />
+        };
       default:
         return {
           bgColor: styles.statusStyles.default.bgColor,
@@ -145,15 +152,18 @@ export function StatusBubble({
         return t('Time since last pump');
       case 'bath':
         return t('Time since last bath');
+      case 'medicine':
+        return t('Time since last dose');
       default:
         return '';
     }
   };
 
   const durationLabel = formatDurationLabel(displayDuration, t);
+  const statusLabel = label ? `${label} – ${getStatusLabel()}` : getStatusLabel();
   const ariaLabel = status === 'feedActive'
     ? t('Feeding')
-    : `${getStatusLabel()}, ${durationLabel}`;
+    : `${statusLabel}, ${durationLabel}`;
 
   return (
     <div
@@ -166,7 +176,9 @@ export function StatusBubble({
       )}
     >
       {icon}
-      <span className="min-w-0 truncate">{status === 'feedActive' ? t('Feeding') : formatDuration(displayDuration)}</span>
+      <span className="min-w-0 truncate">
+        {status === 'feedActive' ? t('Feeding') : (label ? `${label} · ${formatDuration(displayDuration)}` : formatDuration(displayDuration))}
+      </span>
     </div>
   );
 }

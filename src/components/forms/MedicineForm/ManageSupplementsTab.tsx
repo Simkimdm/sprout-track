@@ -11,6 +11,7 @@ import {
   Edit,
   Plus,
   User,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
@@ -246,6 +247,12 @@ const ManageSupplementsTab: React.FC<ManageSupplementsTabProps> = ({ refreshData
                 {expandedSupplement === supplement.id && (
                   <div className={cn(styles.medicineListDetails, "medicine-form-medicine-list-details")}>
                     <div className={cn(styles.medicineListDetailsContent)}>
+                      {supplement.warningTime && (
+                        <p className={cn(styles.medicineListDetailItem, "medicine-form-medicine-list-detail-item")}>
+                          <Clock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
+                          {t('Dose timer:')} {supplement.warningTime}
+                        </p>
+                      )}
                       {supplement.notes && <p className={cn(styles.medicineListNotes, "medicine-form-medicine-list-notes")}>{supplement.notes}</p>}
                       <div className={cn(styles.medicineListContactsContainer)}>
                         <User className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
