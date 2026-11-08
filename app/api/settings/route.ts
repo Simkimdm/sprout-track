@@ -102,6 +102,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'defaultBottleUnit', 'defaultSolidsUnit',
       'defaultHeightUnit', 'defaultWeightUnit', 'defaultTempUnit',
       'growthChartStandard',
+      'dateFormat', 'timeFormat',
     ];
 
     // Additional fields only admins can update
@@ -109,7 +110,6 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'familyName', 'securityPin', 'authType',
       'enableDebugTimer', 'enableDebugTimezone',
       'enableBreastMilkTracking',
-      'dateFormat', 'timeFormat',
       'photoQuotaMB',
     ];
 

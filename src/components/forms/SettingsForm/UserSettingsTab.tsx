@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from '@/src/components/ui/select';
 import { useLocalization } from '@/src/context/localization';
+import { useTimezone } from '@/app/context/timezone';
+import { DateFormatSetting, TimeFormatSetting } from '@/src/utils/dateFormat';
 import NotificationSettings from './NotificationSettings';
 import { Baby } from '@prisma/client';
 import { useUnit } from '@/src/hooks/useUnit';
@@ -35,7 +37,10 @@ export default function UserSettingsTab({
 }: UserSettingsTabProps) {
   const { t } = useLocalization();
   const { unitName, unitSymbol } = useUnit();
+  const { setDateTimeFormats } = useTimezone();
   const idPrefix = useId();
+  const dateFormatId = `${idPrefix}-date-format`;
+  const timeFormatId = `${idPrefix}-time-format`;
 
   return (
     <div className="space-y-6">
@@ -157,6 +162,52 @@ export default function UserSettingsTab({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Date & Time Format */}
+      <div>
+        <h3 className="form-label mb-4">{t('Date & Time Format')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="form-label" htmlFor={dateFormatId}>{t('Date Format')}</Label>
+            <Select
+              value={(settings as any)?.dateFormat || 'MM/DD/YYYY'}
+              onValueChange={(value) => {
+                onSettingsChange({ dateFormat: value } as any);
+                setDateTimeFormats(value as DateFormatSetting, ((settings as any)?.timeFormat || '12h') as TimeFormatSetting);
+              }}
+              disabled={loading}
+            >
+              <SelectTrigger id={dateFormatId}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (04/06/2026)</SelectItem>
+                <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (06/04/2026)</SelectItem>
+                <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2026-04-06)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="form-label" htmlFor={timeFormatId}>{t('Time Format')}</Label>
+            <Select
+              value={(settings as any)?.timeFormat || '12h'}
+              onValueChange={(value) => {
+                onSettingsChange({ timeFormat: value } as any);
+                setDateTimeFormats(((settings as any)?.dateFormat || 'MM/DD/YYYY') as DateFormatSetting, value as TimeFormatSetting);
+              }}
+              disabled={loading}
+            >
+              <SelectTrigger id={timeFormatId}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12h">{t('12-hour')} (1:30 PM)</SelectItem>
+                <SelectItem value="24h">{t('24-hour')} (13:30)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
