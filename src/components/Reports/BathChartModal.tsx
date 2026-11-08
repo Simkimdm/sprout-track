@@ -208,7 +208,7 @@ const BathChartModal: React.FC<BathChartModalProps> = ({
     const weekKeys = Object.keys(bathsByWeek).sort();
     return weekKeys.map((weekKey) => ({
       weekKey,
-      label: formatWeekLabel(weekKey, dateFormat),
+      label: formatWeekLabel(weekKey),
       soap: bathsByWeek[weekKey].soap,
       shampoo: bathsByWeek[weekKey].shampoo,
       both: bathsByWeek[weekKey].both,
