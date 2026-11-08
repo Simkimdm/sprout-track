@@ -243,6 +243,91 @@ Beyond the originally planned Category B files, these additional files were upda
 4. **Phase 4** — Settings UI ✓
 5. **Phase 3** — Update hardcoded call sites ✓
 
+---
+
+## Week Start Day Setting (Extension)
+
+**GitHub Issue:** [Oak-and-Sprout/sprout-track#304](https://github.com/Oak-and-Sprout/sprout-track/issues/304)
+
+### Overview
+
+Added a **Week Start Day** setting that allows users to choose whether the week starts on **Sunday** or **Monday** for calendar views and reports. This addresses the common need in many countries where weeks start on Monday rather than Sunday.
+
+### Implementation
+
+#### 1. Prisma Schema
+
+**File:** `prisma/schema.prisma` (Settings model)
+
+Added new field:
+
+```prisma
+weekStartsOn String @default("Sunday") // "Sunday" | "Monday"
+```
+
+**Migration:** `20261108120000_add_week_starts_on`
+
+#### 2. Utility Functions
+
+**File:** `src/utils/dateFormat.ts`
+
+Added new types and functions:
+
+```typescript
+export type WeekStartSetting = 'Sunday' | 'Monday';
+
+// Get the start date of the week for a given date
+export function getWeekStartDate(date: Date, weekStartsOn: WeekStartSetting): Date
+
+// Get a week key string for grouping dates by week
+export function getWeekKey(date: Date, weekStartsOn: WeekStartSetting): string
+```
+
+#### 3. Settings UI
+
+**File:** `src/components/forms/SettingsForm/UserSettingsTab.tsx`
+
+Added new "Week Start Day" section with Select dropdown:
+- Options: Sunday, Monday
+- Default: Sunday
+- Updates via `onSettingsChange({ weekStartsOn: value })`
+
+#### 4. Calendar Components
+
+**Files:**
+- `src/components/ui/calendar/index.tsx`
+- `src/components/Calendar/index.tsx`
+- `src/components/ui/calendar/calendar.types.ts`
+- `src/components/Calendar/calendar.types.ts`
+
+**Changes:**
+- Added `weekStartsOn` prop to Calendar components
+- Updated day names header to show correct order (Sun-Sat or Mon-Sun)
+- Updated calendar grid to calculate days from previous month based on week start
+- Default: 'Sunday' for backward compatibility
+
+#### 5. Reports
+
+**Files:**
+- `src/components/Reports/BathChartModal.tsx`
+- `src/components/Reports/BathStatsSection.tsx`
+- `src/components/Reports/index.tsx`
+
+**Changes:**
+- Added `weekStartsOn` prop to BathChartModal
+- Updated `getWeekKey` function to use week start preference
+- Reports now group data by weeks starting on the selected day
+
+### Testing Checklist
+
+- [ ] Changing week start in Settings immediately updates calendar views
+- [ ] Calendar shows correct day order (Sun-Sat or Mon-Sun) in header
+- [ ] Calendar grid correctly displays days from previous/next month
+- [ ] Week-based reports group data by correct week boundaries
+- [ ] Both Sunday and Monday week starts work correctly
+- [ ] Default value is Sunday for new installations
+- [ ] Existing data is not affected by the change
+
 ## Testing Checklist
 
 - [ ] Changing format in ConfigTab immediately updates all visible dates/times (no page reload)
