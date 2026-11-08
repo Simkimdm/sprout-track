@@ -83,6 +83,14 @@ describe('groupBreastFeedSessions', () => {
     expect(countBreastFeedSessions(rows)).toBe(2);
   });
 
+  it('counts a sideless row\'s duration in the session total', () => {
+    const rows = [{ type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: null, feedDuration: 491 }];
+    const sessions = groupBreastFeedSessions(rows);
+    expect(sessions[0].leftDuration).toBe(0);
+    expect(sessions[0].rightDuration).toBe(0);
+    expect(sessions[0].totalDuration).toBe(491);
+  });
+
   it('ignores non-BREAST rows', () => {
     const rows = [
       { type: 'BOTTLE', time: at('2026-07-10T10:00:00Z'), side: null },

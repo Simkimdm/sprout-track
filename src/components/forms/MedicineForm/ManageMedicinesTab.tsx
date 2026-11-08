@@ -12,14 +12,12 @@ import {
   Plus, 
   User, 
   Clock,
-  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 import { Switch } from '@/src/components/ui/switch';
 import { Label } from '@/src/components/ui/label';
 import MedicineForm from './MedicineForm';
-import ExpiryBadge from './ExpiryBadge';
 import { useLocalization } from '@/src/context/localization';
 import { useUnit } from '@/src/hooks/useUnit';
 
@@ -263,7 +261,6 @@ const ManageMedicinesTab: React.FC<ManageMedicinesTabProps> = ({ refreshData }) 
                     <p className={cn(styles.medicineListDose, "medicine-form-medicine-list-dose")}>
                       {t('Typical dose:')} {medicine.typicalDoseSize} {unitSymbol(medicine.unit?.unitAbbr)}
                     </p>
-                    <ExpiryBadge expiryDate={medicine.expiryDate} />
                   </div>
                   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEditMedicine(medicine); }} aria-label={t('Edit') + ' ' + medicine.name}>
                     <Edit className="h-4 w-4" aria-hidden="true" />
@@ -276,12 +273,6 @@ const ManageMedicinesTab: React.FC<ManageMedicinesTabProps> = ({ refreshData }) 
                         <Clock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
                         {t('Minimum time between doses:')} {formatDoseMinTimeDisplay(medicine.doseMinTime || '')}
                       </p>
-                      {medicine.expiryDate && (
-                        <p className={cn(styles.medicineListDetailItem, "medicine-form-medicine-list-detail-item")}>
-                          <CalendarClock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
-                          {t('Expiry Date:')} <ExpiryBadge expiryDate={medicine.expiryDate} />
-                        </p>
-                      )}
                       {medicine.notes && <p className={cn(styles.medicineListNotes, "medicine-form-medicine-list-notes")}>{medicine.notes}</p>}
                       <div className={cn(styles.medicineListContactsContainer)}>
                         <User className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />

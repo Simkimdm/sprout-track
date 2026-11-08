@@ -56,6 +56,12 @@ describe('feedTimer', () => {
     expect(feedTimer(status, { ...baby, feedTimerFrom: 'end' }, now)).toEqual({ kind: 'since', minutes: 30, warning: false });
   });
 
+  it('does not count the duration twice for a manual row where end equals start', () => {
+    // Manually logged feed: lastFeedTime === lastFeedEndTime; anchor stays at the start
+    const status = { lastFeedTime: ago(50), lastFeedEndTime: ago(50), lastFeedDurationMinutes: 20 };
+    expect(feedTimer(status, baby, now)).toEqual({ kind: 'since', minutes: 50, warning: false });
+  });
+
   it('turns to warning at the feedWarningTime threshold', () => {
     expect(feedTimer({ lastFeedTime: ago(179) }, baby, now)).toMatchObject({ warning: false });
     expect(feedTimer({ lastFeedTime: ago(180) }, baby, now)).toMatchObject({ warning: true });

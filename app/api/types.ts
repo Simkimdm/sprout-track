@@ -384,11 +384,10 @@ export interface MeasurementCreate {
 }
 
 // Medicine types
-export type MedicineResponse = Omit<Medicine, 'createdAt' | 'updatedAt' | 'deletedAt' | 'expiryDate'> & {
+export type MedicineResponse = Omit<Medicine, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-  expiryDate: string | null;
 };
 
 export interface MedicineCreate {
@@ -399,7 +398,6 @@ export interface MedicineCreate {
   notes?: string;
   active?: boolean;
   isSupplement?: boolean;
-  expiryDate?: string | null; // Optional expiry date of the package (ISO string)
   contactIds?: string[]; // IDs of contacts to associate with this medicine
 }
 
