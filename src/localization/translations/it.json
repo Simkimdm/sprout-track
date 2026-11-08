@@ -2765,5 +2765,8 @@
   "Your payment was processed, but we encountered an issue activating your account. Please contact support or try logging out and back in.": "Il tuo pagamento è stato elaborato, ma abbiamo riscontrato un problema durante l'attivazione del tuo account. Contatta il supporto o prova a disconnetterti e riconnetterti.",
   "Your Personal PIN (6-10 digits)": "Il tuo PIN personale (6-10 cifre)",
   "Your Personal Profile": "Il tuo profilo personale",
-  "Zero “did anyone change him?” texts sent today.": "Zero messaggi “gli ha cambiato il pannolino qualcuno?” inviati oggi."
+  "Zero “did anyone change him?” texts sent today.": "Zero messaggi “gli ha cambiato il pannolino qualcuno?” inviati oggi.",
+  "Bath Warning Time (hh:mm)": "Tempo di avviso del bagno (hh:mm)",
+  "Since last bath": "Dall'ultimo bagno",
+  "Time since last bath": "Tempo dall'ultimo bagno"
 }

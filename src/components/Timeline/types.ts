@@ -24,6 +24,7 @@ export interface LatestStatusData {
   lastFeedTime?: Date;
   lastFeedEndTime?: Date;
   lastDiaperTime?: Date;
+  lastBathTime?: Date;
   lastPumpTime?: Date;
   lastSleepEndTime?: Date;
   ongoingSleep?: SleepLogResponse;

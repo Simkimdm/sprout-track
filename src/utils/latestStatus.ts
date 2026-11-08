@@ -68,6 +68,15 @@ export function computeLatestStatus(
     status.lastDiaperTime = new Date((lastDiaper as any).time);
   }
 
+  // Latest bath (BathLog rows are the only ones with `soapUsed`); drives the
+  // bath tile's "time since last bath" bubble
+  const lastBath = activities
+    .filter((a) => 'soapUsed' in a && 'time' in a)
+    .sort(byTimeDesc('time'))[0] as any;
+  if (lastBath) {
+    status.lastBathTime = new Date(lastBath.time);
+  }
+
   // Latest medicine/supplement dose (MedicineLog rows are the only ones with
   // `medicineId`); the dose interval of that medicine drives the tile timer
   const lastMedicine = activities
