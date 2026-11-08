@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useId } from 'react';
 import { medicineFormStyles as styles } from './medicine-form.styles';
 import { MedicineFormData } from './medicine-form.types';
-import { PillBottle, Loader2, AlertCircle, Clock, FileText } from 'lucide-react';
+import { PillBottle, Loader2, AlertCircle, Clock, FileText, CalendarClock } from 'lucide-react';
 import { FormPage, FormPageContent, FormPageFooter } from '@/src/components/ui/form-page';
 import { Input } from '@/src/components/ui/input';
 import { Textarea } from '@/src/components/ui/textarea';
@@ -21,6 +21,7 @@ import { Contact } from '@/src/components/CalendarEvent/calendar-event.types';
 import ContactSelector from './ContactSelector';
 import { useLocalization } from '@/src/context/localization';
 import { useUnit } from '@/src/hooks/useUnit';
+import { toDateInputValue, fromDateInputValue } from '@/src/utils/medicineExpiry';
 
 interface MedicineFormProps {
   isOpen: boolean;
@@ -132,6 +133,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
         doseMinTime: medicine.doseMinTime || '',
         notes: medicine.notes || '',
         active: medicine.active,
+        expiryDate: toDateInputValue(medicine.expiryDate),
         contactIds: medicine.contacts?.map((c: any) => c.contact.id) || [],
       };
     }
@@ -145,6 +147,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
       notes: '',
       active: true,
       isSupplement,
+      expiryDate: '',
       contactIds: [],
     };
   });
@@ -160,6 +163,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
         doseMinTime: medicine.doseMinTime || '',
         notes: medicine.notes || '',
         active: medicine.active,
+        expiryDate: toDateInputValue(medicine.expiryDate),
         contactIds: medicine.contacts?.map((c: any) => c.contact.id) || [],
       };
       setFormData(medicineData);
@@ -174,6 +178,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
         notes: '',
         active: true,
         isSupplement,
+        expiryDate: '',
         contactIds: [],
       });
       // Reset time selector for new medicine
@@ -395,6 +400,8 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
       ...formData,
       // Explicitly include typicalDoseSize even if it's undefined
       typicalDoseSize: formData.typicalDoseSize,
+      // Convert the date input value back to an ISO string (null clears the expiry date)
+      expiryDate: fromDateInputValue(formData.expiryDate),
       // Ensure contactIds has no duplicates
       contactIds: formData.contactIds ? Array.from(new Set(formData.contactIds)) : [],
     };
@@ -562,6 +569,35 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
                 </div>
               )}
             </div>}
+
+            {/* Expiry Date */}
+            <div className={styles.formGroup}>
+              <Label htmlFor="expiryDate">
+                {t('Expiry Date')}
+              </Label>
+              <div className="relative">
+                <Input
+                  type="date"
+                  id="expiryDate"
+                  name="expiryDate"
+                  value={formData.expiryDate || ''}
+                  onChange={handleChange}
+                  className="w-full pl-9"
+                  aria-invalid={errors.expiryDate ? true : undefined}
+                  aria-describedby={errors.expiryDate ? `${errorId}-expiryDate` : undefined}
+                />
+                <CalendarClock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" aria-hidden="true" />
+              </div>
+              <div className="text-xs text-gray-500">
+                {t('Optional: track when this package runs out')}
+              </div>
+              {errors.expiryDate && (
+                <div id={`${errorId}-expiryDate`} role="alert" className="text-xs text-red-500 mt-1">
+                  <AlertCircle className="h-3 w-3 inline mr-1" aria-hidden="true" />
+                  {errors.expiryDate}
+                </div>
+              )}
+            </div>
 
             {/* Active Status */}
             <div className="flex items-center space-x-2 py-2">

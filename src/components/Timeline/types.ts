@@ -28,6 +28,12 @@ export interface LatestStatusData {
   lastSleepEndTime?: Date;
   ongoingSleep?: SleepLogResponse;
   lastEndedSleep?: SleepLogResponse & { endTime: string };
+  /** Latest medicine/supplement dose; doseMinTime is that medicine's "DD:HH:MM" min interval */
+  lastMedicineLog?: {
+    time: Date;
+    doseMinTime: string | null;
+    medicineName: string | null;
+  };
 }
 
 // Legacy props for the old Timeline component (not actively used)
