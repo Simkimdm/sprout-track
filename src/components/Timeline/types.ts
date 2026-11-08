@@ -23,6 +23,8 @@ export type FilterType = 'sleep' | 'feed' | 'diaper' | 'poop' | 'medicine' | 'no
 export interface LatestStatusData {
   lastFeedTime?: Date;
   lastFeedEndTime?: Date;
+  /** Total feeding duration (minutes) of the last feed session (sum of all its rows). */
+  lastFeedDurationMinutes?: number;
   lastDiaperTime?: Date;
   lastPumpTime?: Date;
   lastSleepEndTime?: Date;

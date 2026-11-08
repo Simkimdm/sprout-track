@@ -55,6 +55,28 @@ describe('computeLatestStatus — feeds', () => {
     expect(s.lastFeedTime?.toISOString()).toBe('2026-10-12T10:00:00.000Z');
     expect(s.lastFeedEndTime?.toISOString()).toBe('2026-10-12T10:25:00.000Z');
   });
+
+  it('reports the whole session duration so the badge includes the feeding itself', () => {
+    // 15 min LEFT + 15 min RIGHT; at 15:00 the badge shows 30 min since the
+    // end (14:30) plus the 30 min duration = 60 min since the feed started
+    const breast15 = (id: string, side: string, startTime: string, endTime: string, sessionId: string | null) =>
+      ({ id, type: 'BREAST', bottleType: null, amount: null, side, time: endTime, startTime, endTime, sessionId, feedDuration: 900 });
+    const acts = [
+      breast15('l', 'LEFT', '2026-10-12T14:00:00Z', '2026-10-12T14:15:00Z', 's1'),
+      breast15('r', 'RIGHT', '2026-10-12T14:15:00Z', '2026-10-12T14:30:00Z', 's1'),
+    ];
+    const s = computeLatestStatus(acts, null);
+    expect(s.lastFeedDurationMinutes).toBe(30);
+    const end = s.lastFeedEndTime!;
+    const badgeAnchor = new Date(end.getTime() - s.lastFeedDurationMinutes! * 60_000);
+    expect(badgeAnchor.toISOString()).toBe('2026-10-12T14:00:00.000Z');
+    expect(elapsedMinutes(badgeAnchor, new Date('2026-10-12T15:00:00Z'))).toBe(60);
+  });
+
+  it('falls back to the single row duration when the session is a singleton', () => {
+    const s = computeLatestStatus([breast('l', 'LEFT', '2026-10-12T14:00:00Z', '2026-10-12T14:10:00Z', 's1')], null);
+    expect(s.lastFeedDurationMinutes).toBe(10);
+  });
 });
 
 describe('computeLatestStatus — sleep', () => {

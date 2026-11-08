@@ -45,6 +45,17 @@ describe('feedTimer', () => {
     expect(feedTimer(status, { ...baby, feedTimerFrom: 'end' }, now)).toEqual({ kind: 'since', minutes: 80, warning: false });
   });
 
+  it('anchors at end minus duration so the elapsed time includes the feeding itself', () => {
+    // Feed ended 30 min ago and lasted 20 min: 30 + 20 = 50 min since it started
+    const status = { lastFeedTime: ago(50), lastFeedEndTime: ago(30), lastFeedDurationMinutes: 20 };
+    expect(feedTimer(status, baby, now)).toEqual({ kind: 'since', minutes: 50, warning: false });
+  });
+
+  it('still counts from the end in "end" mode even with a duration', () => {
+    const status = { lastFeedTime: ago(50), lastFeedEndTime: ago(30), lastFeedDurationMinutes: 20 };
+    expect(feedTimer(status, { ...baby, feedTimerFrom: 'end' }, now)).toEqual({ kind: 'since', minutes: 30, warning: false });
+  });
+
   it('turns to warning at the feedWarningTime threshold', () => {
     expect(feedTimer({ lastFeedTime: ago(179) }, baby, now)).toMatchObject({ warning: false });
     expect(feedTimer({ lastFeedTime: ago(180) }, baby, now)).toMatchObject({ warning: true });

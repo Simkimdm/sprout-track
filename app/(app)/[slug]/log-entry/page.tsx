@@ -104,6 +104,7 @@ function HomeContent(): React.ReactElement {
   const [lastSleepEndTime, setLastSleepEndTime] = useState<Record<string, Date>>({});
   const [lastFeedTime, setLastFeedTime] = useState<Record<string, Date>>({});
   const [lastFeedEndTime, setLastFeedEndTime] = useState<Record<string, Date>>({});
+  const [lastFeedDurationMinutes, setLastFeedDurationMinutes] = useState<Record<string, number>>({});
   const [lastDiaperTime, setLastDiaperTime] = useState<Record<string, Date>>({});
   const [lastPumpTime, setLastPumpTime] = useState<Record<string, Date>>({});
   const [lastMedicineLog, setLastMedicineLog] = useState<Record<string, { time: Date; doseMinTime: string | null; medicineName?: string | null }>>({});
@@ -492,6 +493,15 @@ function HomeContent(): React.ReactElement {
       }
       return next;
     });
+    setLastFeedDurationMinutes(prev => {
+      const next = { ...prev };
+      if (data.lastFeedDurationMinutes !== undefined) {
+        next[selectedBaby.id] = data.lastFeedDurationMinutes;
+      } else {
+        delete next[selectedBaby.id];
+      }
+      return next;
+    });
     if (data.lastDiaperTime) {
       setLastDiaperTime(prev => ({ ...prev, [selectedBaby.id]: data.lastDiaperTime! }));
     }
@@ -554,6 +564,7 @@ function HomeContent(): React.ReactElement {
           lastSleepEndTime={lastSleepEndTime}
           lastFeedTime={lastFeedTime}
           lastFeedEndTime={lastFeedEndTime}
+          lastFeedDurationMinutes={lastFeedDurationMinutes}
           lastDiaperTime={lastDiaperTime}
           lastPumpTime={lastPumpTime}
           lastMedicineLog={lastMedicineLog}
