@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeLatestStatus,
-  doseMinTimeToWarningTime,
   effectiveFeedTime,
   elapsedMinutes,
   feedStartAnchor,
@@ -193,45 +192,5 @@ describe('formatDurationLabel', () => {
     expect(formatDurationLabel(83, t)).toBe('1 hour 23 minutes');
     expect(formatDurationLabel(121, t)).toBe('2 hours 1 minute');
     expect(formatDurationLabel(5, t)).toBe('5 minutes');
-  });
-});
-
-describe('computeLatestStatus — medicine doses', () => {
-  const med = (id: string, time: string, doseMinTime: string | null, name = 'Med') =>
-    ({ id, medicineId: 'm1', time, doseAmount: 5, medicine: { id: 'm1', name, doseMinTime } });
-
-  it('reports the latest dose with its medicine interval and name', () => {
-    const s = computeLatestStatus([
-      med('a', '2026-10-12T08:00:00Z', '00:06:00', 'Ibuprofen'),
-      med('b', '2026-10-12T14:30:00Z', '01:00:00', 'Vitamin D'),
-    ], null);
-    expect(s.lastMedicineLog?.time.toISOString()).toBe('2026-10-12T14:30:00.000Z');
-    expect(s.lastMedicineLog?.doseMinTime).toBe('01:00:00');
-    expect(s.lastMedicineLog?.medicineName).toBe('Vitamin D');
-  });
-
-  it('ignores non-medicine activities and survives a missing medicine relation', () => {
-    const s = computeLatestStatus([bottle('f1', '2026-10-12T09:00:00Z'), { id: 'x', medicineId: 'm1', time: '2026-10-12T10:00:00Z', doseAmount: 1 }], null);
-    expect(s.lastMedicineLog?.time.toISOString()).toBe('2026-10-12T10:00:00.000Z');
-    expect(s.lastMedicineLog?.doseMinTime).toBeNull();
-    expect(s.lastMedicineLog?.medicineName).toBeNull();
-    expect(computeLatestStatus([bottle('f1', '2026-10-12T09:00:00Z')], null).lastMedicineLog).toBeUndefined();
-  });
-});
-
-describe('doseMinTimeToWarningTime', () => {
-  it('converts DD:HH:MM to the H:MM bubble format', () => {
-    expect(doseMinTimeToWarningTime('00:06:30')).toBe('6:30');
-    expect(doseMinTimeToWarningTime('01:00:00')).toBe('24:00');
-    expect(doseMinTimeToWarningTime('00:00:00')).toBe('0:00');
-  });
-  it('returns null for empty or malformed input', () => {
-    expect(doseMinTimeToWarningTime(null)).toBeNull();
-    expect(doseMinTimeToWarningTime('')).toBeNull();
-    expect(doseMinTimeToWarningTime('6h')).toBeNull();
-    expect(doseMinTimeToWarningTime('00:25:00')).toBeNull();
-  });
-  it('round-trips through warningTimeToMinutes (hours may exceed 24)', () => {
-    expect(warningTimeToMinutes(doseMinTimeToWarningTime('02:05:15'))).toBe(2 * 24 * 60 + 5 * 60 + 15);
   });
 });

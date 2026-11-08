@@ -652,8 +652,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
             ...medicine,
             createdAt: formatForResponse(medicine.createdAt) || '',
             updatedAt: formatForResponse(medicine.updatedAt) || '',
-            deletedAt: formatForResponse(medicine.deletedAt),
-            expiryDate: formatForResponse(medicine.expiryDate)
+            deletedAt: formatForResponse(medicine.deletedAt)
           } : undefined
         };
       });
