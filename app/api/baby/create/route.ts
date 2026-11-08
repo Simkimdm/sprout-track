@@ -15,6 +15,7 @@ const CreateBabySchema = z.object({
   feedWarningTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
   diaperWarningTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
   pumpWarningTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format').optional().default('03:00'),
+  bathWarningTime: z.string().regex(/^\d{1,4}:\d{2}$/, 'Invalid time format').optional().default('24:00'),
   feedTimerFrom: z.enum(['start', 'end']).optional(),
   feedTimerTypes: z
     .string()

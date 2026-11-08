@@ -36,6 +36,7 @@ const defaultFormData = {
   feedWarningTime: '03:00',
   diaperWarningTime: '02:00',
   pumpWarningTime: '03:00',
+  bathWarningTime: '24:00',
   feedTimerFrom: 'start',
   feedTimerTypes: [...FEED_TIMER_CATEGORIES] as FeedTimerCategory[],
 };
@@ -66,6 +67,7 @@ export default function BabyModal({
         feedWarningTime: baby.feedWarningTime || '03:00',
         diaperWarningTime: baby.diaperWarningTime || '02:00',
         pumpWarningTime: baby.pumpWarningTime || '03:00',
+        bathWarningTime: baby.bathWarningTime || '24:00',
         feedTimerFrom: (baby as any).feedTimerFrom || 'start',
         feedTimerTypes: parseFeedTimerTypes((baby as any).feedTimerTypes) ?? [...FEED_TIMER_CATEGORIES],
       });

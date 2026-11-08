@@ -41,6 +41,20 @@ interface BabyFormProps {
   appearance?: 'default' | 'storybook';
 }
 
+/**
+ * The bath timer is configured in days + hours (baths recur on a multi-day
+ * rhythm) but stored in the shared "H:MM" warning format, so "1 day" and
+ * "24:00" are the same value.
+ */
+function parseBathWarning(value: string | undefined): { bathDays: number; bathHours: number } {
+  const [hours, minutes] = (value || '24:00').split(':').map(Number);
+  const totalMinutes = (Number.isFinite(hours) ? hours : 0) * 60 + (Number.isFinite(minutes) ? minutes : 0);
+  return {
+    bathDays: Math.floor(totalMinutes / 1440),
+    bathHours: Math.floor((totalMinutes % 1440) / 60),
+  };
+}
+
 const defaultFormData = {
   firstName: '',
   lastName: '',
@@ -50,6 +64,8 @@ const defaultFormData = {
   feedWarningTime: '03:00',
   diaperWarningTime: '02:00',
   pumpWarningTime: '03:00',
+  bathDays: 1,
+  bathHours: 0,
   feedTimerFrom: 'start',
   feedTimerTypes: [...FEED_TIMER_CATEGORIES] as FeedTimerCategory[],
 };
@@ -85,6 +101,7 @@ export default function BabyForm({
         feedWarningTime: baby.feedWarningTime || '03:00',
         diaperWarningTime: baby.diaperWarningTime || '02:00',
         pumpWarningTime: baby.pumpWarningTime || '03:00',
+        ...parseBathWarning(baby.bathWarningTime),
         feedTimerFrom: (baby as any).feedTimerFrom || 'start',
         feedTimerTypes: parseFeedTimerTypes((baby as any).feedTimerTypes) ?? [...FEED_TIMER_CATEGORIES],
       });
@@ -110,14 +127,16 @@ export default function BabyForm({
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
+      const { bathDays, bathHours, ...formValues } = formData;
       const response = await fetch('/api/baby', {
         method: isEditing ? 'PUT' : 'POST',
         headers,
         body: JSON.stringify({
-          ...formData,
+          ...formValues,
           id: baby?.id,
           birthDate: formData.birthDate,
           gender: formData.gender as Gender,
+          bathWarningTime: `${bathDays * 24 + bathHours}:00`,
           // null = all feeds count (default)
           feedTimerTypes: formData.feedTimerTypes.length === FEED_TIMER_CATEGORIES.length
             ? null
@@ -250,6 +269,21 @@ export default function BabyForm({
                 <input id="sbBabyPump" className="sb-fi" pattern="[0-9]{2}:[0-9]{2}" required
                   value={formData.pumpWarningTime}
                   onChange={(e) => setFormData({ ...formData, pumpWarningTime: e.target.value })} />
+              </div>
+              <div>
+                <label className="sb-fl" htmlFor="sbBabyBathDays">
+                  {t('Since last bath')}
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input id="sbBabyBathDays" className="sb-fi" type="number" min="0" step="1"
+                    aria-label={t('Days')} placeholder={t('Days')}
+                    value={formData.bathDays}
+                    onChange={(e) => setFormData({ ...formData, bathDays: Number(e.target.value) || 0 })} />
+                  <input id="sbBabyBathHours" className="sb-fi" type="number" min="0" max="23" step="1"
+                    aria-label={t('Hours')} placeholder={t('Hours')}
+                    value={formData.bathHours}
+                    onChange={(e) => setFormData({ ...formData, bathHours: Number(e.target.value) || 0 })} />
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 14 }}>
@@ -402,6 +436,38 @@ export default function BabyForm({
                 placeholder="03:00"
                 required
               />
+            </div>
+            <div>
+              <label htmlFor={`${formId}-bath-warning-days`} className="form-label">{t('Since last bath')}</label>
+              <div className="flex gap-2">
+                <Input
+                  id={`${formId}-bath-warning-days`}
+                  type="number"
+                  min={0}
+                  step={1}
+                  aria-label={t('Days')}
+                  placeholder={t('Days')}
+                  value={formData.bathDays}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bathDays: Number(e.target.value) || 0 })
+                  }
+                  className="w-full"
+                />
+                <Input
+                  id={`${formId}-bath-warning-hours`}
+                  type="number"
+                  min={0}
+                  max={23}
+                  step={1}
+                  aria-label={t('Hours')}
+                  placeholder={t('Hours')}
+                  value={formData.bathHours}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bathHours: Number(e.target.value) || 0 })
+                  }
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
           <div>

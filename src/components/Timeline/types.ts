@@ -26,6 +26,7 @@ export interface LatestStatusData {
   /** Total feeding duration (minutes) of the last feed session (sum of all its rows). */
   lastFeedDurationMinutes?: number;
   lastDiaperTime?: Date;
+  lastBathTime?: Date;
   lastPumpTime?: Date;
   lastSleepEndTime?: Date;
   ongoingSleep?: SleepLogResponse;

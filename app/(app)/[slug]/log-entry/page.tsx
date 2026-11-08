@@ -107,6 +107,7 @@ function HomeContent(): React.ReactElement {
   const [lastFeedDurationMinutes, setLastFeedDurationMinutes] = useState<Record<string, number>>({});
   const [lastDiaperTime, setLastDiaperTime] = useState<Record<string, Date>>({});
   const [lastPumpTime, setLastPumpTime] = useState<Record<string, Date>>({});
+  const [lastBathTime, setLastBathTime] = useState<Record<string, Date>>({});
   const [lastMedicineLog, setLastMedicineLog] = useState<Record<string, { time: Date; doseMinTime: string | null; medicineName?: string | null }>>({});
 
   // Check whether the Photos feature is enabled for this deployment
@@ -523,6 +524,15 @@ function HomeContent(): React.ReactElement {
       }
       return next;
     });
+    setLastBathTime(prev => {
+      const next = { ...prev };
+      if (data.lastBathTime) {
+        next[selectedBaby.id] = data.lastBathTime;
+      } else {
+        delete next[selectedBaby.id];
+      }
+      return next;
+    });
     if (data.lastSleepEndTime) {
       setLastSleepEndTime(prev => ({ ...prev, [selectedBaby.id]: data.lastSleepEndTime! }));
     }
@@ -566,6 +576,7 @@ function HomeContent(): React.ReactElement {
           lastFeedEndTime={lastFeedEndTime}
           lastFeedDurationMinutes={lastFeedDurationMinutes}
           lastDiaperTime={lastDiaperTime}
+          lastBathTime={lastBathTime}
           lastPumpTime={lastPumpTime}
           lastMedicineLog={lastMedicineLog}
           feedStartTime={feedStartTime}

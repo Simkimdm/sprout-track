@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Droplets, Moon, Sun, Icon, Pill } from 'lucide-react';
+import { Bath, Droplets, Moon, Sun, Icon, Pill } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { cn } from "@/src/lib/utils";
 import { statusBubbleStyles as styles } from './status-bubble.styles';
@@ -39,6 +39,7 @@ export function StatusBubble({
             (status === 'feed' && activityType === 'feed') ||
             (status === 'diaper' && activityType === 'diaper') ||
             (status === 'pump' && activityType === 'pump') ||
+            (status === 'bath' && activityType === 'bath') ||
             (status === 'medicine' && activityType === 'medicine')) {
           const diffMinutes = calculateDurationMinutes(startTime, now.toISOString());
           setCalculatedDuration(diffMinutes);
@@ -114,6 +115,11 @@ export function StatusBubble({
           bgColor: isWarning ? styles.statusStyles.pump.warning : styles.statusStyles.pump.normal,
           icon: <Droplets className={styles.icon} aria-hidden="true" />
         };
+      case 'bath':
+        return {
+          bgColor: isWarning ? styles.statusStyles.bath.warning : styles.statusStyles.bath.normal,
+          icon: <Bath className={styles.icon} aria-hidden="true" />
+        };
       case 'medicine':
         return {
           bgColor: isWarning ? styles.statusStyles.medicine.warning : styles.statusStyles.medicine.normal,
@@ -143,6 +149,8 @@ export function StatusBubble({
         return t('Time since last diaper');
       case 'pump':
         return t('Time since last pump');
+      case 'bath':
+        return t('Time since last bath');
       case 'medicine':
         return t('Time since last dose');
       default:

@@ -24,6 +24,10 @@ export const statusBubbleStyles = {
       normal: "bg-green-500 text-white",
       warning: "bg-red-500 text-white",
     },
+    bath: {
+      normal: "bg-green-500 text-white",
+      warning: "bg-red-500 text-white",
+    },
     medicine: {
       normal: "bg-green-500 text-white",
       warning: "bg-red-500 text-white",

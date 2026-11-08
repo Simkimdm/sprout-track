@@ -25,6 +25,7 @@ interface ActivityTileGroupProps {
     feedWarningTime?: string | number;
     diaperWarningTime?: string | number;
     pumpWarningTime?: string | number;
+    bathWarningTime?: string | number;
     feedTimerFrom?: string;
   } | null;
   sleepingBabies: Set<string>;
@@ -35,6 +36,7 @@ interface ActivityTileGroupProps {
   lastFeedEndTime?: Record<string, Date>;
   lastFeedDurationMinutes?: Record<string, number>;
   lastDiaperTime: Record<string, Date>;
+  lastBathTime?: Record<string, Date>;
   lastPumpTime: Record<string, Date>;
   lastMedicineLog?: Record<string, { time: Date; doseMinTime: string | null; medicineName?: string | null }>;
   feedStartTime?: Record<string, Date>;
@@ -74,6 +76,7 @@ export function ActivityTileGroup({
   lastFeedEndTime,
   lastFeedDurationMinutes,
   lastDiaperTime,
+  lastBathTime = {},
   lastPumpTime,
   lastMedicineLog,
   feedStartTime,
@@ -718,6 +721,15 @@ export function ActivityTileGroup({
                 onBathClick();
               }}
             />
+            {selectedBaby?.id && lastBathTime[selectedBaby.id] && (
+              <StatusBubble
+                status="bath"
+                durationInMinutes={0}
+                startTime={lastBathTime[selectedBaby.id].toISOString()}
+                warningTime={selectedBaby.bathWarningTime as string}
+                activityType="bath"
+              />
+            )}
           </div>
         );
       case 'pump':
