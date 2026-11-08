@@ -13,3 +13,13 @@ export function formatLocalDateTimeInput(now: Date): string {
 export function freshLocalDateTimeInput(now: Date = new Date()): string {
   return formatLocalDateTimeInput(now);
 }
+
+/**
+ * Parses a local datetime input string (YYYY-MM-DDTHH:mm) back into a Date
+ * in local time. Returns null for empty or invalid input.
+ */
+export function parseLocalDateTimeInput(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}

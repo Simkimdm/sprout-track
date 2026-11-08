@@ -6,7 +6,8 @@ import {
   DialogDescription,
 } from '@/src/components/ui/dialog';
 import { Button } from '@/src/components/ui/button';
-import { Input } from '@/src/components/ui/input';
+import { DateTimePicker } from '@/src/components/ui/date-time-picker';
+import { formatLocalDateTimeInput, parseLocalDateTimeInput } from '@/src/utils/dateTimeInput';
 import {
   Select,
   SelectContent,
@@ -52,19 +53,11 @@ export default function SleepModal({
     quality: '' as SleepQuality | '',
   });
 
-  // Format date string to be compatible with datetime-local input
+  // Format date string as a local YYYY-MM-DDTHH:mm value for form state
   const formatDateForInput = (dateStr: string) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '';
-    
-    // Format as YYYY-MM-DDThh:mm in local time
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return formatLocalDateTimeInput(date);
   };
 
   useEffect(() => {
@@ -243,30 +236,22 @@ export default function SleepModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="form-label">{t('Start Time')}</label>
-              <Input
-                type="datetime-local"
-                value={formData.startTime}
-                onChange={(e) =>
-                  setFormData({ ...formData, startTime: e.target.value })
+              <DateTimePicker
+                value={parseLocalDateTimeInput(formData.startTime)}
+                onChange={(date) =>
+                  setFormData({ ...formData, startTime: formatLocalDateTimeInput(date) })
                 }
-                className="w-full"
-                required
-                tabIndex={-1}
                 disabled={isSleeping && !isEditMode} // Only disabled when ending sleep and not editing
               />
             </div>
             {(isSleeping || isEditMode) && (
               <div>
                 <label className="form-label">{t('End Time')}</label>
-                <Input
-                  type="datetime-local"
-                  value={formData.endTime || initialTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endTime: e.target.value })
+                <DateTimePicker
+                  value={parseLocalDateTimeInput(formData.endTime || initialTime)}
+                  onChange={(date) =>
+                    setFormData({ ...formData, endTime: formatLocalDateTimeInput(date) })
                   }
-                  className="w-full"
-                  required={isSleeping}
-                  tabIndex={-1}
                 />
               </div>
             )}
