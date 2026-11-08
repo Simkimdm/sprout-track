@@ -63,8 +63,10 @@ function buildSession<T extends BreastFeedLike>(
 ): BreastFeedSession<T> {
   let left = 0;
   let right = 0;
+  let total = 0;
   for (const row of rows) {
     const duration = feedRowDurationSeconds(row);
+    total += duration;
     if (row.side === 'LEFT') left += duration;
     else if (row.side === 'RIGHT') right += duration;
   }
@@ -74,7 +76,7 @@ function buildSession<T extends BreastFeedLike>(
     sessionId,
     leftDuration: left,
     rightDuration: right,
-    totalDuration: left + right,
+    totalDuration: total,
   };
 }
 

@@ -5,7 +5,7 @@
  * threshold) match the log-entry page's status bubbles.
  */
 import type { LatestStatusData } from '@/src/components/Timeline/types';
-import { effectiveFeedTime, elapsedMinutes, isPastWarning, isWithinStatusWindow } from '@/src/utils/latestStatus';
+import { effectiveFeedTime, elapsedMinutes, feedStartAnchor, isPastWarning, isWithinStatusWindow } from '@/src/utils/latestStatus';
 
 export type WakeTimer =
   | { kind: 'awake' | 'sleeping'; minutes: number }
@@ -49,11 +49,9 @@ export function feedTimer(
   feeding = false
 ): FeedTimer {
   if (feeding) return { kind: 'feeding' };
-  // Anchor at the feed's start (end − duration) so the elapsed time includes
-  // the feeding's own duration; matches the log-entry page's feed badge
-  const startAnchor = status.lastFeedEndTime && status.lastFeedDurationMinutes
-    ? new Date(status.lastFeedEndTime.getTime() - status.lastFeedDurationMinutes * 60_000)
-    : status.lastFeedTime;
+  // Anchor at the feed's start so the elapsed time includes the feeding's own
+  // duration; matches the log-entry page's feed badge
+  const startAnchor = feedStartAnchor(status.lastFeedTime, status.lastFeedEndTime, status.lastFeedDurationMinutes);
   return sinceTimer(effectiveFeedTime(startAnchor, status.lastFeedEndTime, baby.feedTimerFrom), baby.feedWarningTime, now);
 }
 
