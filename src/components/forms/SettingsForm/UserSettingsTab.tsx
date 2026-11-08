@@ -187,6 +187,32 @@ export default function UserSettingsTab({
         </div>
       </div>
 
+      {/* Week Start Day */}
+      <div>
+        <h3 className="form-label mb-4">{t('Week Start Day')}</h3>
+        <p className="text-sm text-gray-500 mb-4">{t('Choose which day the week starts on for calendar views and reports.')}</p>
+        <div className="max-w-xs">
+          <Label className="form-label" htmlFor={`${idPrefix}-week-starts-on`}>{t('Start Day')}</Label>
+          <Select
+            value={settings?.weekStartsOn || 'Sunday'}
+            onValueChange={(value: 'Sunday' | 'Monday') => onSettingsChange({ weekStartsOn: value })}
+            disabled={loading}
+          >
+            <SelectTrigger id={`${idPrefix}-week-starts-on`}>
+              <SelectValue placeholder={t("Select day")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Sunday">
+                {t('Sunday')}
+              </SelectItem>
+              <SelectItem value="Monday">
+                {t('Monday')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Notification Settings - Only show if enabled */}
       {deploymentConfig?.notificationsEnabled && (
         <NotificationSettings

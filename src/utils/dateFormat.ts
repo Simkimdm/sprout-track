@@ -5,6 +5,7 @@
 
 export type DateFormatSetting = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
 export type TimeFormatSetting = '12h' | '24h';
+export type WeekStartSetting = 'Sunday' | 'Monday';
 
 /**
  * Format a Date object as a time string according to the time format setting.
@@ -141,4 +142,35 @@ export function formatDateTimeDisplay(
   const datePart = formatDateLong(date, dateFormat, timezone);
   const timePart = formatTimeDisplay(date, timeFormat, timezone);
   return `${datePart} ${timePart}`;
+}
+
+/**
+ * Get the start date of the week for a given date based on week start preference.
+ * Returns the date of the first day of the week (Sunday or Monday).
+ */
+export function getWeekStartDate(date: Date, weekStartsOn: WeekStartSetting = 'Sunday'): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  
+  if (weekStartsOn === 'Sunday') {
+    // Week starts on Sunday (0)
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  } else {
+    // Week starts on Monday (1)
+    const day = d.getDay();
+    // If Sunday (0), go back to previous Monday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  }
+}
+
+/**
+ * Get a week key string for grouping dates by week.
+ * Returns a date string in YYYY-MM-DD format representing the first day of the week.
+ */
+export function getWeekKey(date: Date, weekStartsOn: WeekStartSetting = 'Sunday'): string {
+  const weekStart = getWeekStartDate(date, weekStartsOn);
+  return weekStart.toLocaleDateString('en-CA');
 }

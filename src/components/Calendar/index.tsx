@@ -26,7 +26,7 @@ import './calendar.css';
  * @param onDateSelect - Optional callback when a date is selected
  */
 export function Calendar({
- selectedBabyId, userTimezone, onDateSelect }: CalendarProps) {
+ selectedBabyId, userTimezone, onDateSelect, weekStartsOn = 'Sunday' }: CalendarProps) {
   const { t, language } = useLocalization();
   
   // Component state
@@ -67,9 +67,16 @@ export function Calendar({
     // Get the day of the week for the first day of the month (0 = Sunday, 6 = Saturday)
     const firstDayOfMonth = date.getDay();
     
+    // Calculate how many days from previous month to add based on week start preference
+    let daysFromPrevMonth = firstDayOfMonth;
+    if (weekStartsOn === 'Monday') {
+      // If week starts on Monday, adjust the offset
+      daysFromPrevMonth = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+    }
+    
     // Add days from the previous month to fill the first row
     const lastDayOfPrevMonth = new Date(year, month, 0).getDate();
-    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+    for (let i = daysFromPrevMonth - 1; i >= 0; i--) {
       days.push(new Date(year, month - 1, lastDayOfPrevMonth - i));
     }
     
@@ -494,7 +501,9 @@ export function Calendar({
           <div className="h-full flex flex-col">
             {/* Day names header */}
             <div className="grid grid-cols-7 text-center bg-gray-100 border-b border-gray-200 main-calendar-weekdays">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+              {(weekStartsOn === 'Monday' 
+                ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map((day, index) => (
                 <div key={index} className="py-2 text-xs font-medium text-gray-500 main-calendar-weekday">
                   {day}
                 </div>

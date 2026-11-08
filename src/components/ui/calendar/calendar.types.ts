@@ -1,5 +1,6 @@
 import { type VariantProps } from "class-variance-authority"
 import { calendarVariants } from "./calendar.styles"
+import { WeekStartSetting } from '@/src/utils/dateFormat'
 
 /**
  * Props for the Calendar component
@@ -42,6 +43,12 @@ export interface CalendarProps extends VariantProps<typeof calendarVariants> {
    * Defaults to current month if not provided
    */
   month?: Date
+  
+  /**
+   * Which day the week starts on (Sunday or Monday)
+   * Defaults to Sunday
+   */
+  weekStartsOn?: WeekStartSetting
   
   /**
    * Optional class name for additional styling

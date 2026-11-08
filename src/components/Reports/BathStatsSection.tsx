@@ -13,6 +13,8 @@ import { styles } from './reports.styles';
 import { BathStats, ActivityType, DateRange } from './reports.types';
 import BathChartModal, { BathChartMetric } from './BathChartModal';
 import { useLocalization } from '@/src/context/localization';
+import { WeekStartSetting } from '@/src/utils/dateFormat';
+import { Settings } from '@/app/api/types';
 
 interface BathStatsSectionProps {
   stats: BathStats;
@@ -29,6 +31,29 @@ const BathStatsSection: React.FC<BathStatsSectionProps> = ({ stats, activities, 
   const { t } = useLocalization();
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [chartMetric, setChartMetric] = useState<BathChartMetric | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  // Fetch settings for week start preference
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const headers: HeadersInit = authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {};
+
+        const response = await fetch('/api/settings', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   return (
     <>
@@ -99,6 +124,7 @@ const BathStatsSection: React.FC<BathStatsSectionProps> = ({ stats, activities, 
         metric={chartMetric}
         activities={activities}
         dateRange={dateRange}
+        weekStartsOn={settings?.weekStartsOn as WeekStartSetting}
       />
     </>
   );

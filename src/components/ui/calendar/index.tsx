@@ -73,6 +73,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
     disabledDates = [],
     isDateDisabled,
     initialFocus,
+    weekStartsOn = 'Sunday',
     ...props 
   }, ref) => {
     const { t } = useLocalization();
@@ -121,8 +122,14 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
     // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
     const firstDayOfWeek = firstDayOfMonth.getDay();
     
-    // Calculate days from previous month to display
-    const daysFromPrevMonth = firstDayOfWeek;
+    // Calculate days from previous month to display based on week start preference
+    let daysFromPrevMonth = firstDayOfWeek;
+    if (weekStartsOn === 'Monday') {
+      // If week starts on Monday, adjust the offset
+      // Monday = 1, so if first day is Sunday (0), we need 6 days from prev month
+      // If first day is Monday (1), we need 0 days from prev month
+      daysFromPrevMonth = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+    }
     
     // Calculate total days in the current month
     const daysInMonth = lastDayOfMonth.getDate();
@@ -484,7 +491,9 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
     }, [days, focusedDate, initialFocus]);
 
     // Day names for the calendar header
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayNames = weekStartsOn === 'Monday' 
+      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     // Render different content areas based on currentPage state
     const renderContentArea = () => {

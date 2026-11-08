@@ -21,7 +21,7 @@ import { ActivityType, DateRange } from './reports.types';
 import { ChartDataTable } from '@/src/components/ui/chart-data-table';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
-import { formatDateShort, formatDateDisplay, DateFormatSetting } from '@/src/utils/dateFormat';
+import { formatDateShort, formatDateDisplay, DateFormatSetting, WeekStartSetting, getWeekKey as getWeekKeyUtil, getWeekStartDate } from '@/src/utils/dateFormat';
 
 export type BathChartMetric = 'total' | 'avgPerWeek' | 'soapShampoo';
 
@@ -31,26 +31,10 @@ interface BathChartModalProps {
   metric: BathChartMetric | null;
   activities: ActivityType[];
   dateRange: DateRange;
+  weekStartsOn?: WeekStartSetting;
 }
 
-// Helper function to get week key from date (ISO week: Monday-Sunday)
-function getWeekKey(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  // Get Monday of the week
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-  const monday = new Date(d.setDate(diff));
-  return monday.toLocaleDateString('en-CA');
-}
 
-// Helper function to format week label
-function formatWeekLabel(weekKey: string, dateFormat: DateFormatSetting): string {
-  const date = new Date(weekKey + 'T00:00:00');
-  const endDate = new Date(date);
-  endDate.setDate(endDate.getDate() + 6); // Sunday of the week
-  return `${formatDateShort(date, dateFormat)} - ${formatDateShort(endDate, dateFormat)}`;
-}
 
 /**
  * BathChartModal Component
@@ -63,9 +47,27 @@ const BathChartModal: React.FC<BathChartModalProps> = ({
   metric,
   activities,
   dateRange,
+  weekStartsOn,
 }) => {
   const { t } = useLocalization();
   const { dateFormat } = useTimezone();
+  
+  // Use the week start setting from props, default to Monday for backward compatibility
+  const effectiveWeekStartsOn = weekStartsOn || 'Monday';
+
+  // Helper function to get week key from date based on week start preference
+  const getWeekKey = (date: Date): string => {
+    return getWeekKeyUtil(date, effectiveWeekStartsOn);
+  };
+
+  // Helper function to format week label
+  const formatWeekLabel = (weekKey: string): string => {
+    const date = new Date(weekKey + 'T00:00:00');
+    const endDate = new Date(date);
+    // Add 6 days to get to the end of the week
+    endDate.setDate(endDate.getDate() + 6);
+    return `${formatDateShort(date, dateFormat)} - ${formatDateShort(endDate, dateFormat)}`;
+  };
   // Calculate daily bath counts
   const dailyData = useMemo(() => {
     if (!activities.length || !dateRange.from || !dateRange.to || metric !== 'total') {
@@ -158,7 +160,7 @@ const BathChartModal: React.FC<BathChartModalProps> = ({
       
       return {
         weekKey,
-        label: formatWeekLabel(weekKey, dateFormat),
+        label: formatWeekLabel(weekKey),
         value: avgPerWeek,
       };
     });

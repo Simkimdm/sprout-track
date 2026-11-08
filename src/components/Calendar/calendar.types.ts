@@ -1,4 +1,5 @@
 import { CalendarEventData } from '@/src/components/CalendarEvent/calendar-event.types';
+import { WeekStartSetting } from '@/src/utils/dateFormat';
 
 /**
  * Type definitions for the Calendar component
@@ -22,6 +23,12 @@ export interface CalendarProps {
    * Optional callback when a date is selected
    */
   onDateSelect?: (date: Date | null) => void;
+  
+  /**
+   * Which day the week starts on (Sunday or Monday)
+   * Defaults to Sunday
+   */
+  weekStartsOn?: WeekStartSetting;
 }
 
 /**

@@ -22,7 +22,8 @@ import HealthTab from './HealthTab';
 import MonthlyReportCard from './MonthlyReportCard';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
-import { formatDateDisplay } from '@/src/utils/dateFormat';
+import { formatDateDisplay, WeekStartSetting } from '@/src/utils/dateFormat';
+import { Settings } from '@/app/api/types';
 
 import './reports.css';
 
@@ -37,6 +38,34 @@ const Reports: React.FC<ReportsProps> = ({ className }) => {
   const { t } = useLocalization();
   const { dateFormat } = useTimezone();
   const { selectedBaby } = useBaby();
+
+  // Settings state
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  // Fetch settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const headers: HeadersInit = authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {};
+
+        const response = await fetch('/api/settings', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<ReportTab>('stats');
