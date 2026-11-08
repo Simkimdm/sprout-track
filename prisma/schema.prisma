@@ -930,6 +930,7 @@ model Medicine {
   typicalDoseSize Float?
   unitAbbr        String?
   doseMinTime     String? // Minimum time between doses (format: "HH:MM")
+  warningTime     String? // Per-medicine dose timer threshold; "H:MM", hours may exceed 24 (like bathWarningTime). Null = no timer
   notes           String? // Additional notes about the medicine
   active          Boolean   @default(true)
   isSupplement    Boolean   @default(false)

@@ -71,6 +71,40 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
   // State for dose minimum time selector
   const [doseTimeValue, setDoseTimeValue] = useState<string>('');
   const [doseTimeUnit, setDoseTimeUnit] = useState<'hours' | 'days'>('hours');
+
+  // State for the per-medicine dose reminder timer ("H:MM", hours may exceed 24)
+  const [warningHours, setWarningHours] = useState<string>('');
+  const [warningMinutes, setWarningMinutes] = useState<string>('');
+
+  // Parse a "H:MM" warning time into the hours/minutes input fields
+  const parseWarningTime = (warningTime: string | null | undefined) => {
+    if (!warningTime) {
+      setWarningHours('');
+      setWarningMinutes('');
+      return;
+    }
+    const [hours, minutes] = warningTime.split(':').map(Number);
+    if (Number.isFinite(hours) && Number.isFinite(minutes)) {
+      setWarningHours(hours > 0 ? String(hours) : '');
+      setWarningMinutes(minutes > 0 ? String(minutes) : '');
+    } else {
+      setWarningHours('');
+      setWarningMinutes('');
+    }
+  };
+
+  // Update the warningTime form field from the hours/minutes inputs ("H:MM"; empty = no timer)
+  const handleWarningTimeChange = (hours: string, minutes: string) => {
+    setWarningHours(hours);
+    setWarningMinutes(minutes);
+    const h = parseInt(hours || '0', 10);
+    const m = parseInt(minutes || '0', 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || m < 0 || m > 59 || (h === 0 && m === 0)) {
+      setFormData(prev => ({ ...prev, warningTime: '' }));
+    } else {
+      setFormData(prev => ({ ...prev, warningTime: `${h}:${String(m).padStart(2, '0')}` }));
+    }
+  };
   
   // Helper function to parse doseMinTime from DD:HH:MM format
   const parseDoseMinTime = (doseMinTime: string) => {  
@@ -130,6 +164,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
         typicalDoseSize: medicine.typicalDoseSize,
         unitAbbr: medicine.unitAbbr || '',
         doseMinTime: medicine.doseMinTime || '',
+        warningTime: medicine.warningTime || '',
         notes: medicine.notes || '',
         active: medicine.active,
         contactIds: medicine.contacts?.map((c: any) => c.contact.id) || [],
@@ -142,6 +177,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
       typicalDoseSize: undefined,
       unitAbbr: '',
       doseMinTime: '',
+      warningTime: '',
       notes: '',
       active: true,
       isSupplement,
@@ -158,6 +194,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
         typicalDoseSize: medicine.typicalDoseSize,
         unitAbbr: medicine.unitAbbr || '',
         doseMinTime: medicine.doseMinTime || '',
+        warningTime: medicine.warningTime || '',
         notes: medicine.notes || '',
         active: medicine.active,
         contactIds: medicine.contacts?.map((c: any) => c.contact.id) || [],
@@ -165,12 +202,15 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
       setFormData(medicineData);
       // Parse the existing doseMinTime for the time selector
       parseDoseMinTime(medicine.doseMinTime || '');
+      // Parse the existing dose reminder timer for the hours/minutes inputs
+      parseWarningTime(medicine.warningTime);
     } else {
       setFormData({
         name: '',
         typicalDoseSize: undefined,
         unitAbbr: '',
         doseMinTime: '',
+        warningTime: '',
         notes: '',
         active: true,
         isSupplement,
@@ -179,6 +219,8 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
       // Reset time selector for new medicine
       setDoseTimeValue('');
       setDoseTimeUnit('hours');
+      setWarningHours('');
+      setWarningMinutes('');
     }
     // Reset errors when form data changes
     setErrors({});
@@ -562,6 +604,50 @@ const MedicineForm: React.FC<MedicineFormProps> = ({
                 </div>
               )}
             </div>}
+
+            {/* Per-medicine dose reminder timer */}
+            <div className={styles.formGroup}>
+              <Label htmlFor="warningHours">
+                {t('Dose reminder timer')}
+              </Label>
+              <div className="flex items-center space-x-2">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    id="warningHours"
+                    min="0"
+                    max="9999"
+                    step="1"
+                    inputMode="numeric"
+                    value={warningHours}
+                    onChange={(e) => handleWarningTimeChange(e.target.value, warningMinutes)}
+                    className="w-full pl-9"
+                    placeholder={t('Hours')}
+                    aria-label={t('Hours')}
+                  />
+                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" aria-hidden="true" />
+                </div>
+                <span className="text-gray-500">:</span>
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    id="warningMinutes"
+                    min="0"
+                    max="59"
+                    step="1"
+                    inputMode="numeric"
+                    value={warningMinutes}
+                    onChange={(e) => handleWarningTimeChange(warningHours, e.target.value)}
+                    className="w-full"
+                    placeholder={t('Minutes')}
+                    aria-label={t('Minutes')}
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                {t('Optional: the medicine whose timer expires next is shown on the Medicine tile')}
+              </div>
+            </div>
 
             {/* Active Status */}
             <div className="flex items-center space-x-2 py-2">

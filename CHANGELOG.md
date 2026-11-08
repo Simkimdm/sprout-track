@@ -4,6 +4,11 @@
 
 ### Changes
 
+#### Medicines & Supplements
+
+- Each medicine/supplement can now have its own **dose reminder timer** (`warningTime`, "H:MM" — hours may exceed 24, same format as the bath/feed/diaper/pump warning times), set in the medicine form
+- The **Medicine tile** shows the medicine whose timer expires next: a status bubble with the medicine name and the time since its last dose, turning red once the timer has elapsed (next dose due)
+
 #### Settings
 
 - Added **Week Start Day** option in User Settings, allowing users to choose between Sunday or Monday as the first day of the week for calendar views and reports - addresses [Oak-and-Sprout/sprout-track#304](https://github.com/Oak-and-Sprout/sprout-track/issues/304)

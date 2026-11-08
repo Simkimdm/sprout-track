@@ -167,6 +167,8 @@ export interface MedicineFormData {
   typicalDoseSize?: number;
   unitAbbr?: string;
   doseMinTime?: string;
+  /** Per-medicine dose timer threshold ("H:MM", hours may exceed 24); '' clears it */
+  warningTime?: string | null;
   notes?: string;
   active?: boolean;
   isSupplement?: boolean;

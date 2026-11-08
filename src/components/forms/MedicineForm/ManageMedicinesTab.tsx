@@ -273,6 +273,12 @@ const ManageMedicinesTab: React.FC<ManageMedicinesTabProps> = ({ refreshData }) 
                         <Clock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
                         {t('Minimum time between doses:')} {formatDoseMinTimeDisplay(medicine.doseMinTime || '')}
                       </p>
+                      {medicine.warningTime && (
+                        <p className={cn(styles.medicineListDetailItem, "medicine-form-medicine-list-detail-item")}>
+                          <Clock className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
+                          {t('Dose timer:')} {medicine.warningTime}
+                        </p>
+                      )}
                       {medicine.notes && <p className={cn(styles.medicineListNotes, "medicine-form-medicine-list-notes")}>{medicine.notes}</p>}
                       <div className={cn(styles.medicineListContactsContainer)}>
                         <User className={cn(styles.medicineListDetailIcon)} aria-hidden="true" />
