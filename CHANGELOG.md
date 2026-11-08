@@ -1,5 +1,15 @@
 # Sprout Track Changelog
 
+## Unreleased
+
+### Changes
+
+#### Settings
+
+- Added **Week Start Day** option in User Settings, allowing users to choose between Sunday or Monday as the first day of the week for calendar views and reports - addresses [Oak-and-Sprout/sprout-track#304](https://github.com/Oak-and-Sprout/sprout-track/issues/304)
+- Calendar components now respect the week start preference
+- Week-based reports (e.g., Bath Statistics) now group data according to the selected week start day
+
 ## v1.6.8 - Multi-food amounts, Nursery Mode timers, Huckleberry import
 
 ### Changes
