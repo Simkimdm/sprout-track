@@ -78,19 +78,6 @@ export function computeLatestStatus(
     status.lastBathTime = new Date(lastBath.time);
   }
 
-  // Latest medicine/supplement dose (MedicineLog rows are the only ones with
-  // `medicineId`); the dose interval of that medicine drives the tile timer
-  const lastMedicine = activities
-    .filter((a) => 'medicineId' in a && 'time' in a)
-    .sort(byTimeDesc('time'))[0] as any;
-  if (lastMedicine) {
-    status.lastMedicineLog = {
-      time: new Date(lastMedicine.time),
-      doseMinTime: lastMedicine.medicine?.doseMinTime ?? null,
-      medicineName: lastMedicine.medicine?.name ?? null,
-    };
-  }
-
   status.lastPumpTime = findLatestPumpTime(activities);
 
   const sleepLogs = activities.filter((a) =>
@@ -161,18 +148,6 @@ export function warningTimeToMinutes(warningTime: string | null | undefined): nu
 export function isPastWarning(minutes: number, warningTime: string | null | undefined): boolean {
   const threshold = warningTimeToMinutes(warningTime);
   return threshold !== null && minutes >= threshold;
-}
-
-/**
- * Convert a medicine dose interval "DD:HH:MM" to the "H:MM" warning format used
- * by the status bubbles (hours may exceed 24). Null when unset or malformed.
- */
-export function doseMinTimeToWarningTime(doseMinTime: string | null | undefined): string | null {
-  if (!doseMinTime) return null;
-  const match = /^([0-9]{1,2}):([0-1][0-9]|2[0-3]):([0-5][0-9])$/.exec(doseMinTime);
-  if (!match) return null;
-  const [days, hours, minutes] = match.slice(1).map(Number);
-  return `${days * 24 + hours}:${String(minutes).padStart(2, '0')}`;
 }
 
 /** Screen-reader duration, e.g. "1 hour 23 minutes". */

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { ActivityTile } from '@/src/components/ui/activity-tile';
 import { StatusBubble } from "@/src/components/ui/status-bubble";
-import { effectiveFeedTime as getEffectiveFeedTime, feedStartAnchor, doseMinTimeToWarningTime } from "@/src/utils/latestStatus";
+import { effectiveFeedTime as getEffectiveFeedTime, feedStartAnchor } from "@/src/utils/latestStatus";
 import { SleepLogResponse, FeedLogResponse, DiaperLogResponse, NoteResponse, BathLogResponse, PumpLogResponse, PlayLogResponse, MeasurementResponse, MilestoneResponse, MedicineLogResponse, VaccineLogResponse, FoodLogResponse, ActivitySettings } from '@/app/api/types';
 import { ArrowDownUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '@/src/context/theme';
@@ -38,7 +38,6 @@ interface ActivityTileGroupProps {
   lastDiaperTime: Record<string, Date>;
   lastBathTime?: Record<string, Date>;
   lastPumpTime: Record<string, Date>;
-  lastMedicineLog?: Record<string, { time: Date; doseMinTime: string | null; medicineName?: string | null }>;
   feedStartTime?: Record<string, Date>;
   updateUnlockTimer: () => void;
   onSleepClick: () => void;
@@ -78,7 +77,6 @@ export function ActivityTileGroup({
   lastDiaperTime,
   lastBathTime = {},
   lastPumpTime,
-  lastMedicineLog,
   feedStartTime,
   updateUnlockTimer,
   onSleepClick,
@@ -884,15 +882,6 @@ export function ActivityTileGroup({
                 onMedicineClick();
               }}
             />
-            {selectedBaby?.id && lastMedicineLog?.[selectedBaby.id] && !exceeds24Hours(lastMedicineLog[selectedBaby.id].time) && (
-              <StatusBubble
-                status="medicine"
-                durationInMinutes={0}
-                startTime={lastMedicineLog[selectedBaby.id].time.toISOString()}
-                warningTime={doseMinTimeToWarningTime(lastMedicineLog[selectedBaby.id].doseMinTime) ?? undefined}
-                activityType="medicine"
-              />
-            )}
           </div>
         );
       case 'vaccine':
