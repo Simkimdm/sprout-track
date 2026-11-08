@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project uses **Prisma** as the ORM for database management. Database schema changes must be made through **Prisma migrations** to ensure the database structure stays in sync with the code.
+This project uses **Prisma** as the ORM for database management. All database schema changes must be made through **Prisma migrations** to ensure the database structure stays in sync with the code.
 
 ## Prisma Version
 
@@ -13,7 +13,7 @@ This project uses **Prisma** as the ORM for database management. Database schema
 
 ### 1. Modify the Prisma Schema
 
-Edit `prisma/schema.prisma` to make your changes. For example, adding a new field:
+Edit `prisma/schema.prisma` to make your schema changes. For example, adding a new field:
 
 ```prisma
 model Settings {
@@ -75,7 +75,7 @@ docker compose down && docker compose up -d
 
 ## Docker Startup Process
 
-The `docker-startup.sh` script handles database setup:
+The `docker-startup.sh` script handles database setup automatically:
 
 1. **SQLite**: Runs `prisma migrate deploy`
 2. **PostgreSQL**: Runs `prisma db push --accept-data-loss`
