@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { ActivityTile } from '@/src/components/ui/activity-tile';
 import { StatusBubble } from "@/src/components/ui/status-bubble";
-import { effectiveFeedTime as getEffectiveFeedTime, doseMinTimeToWarningTime } from "@/src/utils/latestStatus";
+import { effectiveFeedTime as getEffectiveFeedTime, feedStartAnchor, doseMinTimeToWarningTime } from "@/src/utils/latestStatus";
 import { SleepLogResponse, FeedLogResponse, DiaperLogResponse, NoteResponse, BathLogResponse, PumpLogResponse, PlayLogResponse, MeasurementResponse, MilestoneResponse, MedicineLogResponse, VaccineLogResponse, FoodLogResponse, ActivitySettings } from '@/app/api/types';
 import { ArrowDownUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '@/src/context/theme';
@@ -579,11 +579,9 @@ export function ActivityTileGroup({
                 const feedDurationMinutes = lastFeedDurationMinutes?.[selectedBaby.id!];
                 // The badge counts from the feed's start so the elapsed time
                 // includes the feeding's own duration: (now − end) + duration
-                const badgeAnchor = feedEndTime && feedDurationMinutes
-                  ? new Date(feedEndTime.getTime() - feedDurationMinutes * 60_000)
-                  : undefined;
+                const badgeAnchor = feedStartAnchor(feedStartTimeVal, feedEndTime, feedDurationMinutes);
                 const effectiveTime = getEffectiveFeedTime(
-                  badgeAnchor ?? feedStartTimeVal,
+                  badgeAnchor,
                   feedEndTime,
                   selectedBaby?.feedTimerFrom
                 );

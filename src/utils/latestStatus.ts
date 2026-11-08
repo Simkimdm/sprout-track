@@ -123,6 +123,23 @@ export function effectiveFeedTime(
   return feedTimerFrom === 'end' && lastFeedEndTime ? lastFeedEndTime : lastFeedTime;
 }
 
+/**
+ * Anchor for the "time since last feed" badge/timer: the feed's start. When the
+ * session end and total duration are known, end − duration is the start; clamped
+ * to lastFeedTime so manually logged rows (whose `time` is the start, not the
+ * end) never count the feeding's own duration twice.
+ */
+export function feedStartAnchor(
+  lastFeedTime: Date | undefined,
+  lastFeedEndTime: Date | undefined,
+  lastFeedDurationMinutes: number | undefined
+): Date | undefined {
+  if (!lastFeedTime) return undefined;
+  if (!lastFeedEndTime || !lastFeedDurationMinutes) return lastFeedTime;
+  const fromEnd = new Date(lastFeedEndTime.getTime() - lastFeedDurationMinutes * 60_000);
+  return fromEnd.getTime() < lastFeedTime.getTime() ? lastFeedTime : fromEnd;
+}
+
 /** Whole minutes between two instants. Epoch-based, so DST changes don't skew it. */
 export function elapsedMinutes(from: Date, now: Date): number {
   return Math.floor((now.getTime() - from.getTime()) / 60000);

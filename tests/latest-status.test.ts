@@ -4,6 +4,7 @@ import {
   doseMinTimeToWarningTime,
   effectiveFeedTime,
   elapsedMinutes,
+  feedStartAnchor,
   formatDurationLabel,
   isPastWarning,
   isWithinStatusWindow,
@@ -76,6 +77,41 @@ describe('computeLatestStatus — feeds', () => {
   it('falls back to the single row duration when the session is a singleton', () => {
     const s = computeLatestStatus([breast('l', 'LEFT', '2026-10-12T14:00:00Z', '2026-10-12T14:10:00Z', 's1')], null);
     expect(s.lastFeedDurationMinutes).toBe(10);
+  });
+
+  it('counts a manually logged row (time = start, no endTime) from its start, not start minus duration', () => {
+    // Manually entered feed: 21:08, 8 min 11 s; `time` holds the start, there is no endTime
+    const row = { id: 'm1', type: 'BREAST', bottleType: null, amount: null, side: 'RIGHT', time: '2026-10-12T21:08:00Z', startTime: null, endTime: null, sessionId: null, feedDuration: 491 };
+    const s = computeLatestStatus([row], null);
+    expect(s.lastFeedTime?.toISOString()).toBe('2026-10-12T21:08:00.000Z');
+    expect(s.lastFeedDurationMinutes).toBeCloseTo(491 / 60);
+    const anchor = feedStartAnchor(s.lastFeedTime, s.lastFeedEndTime, s.lastFeedDurationMinutes);
+    expect(anchor?.toISOString()).toBe('2026-10-12T21:08:00.000Z');
+    expect(elapsedMinutes(anchor!, new Date('2026-10-12T21:30:00Z'))).toBe(22);
+  });
+});
+
+describe('feedStartAnchor', () => {
+  const start = new Date('2026-10-12T14:00:00Z');
+  const end = new Date('2026-10-12T14:30:00Z');
+
+  it('is undefined without a feed start', () => {
+    expect(feedStartAnchor(undefined, end, 30)).toBeUndefined();
+  });
+
+  it('falls back to the feed start when end or duration is missing', () => {
+    expect(feedStartAnchor(start, undefined, 30)).toBe(start);
+    expect(feedStartAnchor(start, end, undefined)).toBe(start);
+    expect(feedStartAnchor(start, end, 0)).toBe(start);
+  });
+
+  it('anchors at end minus duration when that equals the session start', () => {
+    expect(feedStartAnchor(start, end, 30)?.toISOString()).toBe('2026-10-12T14:00:00.000Z');
+  });
+
+  it('clamps to the feed start when end minus duration would precede it', () => {
+    // Manual row: end === start, so end − duration would double-count the feeding
+    expect(feedStartAnchor(start, start, 8.2)?.toISOString()).toBe('2026-10-12T14:00:00.000Z');
   });
 });
 
