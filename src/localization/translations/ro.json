@@ -2775,5 +2775,11 @@
   "Show calendar events in timeline": "Show calendar events in timeline",
   "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
   "Calendar event": "Calendar event",
-  "All day": "All day"
+  "All day": "All day",
+  "Drinking Quality": "Calitatea băutului",
+  "How well did they drink?": "Cât de bine au băut?",
+  "Drank very well": "Au băut foarte bine",
+  "Drank well": "Au băut bine",
+  "Drank okay": "Au băut acceptabil",
+  "Only suckled": "Doar au supt"
 }
