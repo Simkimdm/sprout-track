@@ -2764,5 +2764,7 @@
   "Zero “did anyone change him?” texts sent today.": "आज “क्या किसी ने उसका डायपर बदला?” वाला एक भी मैसेज नहीं भेजा गया।",
   "Bath Warning Time (hh:mm)": "स्नान चेतावनी समय (hh:mm)",
   "Since last bath": "अंतिम स्नान के बाद से",
-  "Time since last bath": "अंतिम स्नान के बाद का समय"
+  "Time since last bath": "अंतिम स्नान के बाद का समय",
+  "Automatically end sleep when a feeding starts": "फीडिंग शुरू होने पर नींद खत्म करें",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "जब फीडिंग प्रारंभ होते ही नींद खत्म हो जाती हैं"
 }

@@ -110,6 +110,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'familyName', 'securityPin', 'authType',
       'enableDebugTimer', 'enableDebugTimezone',
       'enableBreastMilkTracking',
+      'autoEndSleepOnFeed',
       'photoQuotaMB',
     ];
 
