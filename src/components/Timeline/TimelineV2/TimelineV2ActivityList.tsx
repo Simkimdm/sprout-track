@@ -305,8 +305,9 @@ const TimelineV2ActivityList = ({
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
                               gapInfo = feedGapById.get(activity.id);
                               const session = sessionByRowId.get(activity.id);
+                              // show the session's gap on its first rendered (newest) row
                               isAnchor = !session || session.rows.every(r =>
-                                new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
+                                new Date(getActivityTime(r as unknown as ActivityType)).getTime() <= activityTime.getTime()
                               );
                               const durSec = activity.type === 'BREAST'
                                 ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
