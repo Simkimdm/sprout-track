@@ -584,6 +584,7 @@ const TimelineV2ActivityList = ({
                               {/* Event Time */}
                               <div className="flex-shrink-0 text-xs text-gray-500 event-time">
                                 {timeStr}
+                                {gapSuffix && <span className="timeline-feed-gap">{gapSuffix}</span>}
                               </div>
                             </motion.div>
                           );
