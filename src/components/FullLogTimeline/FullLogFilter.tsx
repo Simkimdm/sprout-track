@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/src/components/ui/button';
 import {
   Moon,
@@ -34,7 +34,8 @@ import { Calendar } from '@/src/components/ui/calendar';
 import { cn } from '@/src/lib/utils';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
-import { formatDateDisplay } from '@/src/utils/dateFormat';
+import { formatDateDisplay, WeekStartSetting } from '@/src/utils/dateFormat';
+import { Settings } from '@/app/api/types';
 
 /**
  * FullLogFilter Component
@@ -58,6 +59,30 @@ const FullLogFilter: React.FC<FullLogFilterProps> = ({
 
   // State for popover open/close
   const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // Settings state for week start preference
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const headers: HeadersInit = authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {};
+
+        const response = await fetch('/api/settings', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
   
   // Define filter types and their icons
   const filterOptions = [
@@ -100,6 +125,7 @@ const FullLogFilter: React.FC<FullLogFilterProps> = ({
               mode="range"
               rangeFrom={startDate}
               rangeTo={endDate}
+              weekStartsOn={settings?.weekStartsOn as WeekStartSetting | undefined}
               onRangeChange={(from, to) => {
                 const newStartDate = from ? new Date(from) : null;
                 if (newStartDate) newStartDate.setHours(0, 0, 0, 0);
