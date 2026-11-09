@@ -90,6 +90,13 @@ const TimelineV2ActivityList = ({
   
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Ticking clock so ongoing activities (e.g. sleep without endTime) show a live end time
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Group activities by time of day
   const getTimeOfDay = (date: Date): string => {
     const hour = date.getHours();
@@ -247,7 +254,8 @@ const TimelineV2ActivityList = ({
                                 timeStr = `${startTimeStr} - ${endTimeStr}`;
                               }
                             } else {
-                              timeStr = formatTimeDisplay(startTime, timeFormat);
+                              // ongoing: live end time (ticks every 30s)
+                              timeStr = `${formatTimeDisplay(startTime, timeFormat)}–${formatTimeDisplay(now, timeFormat)}`;
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
@@ -278,7 +286,11 @@ const TimelineV2ActivityList = ({
                               if (durSec > 0) durationSuffix = formatDurationWords(durSec);
                             } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
                               gapInfo = gapById?.get(activity.id);
-                              if (activity.duration) durationSuffix = formatDurationWords(activity.duration * 60);
+                              if (!(activity as { endTime?: string | null }).endTime) {
+                                durationSuffix = formatDurationWords((now.getTime() - activityTime.getTime()) / 1000);
+                              } else if (activity.duration) {
+                                durationSuffix = formatDurationWords(activity.duration * 60);
+                              }
                             }
                             if (gapInfo) {
                               gapSuffix = formatDurationWords(gapInfo.gapSeconds);
