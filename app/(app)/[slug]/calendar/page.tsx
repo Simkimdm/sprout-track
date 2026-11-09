@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useBaby } from '../../../context/baby';
 import { useTimezone } from '../../../context/timezone';
 import { useFamily } from '@/src/context/family';
@@ -9,6 +9,8 @@ import { useParams } from 'next/navigation';
 import { Calendar } from '@/src/components/Calendar';
 import { NoBabySelected } from '@/src/components/ui/no-baby-selected';
 import { Baby as BabyIcon } from 'lucide-react';
+import { Settings } from '@/app/api/types';
+import { WeekStartSetting } from '@/src/utils/dateFormat';
 
 function CalendarPage() {
   const { selectedBaby, accountStatus, isAccountAuth, isCheckingAccountStatus } = useBaby();
@@ -17,6 +19,29 @@ function CalendarPage() {
   const { t } = useLocalization();
   const params = useParams();
   const familySlug = params?.slug as string;
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  // Fetch settings for week start preference
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const headers: HeadersInit = authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {};
+
+        const response = await fetch('/api/settings', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   // Update unlock timer on any activity
   const updateUnlockTimer = () => {
@@ -49,6 +74,7 @@ function CalendarPage() {
         <Calendar 
           selectedBabyId={selectedBaby.id} 
           userTimezone={userTimezone}
+          weekStartsOn={settings?.weekStartsOn as WeekStartSetting | undefined}
           // Note: If the Calendar component needs to be updated to support familyId,
           // we would need to modify the Calendar component itself
         />
