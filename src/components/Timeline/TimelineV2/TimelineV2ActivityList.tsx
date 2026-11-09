@@ -2,7 +2,7 @@ import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
-import { groupBreastFeedSessions, buildGapMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -198,7 +198,8 @@ const TimelineV2ActivityList = ({
 
 
   // Gap map for other types (diaper, note, ...) when a filter is active: start-anchored,
-  // no duration needed — the filtered list is homogeneous, so gaps chain per type
+  // no duration needed — the filtered list is homogeneous, so gaps chain per type.
+  // Keyed to the older entry of each pair so the divider renders between the two entries.
   const otherGapById = useMemo(() => {
     if (!activeFilter) return new Map<string, FeedGapInfo>();
     const isFeedRow = (a: ActivityType) => 'amount' in a && 'type' in a && !('foodId' in a);
@@ -209,12 +210,12 @@ const TimelineV2ActivityList = ({
         const startTs = new Date(getActivityTime(a)).getTime();
         return { rowIds: [a.id], startTs, endTs: startTs, durationSeconds: 0 };
       });
-    return buildGapMap(points, 'start');
+    return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
   }, [activities, activeFilter]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
-  // Feed/sleep items carry a dividerGap: the gap since the previous same-type entry, rendered
-  // as a divider line between the entries (only when > 0, i.e. a previous entry exists).
+  // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the
+  // older entry of the pair so the divider renders between the two entries (only when > 0).
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
     return groupedActivities.map(group => {
@@ -241,13 +242,18 @@ const TimelineV2ActivityList = ({
         const firstRow = rows.find(r => new Date(getActivityTime(r)).getTime() === earliest) ?? rows[0];
         const isFeed = !!firstRow && 'amount' in firstRow && 'type' in firstRow && !('foodId' in firstRow);
         const isSleep = !!firstRow && 'duration' in firstRow && 'startTime' in firstRow && !('activities' in firstRow);
+        // divider maps are keyed to the older entry of a pair; for a multi-row session the
+        // relevant key sits on its newest row (the pair with the next newer entry)
+        const anchorRow = rows.reduce((newest, r) =>
+          new Date(getActivityTime(r)).getTime() > new Date(getActivityTime(newest)).getTime() ? r : newest
+        , rows[0]);
         // the between-entry gap divider only shows when a type filter is active;
         // feeds/sleep use the end-anchored map (durations included), other types start-anchored
         let gap: number | undefined;
-        if (activeFilter && firstRow) {
+        if (activeFilter && anchorRow) {
           gap = isFeed || isSleep
-            ? dividerGapById?.get(firstRow.id)?.gapSeconds
-            : otherGapById.get(firstRow.id)?.gapSeconds;
+            ? dividerGapById?.get(anchorRow.id)?.gapSeconds
+            : otherGapById.get(anchorRow.id)?.gapSeconds;
         }
         if (gap && gap > 0) item.dividerGap = formatDurationWords(gap);
         items.push(item);

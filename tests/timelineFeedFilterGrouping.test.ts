@@ -13,7 +13,7 @@ vi.mock('@/src/hooks/useAuthedImage', () => ({
 }));
 
 import TimelineV2ActivityList from '@/src/components/Timeline/TimelineV2/TimelineV2ActivityList';
-import { buildFeedGapMap, buildGapMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
+import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 
 // mirror of TimelineV2's gapById computation
 const computeGapById = (activities: any[], history: any[], from: 'start' | 'end'): Map<string, FeedGapInfo> => {
@@ -27,6 +27,24 @@ const computeGapById = (activities: any[], history: any[], from: 'start' | 'end'
       return { rowIds: [a.id], startTs, endTs: a.endTime ? new Date(a.endTime).getTime() : startTs + dur * 1000, durationSeconds: dur };
     });
   return new Map([...feedGaps, ...buildGapMap(sleepPoints, 'end')]);
+};
+
+// mirror of TimelineV2's dividerGapById computation (gaps keyed to the older entry)
+const computeDividerGapById = (activities: any[], history: any[]): Map<string, FeedGapInfo> => {
+  const isFeed = (a: any) => 'amount' in a && 'type' in a && !('foodId' in a) && a.type !== 'SOLIDS';
+  const renderedIds = new Set(activities.map(a => a.id));
+  const feedDividers = buildGapDividerMap(
+    buildFeedGapPoints(activities.filter(isFeed) as FeedGapRow[], history.filter(isFeed) as FeedGapRow[]),
+    'end', renderedIds
+  );
+  const sleepPoints = activities
+    .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+    .map(a => {
+      const startTs = new Date(a.startTime).getTime();
+      const dur = (a.duration || 0) * 60;
+      return { rowIds: [a.id], startTs, endTs: a.endTime ? new Date(a.endTime).getTime() : startTs + dur * 1000, durationSeconds: dur };
+    });
+  return new Map([...feedDividers, ...buildGapDividerMap(sleepPoints, 'end', renderedIds)]);
 };
 
 const feed = (id: string, type: string, time: string, extra: Record<string, unknown> = {}) => ({
@@ -59,7 +77,7 @@ const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, history
       historyActivities,
       feedTimerFrom,
       gapById: computeGapById(activities, historyActivities ?? [], feedTimerFrom === 'end' ? 'end' : 'start'),
-      dividerGapById: computeGapById(activities, historyActivities ?? [], 'end'),
+      dividerGapById: computeDividerGapById(activities, historyActivities ?? []),
     })
   );
 
@@ -92,7 +110,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, historyActivities: history, feedTimerFrom: 'start',
-        gapById: computeGapById(dayFeeds, history, 'start'), dividerGapById: computeGapById(dayFeeds, history, 'end'),
+        gapById: computeGapById(dayFeeds, history, 'start'), dividerGapById: computeDividerGapById(dayFeeds, history),
       })
     );
     // 22:00 -> 06:00 = 8h gap, no duration on a bottle
@@ -106,7 +124,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
-        gapById: computeGapById(dayFeeds, [], 'start'), dividerGapById: computeGapById(dayFeeds, [], 'end'),
+        gapById: computeGapById(dayFeeds, [], 'start'), dividerGapById: computeDividerGapById(dayFeeds, []),
       })
     );
     expect(gapValues(html)).toEqual([]);
@@ -122,11 +140,18 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
       })
     );
     // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
     expect(gapValues(html)).toEqual(['3h 0m']);
+    // the gap divider sits between the two sleep entries (s2 newest first), not above s2
+    const iNew = html.indexOf('2:00 PM');
+    const iGap = html.indexOf('3h 0m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iNew).toBeGreaterThan(-1);
+    expect(iNew).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iOld);
     expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['1h 30m', '1h 0m']);
   });
 
@@ -139,7 +164,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
       })
     );
     expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['21m']);
@@ -155,7 +180,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
       })
     );
     // start–end range with a dash, plus live duration chip and 'Still asleep' in details
@@ -177,6 +202,13 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     );
     // start-anchored gap between the two diapers: 10:00 -> 12:30 = 2h 30m; first entry: none
     expect(gapValues(html)).toEqual(['2h 30m']);
+    // the divider renders BETWEEN the two entries (newest first), not above the first one
+    const iNew = html.indexOf('12:30 PM');
+    const iGap = html.indexOf('2h 30m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iNew).toBeGreaterThan(-1);
+    expect(iNew).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iOld);
   });
 
   it('renders the session bracket without a filter, but no gap dividers', () => {
