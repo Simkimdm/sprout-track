@@ -103,6 +103,44 @@ describe('endBreastfeedSession', () => {
     expect(right.time).toEqual(right.startTime);
   });
 
+  it('does not shift the second side by the trailing pause when ending while paused', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-22T11:13:00.000Z'));
+    try {
+      const sessionStartTime = new Date('2026-07-22T10:28:18.000Z');
+      const session = {
+        id: 'session-3',
+        babyId: 'baby-1',
+        activeSide: 'RIGHT',
+        isPaused: true,
+        leftDuration: 1002,
+        rightDuration: 568,
+        pauseDuration: 180,
+        pausedAt: new Date('2026-07-22T10:58:00.000Z'),
+        firstSide: 'LEFT',
+        currentSideStartTime: null,
+        sessionStartTime,
+        familyId: 'family-1',
+        caretakerId: null,
+      };
+
+      await endBreastfeedSession(session as any, { familyId: 'family-1' });
+
+      expect(createFeedLog).toHaveBeenCalledTimes(2);
+      const rows = createFeedLog.mock.calls.map(([arg]) => arg.data);
+      const left = rows.find(r => r.side === 'LEFT')!;
+      const right = rows.find(r => r.side === 'RIGHT')!;
+
+      expect(left.startTime).toEqual(sessionStartTime);
+      expect(left.endTime).toEqual(new Date('2026-07-22T10:45:00.000Z'));
+      expect(right.startTime).toEqual(new Date('2026-07-22T10:48:00.000Z'));
+      expect(right.endTime).toEqual(new Date('2026-07-22T10:57:28.000Z'));
+      expect(right.pauseDuration).toBe(1080);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('stamps a single-side session with the session start time', async () => {
     const sessionStartTime = new Date('2026-07-22T08:00:00.000Z');
     const session = {
