@@ -273,21 +273,23 @@ describe('buildFeedGapMap', () => {
     expect(buildFeedGapMap(feeds, 'start').get('f1')!.gapSeconds).toBe(0);
   });
 
-  it('treats a linked L+R breast session as one feeding with summed duration', () => {
+  it('measures each row individually: second side of an L+R session gets the pause since the first side ended', () => {
     const feeds = [
       { id: 'b1', type: 'BOTTLE', time: at('2026-07-22T08:00:00Z'), amount: 90 },
       { id: 'l', type: 'BREAST', time: at('2026-07-22T10:00:00Z'), side: 'LEFT', feedDuration: 480, sessionId: 's1' },
       { id: 'r', type: 'BREAST', time: at('2026-07-22T10:08:00Z'), side: 'RIGHT', feedDuration: 360, sessionId: 's1' },
       { id: 'b2', type: 'BOTTLE', time: at('2026-07-22T13:15:00Z'), amount: 110 },
     ];
-    const gaps = buildFeedGapMap(feeds);
-    // Both session rows share the session's gap (10:00 - 08:00 = 2h) and summed duration (840s)
-    expect(gaps.get('l')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
-    expect(gaps.get('r')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
-    // Default anchor 'start': the next feeding measures its gap from the session start
-    expect(gaps.get('b2')).toEqual({ gapSeconds: 11700, durationSeconds: 0 });
-    // Anchor 'end': gap from the session END (latest side start + its duration = 10:14)
+    // anchor 'start': gaps are start-to-start per row
+    const gaps = buildFeedGapMap(feeds, 'start');
+    expect(gaps.get('l')).toEqual({ gapSeconds: 7200, durationSeconds: 480 });
+    expect(gaps.get('r')).toEqual({ gapSeconds: 480, durationSeconds: 360 });
+    expect(gaps.get('b2')).toEqual({ gapSeconds: 11220, durationSeconds: 0 });
+    // anchor 'end': r's gap is the pause since l ended (10:00+8m = 10:08 -> 0)
     const gapsEnd = buildFeedGapMap(feeds, 'end');
+    expect(gapsEnd.get('l')).toEqual({ gapSeconds: 7200, durationSeconds: 480 });
+    expect(gapsEnd.get('r')).toEqual({ gapSeconds: 0, durationSeconds: 360 });
+    // b2 measures from r's end (10:08 + 6m = 10:14)
     expect(gapsEnd.get('b2')).toEqual({ gapSeconds: 10860, durationSeconds: 0 });
   });
 

@@ -230,13 +230,12 @@ export function formatDurationWords(totalSeconds: number): string {
 
 /**
  * Map each feed row id to its "time since the previous feeding" gap and its own
- * duration. The gap is measured from the previous feeding's START by default
- * (`from: 'start'`); with `from: 'end'` it is the pause between feedings
- * (current start minus previous END = start + duration), matching the baby's
- * feedTimerFrom setting. Breast rows are grouped into sessions first (a
- * linked/paired L+R session is one feeding with summed side durations; other
- * feed types count per row). SOLIDS rows are not feedings (they live under the
- * food log).
+ * duration. Each feed row is measured individually, so the second side of a
+ * bracketed L+R session shows the pause since the first side ended. The gap is
+ * anchored per `from`: previous row's START by default (`from: 'start'`); with
+ * `from: 'end'` it is the pause (current start minus previous END = start +
+ * duration), matching the baby's feedTimerFrom setting. SOLIDS rows are not
+ * feedings (they live under the food log).
  */
 /** One feeding/sleeping point on the gap timeline. */
 export interface GapPoint {
@@ -284,32 +283,21 @@ export function buildFeedGapMap<T extends FeedGapRow>(
   // still included in the map, which is harmless (their ids are never rendered).
   const allFeeds = [...historyFeeds, ...feeds];
 
-  for (const session of groupBreastFeedSessions(allFeeds)) {
-    // Session start = earliest side start; session end = latest side end
-    // (start + own duration), so a pause between sides still counts as part
-    // of the session, not as "time since last feeding".
-    let endTs = session.time.getTime();
-    for (const row of session.rows) {
-      const rowStart = new Date(breastFeedDisplayTime(row)).getTime();
-      endTs = Math.max(endTs, rowStart + feedRowDurationSeconds(row) * 1000);
-    }
-    points.push({
-      rowIds: session.rows.map(r => r.id),
-      startTs: session.time.getTime(),
-      endTs,
-      durationSeconds: session.totalDuration,
-    });
-  }
-
+  // Every feed row is its own gap point, so the second side of a bracketed
+  // L+R session shows the pause since the first side ended. (Session grouping
+  // for the bracket itself happens in the component via groupBreastFeedSessions.)
   for (const row of allFeeds) {
-    if (row.type === 'BREAST' || row.type === 'SOLIDS') continue;
+    if (row.type === 'SOLIDS') continue;
     const startTs = new Date(breastFeedDisplayTime(row)).getTime();
+    // BREAST: amount may hold legacy minutes; other types: amount is a volume
+    const durationSeconds = row.type === 'BREAST'
+      ? feedRowDurationSeconds(row)
+      : (row.feedDuration || 0);
     points.push({
       rowIds: [row.id],
       startTs,
-      endTs: startTs + (row.feedDuration || 0) * 1000,
-      // Non-breast rows: amount is a volume, not minutes — only feedDuration counts
-      durationSeconds: row.feedDuration || 0,
+      endTs: startTs + durationSeconds * 1000,
+      durationSeconds,
     });
   }
 
