@@ -91,7 +91,10 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
 ): BreastFeedSession<T>[] {
   const sorted = feeds
     .filter(f => f.type === 'BREAST')
-    .map(f => ({ row: f, ts: new Date(f.time).getTime() }))
+    // Pair by the displayed time (side start when known): timer rows stamp
+    // `time` with the session end, so raw `time` can push the two sides of
+    // one session apart while their starts are close together.
+    .map(f => ({ row: f, ts: new Date(breastFeedDisplayTime({ time: f.time, startTime: (f as { startTime?: string | Date | null }).startTime })).getTime() }))
     .sort((a, b) => a.ts - b.ts);
 
   const sessions: BreastFeedSession<T>[] = [];
