@@ -22,6 +22,7 @@ import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime } from '../utils';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { buildFeedGapMap, buildGapMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
 import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
@@ -62,6 +63,26 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   const activityCache = useActivityCache();
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
+
+  // Gap since the previous same-type entry for every feed/sleep row of the day
+  // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
+  const gapById = useMemo(() => {
+    const isFeedRow = (a: ActivityType) =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
+    const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
+    const feedGaps = buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
+    const sleepPoints = dateFilteredActivities
+      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+      .map(a => {
+        const startTs = new Date((a as { startTime: string }).startTime).getTime();
+        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60; // SleepLog.duration is minutes
+        const endTime = (a as { endTime?: string | null }).endTime;
+        return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+      });
+    const sleepGaps = buildGapMap(sleepPoints, 'end');
+    return new Map<string, FeedGapInfo>([...feedGaps, ...sleepGaps]);
+  }, [dateFilteredActivities, historyFeeds, feedTimerFrom]);
 
   // Issue #225: feed categories that reset the "time since last feed" timer
   // (null = all feeds count)
@@ -496,6 +517,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             allActivities={dateFilteredActivities}
             historyActivities={historyFeeds}
             feedTimerFrom={feedTimerFrom}
+            gapById={gapById}
           />
         </div>
 
@@ -520,6 +542,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         onDelete={handleDelete}
         onEdit={handleEdit}
         onPhotoClick={handlePhotoClick}
+        gapById={gapById}
       />
 
       {/* Photo Detail - opened from a timeline thumbnail click */}

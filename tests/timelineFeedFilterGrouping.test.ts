@@ -13,6 +13,21 @@ vi.mock('@/src/hooks/useAuthedImage', () => ({
 }));
 
 import TimelineV2ActivityList from '@/src/components/Timeline/TimelineV2/TimelineV2ActivityList';
+import { buildFeedGapMap, buildGapMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
+
+// mirror of TimelineV2's gapById computation
+const computeGapById = (activities: any[], history: any[], from: 'start' | 'end'): Map<string, FeedGapInfo> => {
+  const isFeed = (a: any) => 'amount' in a && 'type' in a && !('foodId' in a) && a.type !== 'SOLIDS';
+  const feedGaps = buildFeedGapMap(activities.filter(isFeed) as FeedGapRow[], from, history.filter(isFeed) as FeedGapRow[]);
+  const sleepPoints = activities
+    .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+    .map(a => {
+      const startTs = new Date(a.startTime).getTime();
+      const dur = (a.duration || 0) * 60;
+      return { rowIds: [a.id], startTs, endTs: a.endTime ? new Date(a.endTime).getTime() : startTs + dur * 1000, durationSeconds: dur };
+    });
+  return new Map([...feedGaps, ...buildGapMap(sleepPoints, 'end')]);
+};
 
 const feed = (id: string, type: string, time: string, extra: Record<string, unknown> = {}) => ({
   id, babyId: 'b1', type, time, amount: type === 'BREAST' ? null : 100, ...extra,
@@ -43,6 +58,7 @@ const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, history
       allActivities: activities,
       historyActivities,
       feedTimerFrom,
+      gapById: computeGapById(activities, historyActivities ?? [], feedTimerFrom === 'end' ? 'end' : 'start'),
     })
   );
 
@@ -75,6 +91,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, historyActivities: history, feedTimerFrom: 'start',
+        gapById: computeGapById(dayFeeds, history, 'start'),
       })
     );
     // 22:00 -> 06:00 = 8h gap, no duration on a bottle
@@ -88,6 +105,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
+        gapById: computeGapById(dayFeeds, [], 'start'),
       })
     );
     expect(gapValues(html)).toEqual(['0s']);
@@ -103,6 +121,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
+        gapById: computeGapById(sleeps, [], 'start'),
       })
     );
     // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
@@ -119,6 +138,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
+        gapById: computeGapById(sleeps, [], 'start'),
       })
     );
     expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['21m']);

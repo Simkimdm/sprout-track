@@ -2,7 +2,7 @@ import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
-import { groupBreastFeedSessions, buildFeedGapMap, buildGapMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -73,6 +73,7 @@ const TimelineV2ActivityList = ({
   allActivities,
   historyActivities,
   feedTimerFrom,
+  gapById,
 }: TimelineActivityListProps) => {
 
   const { t } = useLocalization();
@@ -187,38 +188,6 @@ const TimelineV2ActivityList = ({
     return map;
   }, [activities]);
 
-  // Gap since the previous feeding, computed over all feeds of the day plus recent
-  // history, so the day's first entry measures across midnight (0 if none)
-  const feedGapById = useMemo(() => {
-    const source = allActivities ?? activities;
-    const feeds = source.filter(a =>
-      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
-    ) as unknown as FeedGapRow[];
-    const history = (historyActivities ?? []).filter(a =>
-      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
-    ) as unknown as FeedGapRow[];
-    return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
-  }, [allActivities, activities, historyActivities, feedTimerFrom]);
-
-  // Same gap suffix for sleep entries (anchored at the previous sleep's end)
-  const sleepGapById = useMemo(() => {
-    const source = allActivities ?? activities;
-    const points = source
-      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
-      .map(a => {
-        const startTs = new Date((a as { startTime: string }).startTime).getTime();
-        // SleepLog.duration is stored in MINUTES (schema), feed durations are seconds
-        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
-        const endTime = (a as { endTime?: string | null }).endTime;
-        return {
-          rowIds: [a.id],
-          startTs,
-          endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000,
-          durationSeconds,
-        };
-      });
-    return buildGapMap(points, 'end');
-  }, [allActivities, activities]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item
   const renderGroups = useMemo(() => {
@@ -302,13 +271,13 @@ const TimelineV2ActivityList = ({
                           {
                             let gapInfo: FeedGapInfo | undefined;
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
-                              gapInfo = feedGapById.get(activity.id);
+                              gapInfo = gapById?.get(activity.id);
                               const durSec = activity.type === 'BREAST'
                                 ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
                                 : (activity.feedDuration || 0);
                               if (durSec > 0) durationSuffix = formatDurationWords(durSec);
                             } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
-                              gapInfo = sleepGapById.get(activity.id);
+                              gapInfo = gapById?.get(activity.id);
                               if (activity.duration) durationSuffix = formatDurationWords(activity.duration * 60);
                             }
                             if (gapInfo) {

@@ -92,6 +92,8 @@ export interface TimelineActivityListProps {
   allActivities?: ActivityType[];
   /** Feed entries before the selected day, used as gap anchor for the day's first feeding */
   historyActivities?: ActivityType[];
+  /** Per-entry gap since the previous same-type entry (feeds + sleep), keyed by activity id */
+  gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
 }
 
 export interface TimelineActivityDetailsProps {
@@ -102,6 +104,8 @@ export interface TimelineActivityDetailsProps {
   onDelete: (activity: ActivityType) => void;
   onEdit: (activity: ActivityType, type: 'sleep' | 'feed' | 'diaper' | 'medicine' | 'note' | 'bath' | 'pump' | 'breast-milk-adjustment' | 'milestone' | 'measurement' | 'play' | 'vaccine' | 'food' | 'photo') => void;
   onPhotoClick?: (photoId: string) => void; // Handler for tapping an attached photo thumbnail
+  /** Per-entry gap since the previous same-type entry, shown as an extra details row */
+  gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
 }
 
 export interface ActivityDetail {
