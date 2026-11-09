@@ -419,7 +419,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     // Wet diaper tile
     if (wetCount > 0) {
       tiles.push({
-        filter: 'diaper',
+        filter: 'wet',
         label: t('Wet Diapers'),
         value: wetCount.toString(),
         icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,

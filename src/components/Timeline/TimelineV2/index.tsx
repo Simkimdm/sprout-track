@@ -21,6 +21,7 @@ import TimelineV2ActivityList from './TimelineV2ActivityList';
 import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime } from '../utils';
+import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
 import { buildFeedGapMap, buildGapMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
@@ -420,11 +421,11 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
               return 'amount' in activity && 'type' in activity &&
                      (activity as any).type !== 'SOLIDS';
             case 'diaper':
-              return 'condition' in activity && 'type' in activity &&
-                     (activity.type === 'WET' || activity.type === 'BOTH');
+              return 'condition' in activity;
+            case 'wet':
+              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
             case 'poop':
-              return 'condition' in activity && 'type' in activity &&
-                     (activity.type === 'DIRTY' || activity.type === 'BOTH');
+              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
             case 'medicine':
               return 'doseAmount' in activity && 'medicineId' in activity;
             case 'note':

@@ -18,6 +18,7 @@ import TimelineFilter from './TimelineFilter';
 import TimelineActivityList from './TimelineActivityList';
 import TimelineActivityDetails from './TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime } from './utils';
+import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import { PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse } from '@/app/api/types';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
@@ -245,6 +246,10 @@ const Timeline = ({ activities, onActivityDeleted }: LegacyTimelineProps) => {
               return 'amount' in activity && !('foodId' in activity);
             case 'diaper':
               return 'condition' in activity;
+            case 'wet':
+              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
+            case 'poop':
+              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
             case 'medicine':
               return 'doseAmount' in activity && 'medicineId' in activity;
             case 'note':
