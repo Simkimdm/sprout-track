@@ -70,6 +70,11 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@babel/eslint-parser": "^8.0.7",
+    "@babel/parser": "^7.29.13",
+    "@babel/plugin-syntax-jsx": "^8.0.1",
+    "@babel/plugin-syntax-typescript": "^8.0.3",
+    "@next/eslint-plugin-next": "^16.4.5",
     "@shadcn/ui": "^0.0.4",
     "@tailwindcss/nesting": "^0.0.0-insiders.565cd3e",
     "@tailwindcss/postcss": "^4.3.3",
@@ -85,12 +90,12 @@
     "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.5.4",
     "eslint": "^10.9.1",
-    "eslint-config-next": "^16.3.3",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.5.0",
     "postcss": "^8.5.26",
     "postcss-import": "^17.0.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.72.1",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
 }
