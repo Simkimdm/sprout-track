@@ -27,7 +27,7 @@ import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
-const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
+const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultBottleUnit, setDefaultBottleUnit] = useState(() => readCachedDefaultBottleUnit());
   const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
@@ -463,6 +463,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
             onPhotoClick={handlePhotoClick}
             activeFilter={activeFilter}
             allActivities={dateFilteredActivities}
+            feedTimerFrom={feedTimerFrom}
           />
         </div>
 

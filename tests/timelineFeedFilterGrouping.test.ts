@@ -26,7 +26,7 @@ const activities = [
   feed('b2', 'BOTTLE', '2026-07-22T13:15:00.000Z'),
 ];
 
-const renderList = (activeFilter: 'feed' | null) =>
+const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string) =>
   renderToString(
     React.createElement(TimelineV2ActivityList as any, {
       activities,
@@ -37,15 +37,22 @@ const renderList = (activeFilter: 'feed' | null) =>
       onActivitySelect: () => {},
       activeFilter,
       allActivities: activities,
+      feedTimerFrom,
     })
   );
 
 describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
-    const html = renderList('feed');
+    const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
     // session anchor (earliest side): pause from 08:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session end 10:14 -> 3:01
     expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:01)', '(+2:14)']);
+  });
+
+  it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
+    const html = renderList('feed', 'start');
+    // next bottle measured from session start 10:00 -> 3:15
+    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:15)', '(+2:14)']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {

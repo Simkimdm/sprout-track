@@ -54,6 +54,8 @@ export interface TimelineProps {
   initialDate?: Date;
   /** JSON config of feed categories that reset the feed timer (issue #225); null/omitted = all feeds count. */
   feedTimerTypes?: string | null;
+  /** Whether the feed timer (and the filtered timeline's +/- x:yy gap) counts from the feed start or end. */
+  feedTimerFrom?: string | null;
   onLatestStatusReady?: (data: LatestStatusData) => void;
   onActivityDeleted?: (dateFilter?: Date) => void;
 }
@@ -84,6 +86,8 @@ export interface TimelineActivityListProps {
   onPhotoClick?: (photoId: string) => void; // Handler for tapping a timeline photo thumbnail
   /** Active type filter — when set, linked L+R breast-feed rows render grouped and feeds show the +/- x:yy gap */
   activeFilter?: FilterType;
+  /** Gap anchor for the +/- x:yy suffix: 'start' (previous feeding start) or 'end' (previous feeding end) */
+  feedTimerFrom?: string | null;
   /** Unfiltered activities of the selected day, used to compute the gap to the previous feeding */
   allActivities?: ActivityType[];
 }

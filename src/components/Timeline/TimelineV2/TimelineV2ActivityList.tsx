@@ -71,6 +71,7 @@ const TimelineV2ActivityList = ({
   onPhotoClick,
   activeFilter,
   allActivities,
+  feedTimerFrom,
 }: TimelineActivityListProps) => {
 
   const { t } = useLocalization();
@@ -195,8 +196,8 @@ const TimelineV2ActivityList = ({
     const feeds = source.filter(a =>
       'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
     ) as unknown as FeedGapRow[];
-    return buildFeedGapMap(feeds);
-  }, [isFiltering, allActivities, activities]);
+    return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start');
+  }, [isFiltering, allActivities, activities, feedTimerFrom]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item
   const renderGroups = useMemo(() => {

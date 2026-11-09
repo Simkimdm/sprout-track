@@ -219,13 +219,18 @@ export function formatDurationHM(totalSeconds: number): string {
 
 /**
  * Map each feed row id to its "time since the previous feeding" gap and its own
- * duration. The gap is the pause between feedings: current start minus previous
- * END (start + duration). Breast rows are grouped into sessions first (a
+ * duration. The gap is measured from the previous feeding's START by default
+ * (`from: 'start'`); with `from: 'end'` it is the pause between feedings
+ * (current start minus previous END = start + duration), matching the baby's
+ * feedTimerFrom setting. Breast rows are grouped into sessions first (a
  * linked/paired L+R session is one feeding with summed side durations; other
  * feed types count per row). SOLIDS rows are not feedings (they live under the
  * food log).
  */
-export function buildFeedGapMap<T extends FeedGapRow>(feeds: T[]): Map<string, FeedGapInfo> {
+export function buildFeedGapMap<T extends FeedGapRow>(
+  feeds: T[],
+  from: 'start' | 'end' = 'start'
+): Map<string, FeedGapInfo> {
   const result = new Map<string, FeedGapInfo>();
 
   const points: { rowIds: string[]; startTs: number; endTs: number; durationSeconds: number }[] = [];
@@ -264,9 +269,11 @@ export function buildFeedGapMap<T extends FeedGapRow>(feeds: T[]): Map<string, F
   points.forEach((point, index) => {
     const prev = index > 0 ? points[index - 1] : null;
     const info: FeedGapInfo = {
-      // Gap since the previous feeding ENDED (pause between feedings),
-      // clamped at 0 for overlapping entries
-      gapSeconds: prev ? Math.max(0, point.startTs - prev.endTs) / 1000 : null,
+      // Gap since the previous feeding, anchored per the feedTimerFrom
+      // setting: its end (pause between feedings) or its start; clamped at 0
+      gapSeconds: prev
+        ? Math.max(0, point.startTs - (from === 'end' ? prev.endTs : prev.startTs)) / 1000
+        : null,
       durationSeconds: point.durationSeconds,
     };
     for (const rowId of point.rowIds) {
