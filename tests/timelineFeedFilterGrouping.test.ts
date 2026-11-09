@@ -50,9 +50,13 @@ describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
-    // computed end inline on the first line (anchor side starts 10:00 + 8m); sub-line holds only the gap
+    // computed end inline on the first line (anchor side starts 10:00 + 8m)
     expect(html).toContain('10:00 AM–10:08 AM');
+    // sub-line: gap (history icon) + duration (timer icon), duration removed from the details line
     expect(html).toContain('timeline-feed-subline');
+    expect(html).toContain('timeline-feed-duration');
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['6m', '8m']);
+    expect(html).not.toContain('Left Side • 8m');
     // suffix = gap only (duration is visible via start-end): session anchor 2:00 after 08:00; bottle 3:01 after session end 10:14
     expect(gapValues(html)).toEqual(['3h 1m', '2h 0m', '0s']);
   });
@@ -103,6 +107,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     );
     // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
     expect(gapValues(html)).toEqual(['3h 0m', '0s']);
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['1h 30m', '1h 0m']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {

@@ -1,4 +1,4 @@
-import { Baby as BabyIcon, History } from 'lucide-react';
+import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
@@ -288,7 +288,10 @@ const TimelineV2ActivityList = ({
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
                             // Feeds with a duration also show the computed end inline: start-end
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity)) {
-                              const durSec = activity.feedDuration || (activity.amount ? activity.amount * 60 : 0);
+                              // amount is minutes only for legacy BREAST rows; for bottles it is a volume
+                              const durSec = activity.type === 'BREAST'
+                                ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
+                                : (activity.feedDuration || 0);
                               if (durSec > 0) {
                                 const end = new Date(activityTime.getTime() + durSec * 1000);
                                 timeStr = `${timeStr}–${formatTimeDisplay(end, timeFormat)}`;
@@ -299,6 +302,7 @@ const TimelineV2ActivityList = ({
                           // Filtered view: show "(x:yy)" next to the recording time = gap since the
                           // previous same-type entry (0 if none) plus this entry's duration
                           let gapSuffix = '';
+                          let durationSuffix = '';
                           if (isFiltering) {
                             let gapInfo: FeedGapInfo | undefined;
                             let isAnchor = true;
@@ -308,8 +312,13 @@ const TimelineV2ActivityList = ({
                               isAnchor = !session || session.rows.every(r =>
                                 new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
                               );
+                              const durSec = activity.type === 'BREAST'
+                                ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
+                                : (activity.feedDuration || 0);
+                              if (durSec > 0) durationSuffix = formatDurationWords(durSec);
                             } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
                               gapInfo = sleepGapById.get(activity.id);
+                              if (activity.duration) durationSuffix = formatDurationWords(activity.duration);
                             }
                             if (gapInfo && isAnchor) {
                               gapSuffix = formatDurationWords(gapInfo.gapSeconds);
@@ -458,7 +467,7 @@ const TimelineV2ActivityList = ({
                                       const duration = activity.duration ? `${Math.floor(activity.duration / 60)}h ${activity.duration % 60}m` : '';
                                       const parts = [];
                                       if (location) parts.push(localizeSleepLocation(location, t));
-                                      if (duration) parts.push(duration);
+                                      if (duration && !isFiltering) parts.push(duration);
                                       if (!('endTime' in activity)) parts.push(t('Still asleep'));
                                       if ((activity as any).notes) {
                                         const notes = translateNotes((activity as any).notes);
@@ -479,7 +488,7 @@ const TimelineV2ActivityList = ({
                                         } else if (activity.amount) {
                                           duration = `${activity.amount} ${t('min')}`;
                                         }
-                                        const parts = [side, duration].filter(Boolean);
+                                        const parts = [side, ...(isFiltering ? [] : [duration])].filter(Boolean);
                                         if ((activity as any).hadReaction) parts.push(t('Reaction'));
                                         if ((activity as any).notes) {
                                           const notes = translateNotes((activity as any).notes);
@@ -618,12 +627,20 @@ const TimelineV2ActivityList = ({
                               {/* Event Time: start on the first line, computed end + gap on the second */}
                               <div className="flex-shrink-0 text-xs text-gray-500 event-time">
                                 <div>{timeStr}</div>
-                                {gapSuffix && (
+                                {(gapSuffix || durationSuffix) && (
                                   <div className="timeline-feed-subline">
-                                    <span className="timeline-feed-gap">
-                                      <History className="h-3 w-3" aria-hidden="true" />
-                                      {gapSuffix}
-                                    </span>
+                                    {gapSuffix && (
+                                      <span className="timeline-feed-gap">
+                                        <History className="h-3 w-3" aria-hidden="true" />
+                                        {gapSuffix}
+                                      </span>
+                                    )}
+                                    {durationSuffix && (
+                                      <span className="timeline-feed-duration">
+                                        <Timer className="h-3 w-3" aria-hidden="true" />
+                                        {durationSuffix}
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </div>

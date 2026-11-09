@@ -351,6 +351,14 @@ html.dark .timeline-feed-subline {
   color: #9ca3af !important; /* gray-400 */
 }
 
+.timeline-feed-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .timeline-feed-gap {
   display: inline-flex;
   align-items: center;
