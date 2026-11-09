@@ -5,6 +5,7 @@ import { ApiResponse, getAuthenticatedUser } from '@/app/api/utils/auth';
 import { checkWritePermission } from '@/app/api/utils/writeProtection';
 import { Baby, Gender } from '@prisma/client';
 import { isValidFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { parseNightSleepWindow } from '@/src/utils/nightSleepWindow';
 
 const CreateBabySchema = z.object({
   familyId: z.string(),
@@ -22,6 +23,11 @@ const CreateBabySchema = z.object({
     .nullable()
     .optional()
     .refine(isValidFeedTimerTypes, 'Invalid feed timer types'),
+  nightSleepWindow: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((v) => v == null || !!parseNightSleepWindow(v), 'Invalid night sleep window'),
 });
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<Baby>>> {

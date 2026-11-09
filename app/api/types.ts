@@ -99,6 +99,7 @@ export interface BabyCreate {
   bathWarningTime?: string;
   feedTimerFrom?: string;
   feedTimerTypes?: string | null;
+  nightSleepWindow?: string | null;
 }
 
 export interface BabyUpdate extends Partial<BabyCreate> {

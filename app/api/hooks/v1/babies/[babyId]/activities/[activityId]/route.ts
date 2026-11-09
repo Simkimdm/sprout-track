@@ -7,6 +7,7 @@ import { hookSuccess, hookError } from '../../../../response';
 import { BATH_TYPES, BOTTLE_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, FEED_SIDES, PUMP_ACTIONS, SLEEP_QUALITIES, normalizeEnumValue } from '../../../../field-values';
 import { FOOD_FIELDS, formatFoodDetails, getDefaultSolidsUnit, loadFoodCatalog, parseEnjoyment, parseFoodAmount, parseFoodItemInputs, planFoodUnit, resolveFoodItems, resolveItemUnits } from '../../../../food';
 import { buildFoodLogFoodFields, deriveMealAmountFromItems } from '@/src/utils/foodLogUtils';
+import { parseNightSleepWindow, resolveSleepType } from '@/src/utils/nightSleepWindow';
 
 const VALID_TYPES = ['sleep', 'feed', 'diaper', 'note', 'pump', 'play', 'bath', 'measurement', 'medicine', 'supplement', 'food'] as const;
 type ActivityType = typeof VALID_TYPES[number];
@@ -546,7 +547,14 @@ async function updateActivity(type: ActivityType, activityId: string, babyId: st
     case 'sleep': {
       const built = buildSleepData(body, existing.time!);
       if (built.error) return { error: built.error, status: 400 };
-      const row = await prisma.sleepLog.update({ where: { id: activityId }, data: built.data! });
+      let row = await prisma.sleepLog.update({ where: { id: activityId }, data: built.data! });
+      // Re-evaluate the baby's night sleep window: a NAP starting inside it becomes NIGHT_SLEEP
+      const babyRecord = await prisma.baby.findFirst({ where: { id: babyId } });
+      const nightWindow = parseNightSleepWindow(babyRecord?.nightSleepWindow ?? null);
+      const effectiveType = resolveSleepType(row.type, row.startTime, nightWindow);
+      if (effectiveType !== row.type) {
+        row = await prisma.sleepLog.update({ where: { id: activityId }, data: { type: effectiveType } });
+      }
       return { result: summary(type, row.id, row.babyId, 'updated', row.startTime, { type: row.type, startTime: row.startTime.toISOString(), endTime: toIso(row.endTime), duration: row.duration, location: row.location, quality: row.quality, notes: row.notes }) };
     }
     case 'note': {
