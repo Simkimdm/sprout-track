@@ -82,6 +82,10 @@ export interface TimelineActivityListProps {
   onSwipeLeft?: () => void; // Handler for swiping left (next day)
   onSwipeRight?: () => void; // Handler for swiping right (previous day)
   onPhotoClick?: (photoId: string) => void; // Handler for tapping a timeline photo thumbnail
+  /** Active type filter — when set, linked L+R breast-feed rows render grouped and feeds show the +/- x:yy gap */
+  activeFilter?: FilterType;
+  /** Unfiltered activities of the selected day, used to compute the gap to the previous feeding */
+  allActivities?: ActivityType[];
 }
 
 export interface TimelineActivityDetailsProps {

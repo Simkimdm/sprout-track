@@ -179,3 +179,83 @@ export function countBreastFeedSessions(
 ): number {
   return groupBreastFeedSessions(feeds, toleranceMs).length;
 }
+
+/** Feed row shape needed to compute per-row "time since last feeding" gaps. */
+export interface FeedGapRow extends BreastFeedLike {
+  id: string;
+  startTime?: string | Date | null;
+}
+
+export interface FeedGapInfo {
+  /** Seconds since the previous feeding (session start for breast sessions); null for the very first feeding. */
+  gapSeconds: number | null;
+  /** Duration of this feeding in seconds (summed over all rows of a breast session). */
+  durationSeconds: number;
+}
+
+/**
+ * Signed "x:yy" elapsed label, e.g. 8100s -> "+2:15", -270s -> "-0:05".
+ * Used next to the recording time in the filtered timeline, where the gap to
+ * the previous feeding is always in the past and therefore carries a "+".
+ */
+export function formatSignedElapsedHM(totalSeconds: number): string {
+  const sign = totalSeconds < 0 ? '-' : '+';
+  const abs = Math.abs(Math.round(totalSeconds));
+  const hours = Math.floor(abs / 3600);
+  const minutes = Math.floor((abs % 3600) / 60);
+  return `${sign}${hours}:${String(minutes).padStart(2, '0')}`;
+}
+
+/** Plain "x:yy" duration label, e.g. 840s -> "0:14", 8100s -> "2:15". */
+export function formatDurationHM(totalSeconds: number): string {
+  const abs = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(abs / 3600);
+  const minutes = Math.floor((abs % 3600) / 60);
+  return `${hours}:${String(minutes).padStart(2, '0')}`;
+}
+
+/**
+ * Map each feed row id to its "time since the previous feeding" gap and its own
+ * duration. Breast rows are grouped into sessions first (a linked/paired L+R
+ * session is one feeding: the gap is measured from the session start and the
+ * duration is the summed side durations); other feed types count per row.
+ * SOLIDS rows are not feedings for this purpose (they live under the food log).
+ */
+export function buildFeedGapMap<T extends FeedGapRow>(feeds: T[]): Map<string, FeedGapInfo> {
+  const result = new Map<string, FeedGapInfo>();
+
+  const points: { rowIds: string[]; ts: number; durationSeconds: number }[] = [];
+
+  for (const session of groupBreastFeedSessions(feeds)) {
+    points.push({
+      rowIds: session.rows.map(r => r.id),
+      ts: session.time.getTime(),
+      durationSeconds: session.totalDuration,
+    });
+  }
+
+  for (const row of feeds) {
+    if (row.type === 'BREAST' || row.type === 'SOLIDS') continue;
+    points.push({
+      rowIds: [row.id],
+      ts: new Date(breastFeedDisplayTime(row)).getTime(),
+      // Non-breast rows: amount is a volume, not minutes — only feedDuration counts
+      durationSeconds: row.feedDuration || 0,
+    });
+  }
+
+  points.sort((a, b) => a.ts - b.ts);
+
+  points.forEach((point, index) => {
+    const prev = index > 0 ? points[index - 1] : null;
+    const info: FeedGapInfo = {
+      gapSeconds: prev ? (point.ts - prev.ts) / 1000 : null,
+      durationSeconds: point.durationSeconds,
+    };
+    for (const rowId of point.rowIds) {
+      result.set(rowId, info);
+    }
+  });
+
+  return result;
+}

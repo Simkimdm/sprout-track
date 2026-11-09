@@ -461,6 +461,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
             selectedDate={selectedDate}
             onActivitySelect={(activity) => setSelectedActivity(activity)}
             onPhotoClick={handlePhotoClick}
+            activeFilter={activeFilter}
+            allActivities={dateFilteredActivities}
           />
         </div>
 
