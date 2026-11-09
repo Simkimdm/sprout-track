@@ -78,6 +78,37 @@ export function computeLatestStatus(
     status.lastBathTime = new Date(lastBath.time);
   }
 
+  // Next-expiring medicine: for every medicine with a per-medicine dose timer
+  // (warningTime "H:MM"), the due time is its latest dose + the timer; the
+  // smallest due time wins (MedicineLog rows are the only ones with `medicineId`)
+  const medicineLogs = activities
+    .filter((a) => 'medicineId' in a && 'time' in a)
+    .sort(byTimeDesc('time')) as any[];
+  const latestDoseByMedicine = new Map<string, any>();
+  for (const log of medicineLogs) {
+    if (!latestDoseByMedicine.has(log.medicineId)) {
+      latestDoseByMedicine.set(log.medicineId, log);
+    }
+  }
+  let nextDue: LatestStatusData['nextMedicineDue'] | undefined;
+  for (const log of latestDoseByMedicine.values()) {
+    const warningTime: string = log.medicine?.warningTime ?? '';
+    const thresholdMinutes = warningTimeToMinutes(warningTime);
+    if (thresholdMinutes === null) continue;
+    const lastDoseMs = new Date(log.time).getTime();
+    const dueAtMs = lastDoseMs + thresholdMinutes * 60000;
+    if (!nextDue || dueAtMs < nextDue.dueAt.getTime()) {
+      nextDue = {
+        medicineId: log.medicineId,
+        medicineName: log.medicine?.name ?? null,
+        lastDoseTime: new Date(lastDoseMs),
+        warningTime,
+        dueAt: new Date(dueAtMs),
+      };
+    }
+  }
+  status.nextMedicineDue = nextDue;
+
   status.lastPumpTime = findLatestPumpTime(activities);
 
   const sleepLogs = activities.filter((a) =>
@@ -148,18 +179,6 @@ export function warningTimeToMinutes(warningTime: string | null | undefined): nu
 export function isPastWarning(minutes: number, warningTime: string | null | undefined): boolean {
   const threshold = warningTimeToMinutes(warningTime);
   return threshold !== null && minutes >= threshold;
-}
-
-/**
- * Convert a medicine dose interval "DD:HH:MM" to the "H:MM" warning format used
- * by the status bubbles (hours may exceed 24). Null when unset or malformed.
- */
-export function doseMinTimeToWarningTime(doseMinTime: string | null | undefined): string | null {
-  if (!doseMinTime) return null;
-  const match = /^([0-9]{1,2}):([0-1][0-9]|2[0-3]):([0-5][0-9])$/.exec(doseMinTime);
-  if (!match) return null;
-  const [days, hours, minutes] = match.slice(1).map(Number);
-  return `${days * 24 + hours}:${String(minutes).padStart(2, '0')}`;
 }
 
 /** Screen-reader duration, e.g. "1 hour 23 minutes". */

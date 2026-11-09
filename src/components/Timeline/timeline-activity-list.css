@@ -313,6 +313,70 @@ html.dark .timeline-caretaker-badge {
 .event-time {
   font-size: 0.75rem; /* 12px */
   color: #6b7280; /* gray-500 */
+  min-width: 4.75rem; /* keeps the right edge stable regardless of content length */
+  text-align: right;
+}
+
+/* Filtered timeline: a linked/paired L+R breast-feed session is bracketed
+   together. The bracket is absolutely positioned in the container's padding
+   zone so the per-event icons stay centred on the main timeline line. */
+.timeline-feed-session {
+  position: relative;
+  background: rgba(224, 242, 254, 0.45); /* sky-100 tint */
+  border-radius: 0.5rem;
+}
+
+.timeline-feed-session-bracket {
+  position: absolute;
+  left: -0.625rem; /* -10px: sits between the main line and the events */
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 0.5rem; /* 8px */
+  border-left: 3px solid #7dd3fc; /* sky-300 - feed color */
+  border-top: 3px solid #7dd3fc;
+  border-bottom: 3px solid #7dd3fc;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  pointer-events: none;
+}
+
+/* "+x:yy" gap since the previous feeding, shown next to the recording time */
+.timeline-feed-subline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  color: #9ca3af; /* gray-400 */
+  font-size: 0.6875rem; /* 11px */
+}
+
+html.dark .timeline-feed-subline {
+  color: #9ca3af !important; /* gray-400 */
+}
+
+.timeline-feed-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-feed-gap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-left: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+html.dark .timeline-feed-session {
+  background: rgba(12, 74, 110, 0.25); /* sky-950 tint */
+}
+
+html.dark .timeline-feed-session-bracket {
+  border-color: #7dd3fc !important; /* sky-300 */
 }
 
 .timeline-activity-wrapper {

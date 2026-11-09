@@ -7,6 +7,7 @@ import {
 } from '@/src/components/ui/form-page';
 import { TimelineActivityDetailsProps } from './types';
 import { getActivityDetails, formatTime } from './utils';
+import { formatDurationWords } from '@/src/utils/feedSessionUtils';
 import { useLocalization } from '@/src/context/localization';
 import { useUnit } from '@/src/hooks/useUnit';
 import { FeedLogResponse, TimelinePhotoInfo } from '@/app/api/types';
@@ -39,6 +40,7 @@ const TimelineActivityDetails = ({
   onDelete,
   onEdit,
   onPhotoClick,
+  gapById,
 }: TimelineActivityDetailsProps) => {
   
   const { t } = useLocalization();
@@ -70,6 +72,14 @@ const TimelineActivityDetails = ({
     ];
   }
   const activityDetails = getActivityDetails(activity, settings, t);
+
+  // Gap since the previous same-type entry (feeds: since last feed, sleep: since last sleep)
+  const isFeedRow = 'amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS';
+  const isSleepRow = 'duration' in activity && 'startTime' in activity && !('activities' in activity);
+  const gapInfo = gapById?.get(activity.id);
+  const gapRow = gapInfo && (isFeedRow || isSleepRow)
+    ? [{ label: isSleepRow ? t('Time since last sleep') : t('Time since last feed'), value: formatDurationWords(gapInfo.gapSeconds) }]
+    : [];
   
   const handleEdit = () => {
     if (activity) {
@@ -138,7 +148,7 @@ const TimelineActivityDetails = ({
               );
             })
           ) : (
-            activityDetails.details.map((detail, index) => {
+            [...activityDetails.details, ...gapRow].map((detail, index) => {
               const isMultiline = detail.value.includes('\n');
               return (
                 <div key={index} className={`flex ${isMultiline ? 'flex-col gap-1' : 'justify-between items-center'}`}>

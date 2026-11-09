@@ -22,12 +22,13 @@ import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime } from '../utils';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { buildFeedGapMap, buildGapMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
 import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
-const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
+const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultBottleUnit, setDefaultBottleUnit] = useState(() => readCachedDefaultBottleUnit());
   const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
@@ -46,6 +47,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
   }, [initialDate]);
 
   const [dateFilteredActivities, setDateFilteredActivities] = useState<ActivityType[]>([]);
+  // Recent feed entries before the selected day, used as gap anchor for the day's first feeding
+  const [historyFeeds, setHistoryFeeds] = useState<ActivityType[]>([]);
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
   const [windowActivities, setWindowActivities] = useState<ActivityType[]>([]);
   const [heatmapActivities, setHeatmapActivities] = useState<ActivityType[]>([]);
@@ -60,6 +63,26 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
   const activityCache = useActivityCache();
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
+
+  // Gap since the previous same-type entry for every feed/sleep row of the day
+  // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
+  const gapById = useMemo(() => {
+    const isFeedRow = (a: ActivityType) =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
+    const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
+    const feedGaps = buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
+    const sleepPoints = dateFilteredActivities
+      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+      .map(a => {
+        const startTs = new Date((a as { startTime: string }).startTime).getTime();
+        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60; // SleepLog.duration is minutes
+        const endTime = (a as { endTime?: string | null }).endTime;
+        return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+      });
+    const sleepGaps = buildGapMap(sleepPoints, 'end');
+    return new Map<string, FeedGapInfo>([...feedGaps, ...sleepGaps]);
+  }, [dateFilteredActivities, historyFeeds, feedTimerFrom]);
 
   // Issue #225: feed categories that reset the "time since last feed" timer
   // (null = all feeds count)
@@ -100,6 +123,34 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
     }
   };
 
+  // Fetch the most recent feeds before the start of `date` (gap anchor for the day's first entry)
+  const fetchHistoryFeeds = useCallback(async (date: Date) => {
+    if (!babyId) return;
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(
+        `/api/feed-log?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}&limit=50`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Expires': '0',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setHistoryFeeds(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching history feeds:', error);
+    }
+  }, [babyId]);
+
   // Fetch activities for date using cache
   const fetchActivitiesForDate = useCallback(async (date: Date, isAnimated: boolean) => {
     if (!babyId) return;
@@ -113,6 +164,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
       const result = await activityCache.fetchWindow(babyId, date, 1);
       setDateFilteredActivities(result.activities);
       setWindowActivities(result.allActivities);
+      fetchHistoryFeeds(date);
       lastRefreshTimestamp.current = Date.now();
 
       // Only emit status when today is within the fetched window (prevents stale status on past dates)
@@ -461,6 +513,11 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
             selectedDate={selectedDate}
             onActivitySelect={(activity) => setSelectedActivity(activity)}
             onPhotoClick={handlePhotoClick}
+            activeFilter={activeFilter}
+            allActivities={dateFilteredActivities}
+            historyActivities={historyFeeds}
+            feedTimerFrom={feedTimerFrom}
+            gapById={gapById}
           />
         </div>
 
@@ -485,6 +542,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
         onDelete={handleDelete}
         onEdit={handleEdit}
         onPhotoClick={handlePhotoClick}
+        gapById={gapById}
       />
 
       {/* Photo Detail - opened from a timeline thumbnail click */}

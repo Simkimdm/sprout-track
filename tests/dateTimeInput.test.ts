@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatLocalDateTimeInput,
   freshLocalDateTimeInput,
+  parseLocalDateTimeInput,
 } from '@/src/utils/dateTimeInput';
 
 describe('formatLocalDateTimeInput', () => {
@@ -32,5 +33,27 @@ describe('freshLocalDateTimeInput (issue #248 visibility restore)', () => {
     expect(staleFormatted).toBe('2026-07-28T14:00');
     expect(refreshed).toBe('2026-07-28T16:30');
     expect(refreshed).not.toBe(staleFormatted);
+  });
+});
+
+describe('parseLocalDateTimeInput', () => {
+  it('parses a local datetime string back into a local Date', () => {
+    const parsed = parseLocalDateTimeInput('2026-07-28T14:05');
+    expect(parsed).toBeInstanceOf(Date);
+    expect(parsed!.getFullYear()).toBe(2026);
+    expect(parsed!.getMonth()).toBe(6);
+    expect(parsed!.getDate()).toBe(28);
+    expect(parsed!.getHours()).toBe(14);
+    expect(parsed!.getMinutes()).toBe(5);
+  });
+
+  it('round-trips with formatLocalDateTimeInput', () => {
+    const original = new Date(2026, 0, 3, 9, 7);
+    expect(parseLocalDateTimeInput(formatLocalDateTimeInput(original))?.getTime()).toBe(original.getTime());
+  });
+
+  it('returns null for empty or invalid input', () => {
+    expect(parseLocalDateTimeInput('')).toBeNull();
+    expect(parseLocalDateTimeInput('not-a-date')).toBeNull();
   });
 });

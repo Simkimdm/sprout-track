@@ -108,6 +108,7 @@ function HomeContent(): React.ReactElement {
   const [lastDiaperTime, setLastDiaperTime] = useState<Record<string, Date>>({});
   const [lastPumpTime, setLastPumpTime] = useState<Record<string, Date>>({});
   const [lastBathTime, setLastBathTime] = useState<Record<string, Date>>({});
+  const [nextMedicineDue, setNextMedicineDue] = useState<Record<string, { medicineId: string; medicineName: string | null; lastDoseTime: Date; warningTime: string; dueAt: Date }>>({});
 
   // Check whether the Photos feature is enabled for this deployment
   useEffect(() => {
@@ -505,6 +506,15 @@ function HomeContent(): React.ReactElement {
     if (data.lastDiaperTime) {
       setLastDiaperTime(prev => ({ ...prev, [selectedBaby.id]: data.lastDiaperTime! }));
     }
+    setNextMedicineDue(prev => {
+      const next = { ...prev };
+      if (data.nextMedicineDue) {
+        next[selectedBaby.id] = data.nextMedicineDue;
+      } else {
+        delete next[selectedBaby.id];
+      }
+      return next;
+    });
     setLastPumpTime(prev => {
       const next = { ...prev };
       if (data.lastPumpTime) {
@@ -568,6 +578,7 @@ function HomeContent(): React.ReactElement {
           lastDiaperTime={lastDiaperTime}
           lastBathTime={lastBathTime}
           lastPumpTime={lastPumpTime}
+          nextMedicineDue={nextMedicineDue}
           feedStartTime={feedStartTime}
           updateUnlockTimer={updateUnlockTimer}
           onSleepClick={() => setShowSleepModal(true)}
@@ -624,6 +635,7 @@ function HomeContent(): React.ReactElement {
             refreshTrigger={refreshTrigger}
             initialDate={initialTimelineDate}
             feedTimerTypes={selectedBaby.feedTimerTypes}
+            feedTimerFrom={selectedBaby.feedTimerFrom}
             onLatestStatusReady={handleLatestStatusReady}
           />
         </Card>

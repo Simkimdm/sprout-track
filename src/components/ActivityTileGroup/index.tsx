@@ -38,6 +38,7 @@ interface ActivityTileGroupProps {
   lastDiaperTime: Record<string, Date>;
   lastBathTime?: Record<string, Date>;
   lastPumpTime: Record<string, Date>;
+  nextMedicineDue?: Record<string, { medicineId: string; medicineName: string | null; lastDoseTime: Date; warningTime: string; dueAt: Date }>;
   feedStartTime?: Record<string, Date>;
   updateUnlockTimer: () => void;
   onSleepClick: () => void;
@@ -77,6 +78,7 @@ export function ActivityTileGroup({
   lastDiaperTime,
   lastBathTime = {},
   lastPumpTime,
+  nextMedicineDue,
   feedStartTime,
   updateUnlockTimer,
   onSleepClick,
@@ -882,6 +884,15 @@ export function ActivityTileGroup({
                 onMedicineClick();
               }}
             />
+            {selectedBaby?.id && nextMedicineDue?.[selectedBaby.id] && !exceeds24Hours(nextMedicineDue[selectedBaby.id].lastDoseTime) && (
+              <StatusBubble
+                status="medicine"
+                durationInMinutes={0}
+                startTime={nextMedicineDue[selectedBaby.id].lastDoseTime.toISOString()}
+                warningTime={nextMedicineDue[selectedBaby.id].warningTime}
+                activityType="medicine"
+              />
+            )}
           </div>
         );
       case 'vaccine':

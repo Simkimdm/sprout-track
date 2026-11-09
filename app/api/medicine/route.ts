@@ -27,6 +27,17 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
       ...medicineData
     } = body;
     
+    // Validate/normalize the per-medicine dose timer ("H:MM", hours may exceed 24)
+    if (medicineData.warningTime === '') {
+      medicineData.warningTime = null;
+    }
+    if (medicineData.warningTime != null && !/^\d{1,4}:[0-5][0-9]$/.test(medicineData.warningTime)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: 'Invalid warningTime format (expected H:MM)' },
+        { status: 400 }
+      );
+    }
+    
     // Create the medicine
     const medicine = await prisma.medicine.create({
       data: {
@@ -112,6 +123,17 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     const id = searchParams.get('id');
     const body: Partial<MedicineCreate> = await req.json();
     const { contactIds, ...updateData } = body;
+
+    // Validate/normalize the per-medicine dose timer ("H:MM", hours may exceed 24)
+    if (updateData.warningTime === '') {
+      updateData.warningTime = null;
+    }
+    if (updateData.warningTime != null && !/^\d{1,4}:[0-5][0-9]$/.test(updateData.warningTime)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: 'Invalid warningTime format (expected H:MM)' },
+        { status: 400 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json<ApiResponse<MedicineResponse>>(

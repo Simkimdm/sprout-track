@@ -31,6 +31,14 @@ export interface LatestStatusData {
   lastSleepEndTime?: Date;
   ongoingSleep?: SleepLogResponse;
   lastEndedSleep?: SleepLogResponse & { endTime: string };
+  /** The medicine/supplement whose per-medicine dose timer expires next (smallest lastDose + warningTime) */
+  nextMedicineDue?: {
+    medicineId: string;
+    medicineName: string | null;
+    lastDoseTime: Date;
+    warningTime: string;
+    dueAt: Date;
+  };
 }
 
 // Legacy props for the old Timeline component (not actively used)
@@ -46,6 +54,8 @@ export interface TimelineProps {
   initialDate?: Date;
   /** JSON config of feed categories that reset the feed timer (issue #225); null/omitted = all feeds count. */
   feedTimerTypes?: string | null;
+  /** Whether the feed timer (and the filtered timeline's +/- x:yy gap) counts from the feed start or end. */
+  feedTimerFrom?: string | null;
   onLatestStatusReady?: (data: LatestStatusData) => void;
   onActivityDeleted?: (dateFilter?: Date) => void;
 }
@@ -74,6 +84,16 @@ export interface TimelineActivityListProps {
   onSwipeLeft?: () => void; // Handler for swiping left (next day)
   onSwipeRight?: () => void; // Handler for swiping right (previous day)
   onPhotoClick?: (photoId: string) => void; // Handler for tapping a timeline photo thumbnail
+  /** Active type filter — when set, linked L+R breast-feed rows render grouped and feeds show the +/- x:yy gap */
+  activeFilter?: FilterType;
+  /** Gap anchor for the +/- x:yy suffix: 'start' (previous feeding start) or 'end' (previous feeding end) */
+  feedTimerFrom?: string | null;
+  /** Unfiltered activities of the selected day, used to compute the gap to the previous feeding */
+  allActivities?: ActivityType[];
+  /** Feed entries before the selected day, used as gap anchor for the day's first feeding */
+  historyActivities?: ActivityType[];
+  /** Per-entry gap since the previous same-type entry (feeds + sleep), keyed by activity id */
+  gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
 }
 
 export interface TimelineActivityDetailsProps {
@@ -84,6 +104,8 @@ export interface TimelineActivityDetailsProps {
   onDelete: (activity: ActivityType) => void;
   onEdit: (activity: ActivityType, type: 'sleep' | 'feed' | 'diaper' | 'medicine' | 'note' | 'bath' | 'pump' | 'breast-milk-adjustment' | 'milestone' | 'measurement' | 'play' | 'vaccine' | 'food' | 'photo') => void;
   onPhotoClick?: (photoId: string) => void; // Handler for tapping an attached photo thumbnail
+  /** Per-entry gap since the previous same-type entry, shown as an extra details row */
+  gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
 }
 
 export interface ActivityDetail {

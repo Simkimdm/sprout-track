@@ -174,7 +174,9 @@ export function StatusBubble({
       )}
     >
       {icon}
-      <span className="min-w-0 truncate">{status === 'feedActive' ? t('Feeding') : formatDuration(displayDuration)}</span>
+      <span className="min-w-0 truncate">
+        {status === 'feedActive' ? t('Feeding') : formatDuration(displayDuration)}
+      </span>
     </div>
   );
 }

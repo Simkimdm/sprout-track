@@ -395,6 +395,7 @@ export interface MedicineCreate {
   typicalDoseSize?: number;
   unitAbbr?: string;
   doseMinTime?: string;
+  warningTime?: string | null; // Per-medicine dose timer threshold ("H:MM", hours may exceed 24); null = no timer
   notes?: string;
   active?: boolean;
   isSupplement?: boolean;

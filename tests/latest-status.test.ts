@@ -194,3 +194,46 @@ describe('formatDurationLabel', () => {
     expect(formatDurationLabel(5, t)).toBe('5 minutes');
   });
 });
+
+describe('computeLatestStatus — next medicine due (per-medicine timer)', () => {
+  const med = (id: string, medicineId: string, time: string, warningTime: string | null, name = medicineId) =>
+    ({ id, medicineId, time, doseAmount: 5, medicine: { id: medicineId, name, warningTime } });
+
+  it('is undefined when no medicine log exists', () => {
+    expect(computeLatestStatus([bottle('f1', '2026-10-12T09:00:00Z')], null).nextMedicineDue).toBeUndefined();
+  });
+
+  it('ignores medicines without a timer and picks the soonest due time', () => {
+    const acts = [
+      med('a', 'm-slow', '2026-10-12T08:00:00Z', '24:00', 'Slow'),   // due 2026-10-13T08:00
+      med('b', 'm-fast', '2026-10-12T10:00:00Z', '06:00', 'Fast'),   // due 2026-10-12T16:00
+      med('c', 'm-none', '2026-10-12T11:00:00Z', null, 'None'),      // no timer
+    ];
+    const s = computeLatestStatus(acts, null);
+    expect(s.nextMedicineDue?.medicineId).toBe('m-fast');
+    expect(s.nextMedicineDue?.medicineName).toBe('Fast');
+    expect(s.nextMedicineDue?.warningTime).toBe('06:00');
+    expect(s.nextMedicineDue?.lastDoseTime.toISOString()).toBe('2026-10-12T10:00:00.000Z');
+    expect(s.nextMedicineDue?.dueAt.toISOString()).toBe('2026-10-12T16:00:00.000Z');
+  });
+
+  it('uses the latest dose per medicine when several logs exist', () => {
+    const acts = [
+      med('a', 'm1', '2026-10-12T08:00:00Z', '06:00', 'M1'), // older dose -> due 14:00
+      med('b', 'm1', '2026-10-12T12:00:00Z', '06:00', 'M1'), // latest dose -> due 18:00
+    ];
+    const s = computeLatestStatus(acts, null);
+    expect(s.nextMedicineDue?.lastDoseTime.toISOString()).toBe('2026-10-12T12:00:00.000Z');
+    expect(s.nextMedicineDue?.dueAt.toISOString()).toBe('2026-10-12T18:00:00.000Z');
+  });
+
+  it('supports day-scale timers (hours may exceed 24) and skips malformed values', () => {
+    const acts = [
+      med('a', 'm1', '2026-10-12T08:00:00Z', '168:00', 'Weekly'), // 7 days -> due 2026-10-19
+      med('b', 'm2', '2026-10-12T09:00:00Z', 'bogus', 'Broken'),
+    ];
+    const s = computeLatestStatus(acts, null);
+    expect(s.nextMedicineDue?.medicineId).toBe('m1');
+    expect(s.nextMedicineDue?.dueAt.toISOString()).toBe('2026-10-19T08:00:00.000Z');
+  });
+});
