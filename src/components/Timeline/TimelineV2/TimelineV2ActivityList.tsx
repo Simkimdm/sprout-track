@@ -286,14 +286,13 @@ const TimelineV2ActivityList = ({
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
-                          }
-                          // Feeds with a duration show the computed end on the sub-line: -end
-                          let endSuffix = '';
-                          if (!('duration' in activity && 'startTime' in activity) && 'amount' in activity && 'type' in activity && !('foodId' in activity)) {
-                            const durSec = activity.feedDuration || (activity.amount ? activity.amount * 60 : 0);
-                            if (durSec > 0) {
-                              const end = new Date(activityTime.getTime() + durSec * 1000);
-                              endSuffix = `–${formatTimeDisplay(end, timeFormat)}`;
+                            // Feeds with a duration also show the computed end inline: start-end
+                            if ('amount' in activity && 'type' in activity && !('foodId' in activity)) {
+                              const durSec = activity.feedDuration || (activity.amount ? activity.amount * 60 : 0);
+                              if (durSec > 0) {
+                                const end = new Date(activityTime.getTime() + durSec * 1000);
+                                timeStr = `${timeStr}–${formatTimeDisplay(end, timeFormat)}`;
+                              }
                             }
                           }
                           
@@ -619,15 +618,12 @@ const TimelineV2ActivityList = ({
                               {/* Event Time: start on the first line, computed end + gap on the second */}
                               <div className="flex-shrink-0 text-xs text-gray-500 event-time">
                                 <div>{timeStr}</div>
-                                {(endSuffix || gapSuffix) && (
+                                {gapSuffix && (
                                   <div className="timeline-feed-subline">
-                                    {endSuffix}
-                                    {gapSuffix && (
-                                      <span className="timeline-feed-gap">
-                                        <History className="h-3 w-3" aria-hidden="true" />
-                                        {gapSuffix}
-                                      </span>
-                                    )}
+                                    <span className="timeline-feed-gap">
+                                      <History className="h-3 w-3" aria-hidden="true" />
+                                      {gapSuffix}
+                                    </span>
                                   </div>
                                 )}
                               </div>

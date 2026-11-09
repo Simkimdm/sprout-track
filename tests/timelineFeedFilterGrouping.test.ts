@@ -50,9 +50,9 @@ describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
-    // computed end on the sub-line (session anchor side starts 10:00 + 8m)
+    // computed end inline on the first line (anchor side starts 10:00 + 8m); sub-line holds only the gap
+    expect(html).toContain('10:00 AM–10:08 AM');
     expect(html).toContain('timeline-feed-subline');
-    expect(html).toContain('–10:08');
     // suffix = gap only (duration is visible via start-end): session anchor 2:00 after 08:00; bottle 3:01 after session end 10:14
     expect(gapValues(html)).toEqual(['3h 1m', '2h 0m', '0s']);
   });
