@@ -67,7 +67,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
     // computed end inline on the first line (anchor side starts 10:00 + 8m)
-    expect(html).toContain('10:00 AM–10:08 AM');
+    expect(html).toContain('10:00 AM - 10:08 AM');
     // sub-line: gap (history icon) + duration (timer icon), duration removed from the details line
     expect(html).toContain('timeline-feed-subline');
     expect(html).toContain('timeline-feed-duration');
@@ -158,7 +158,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
       })
     );
     // start–end range with a dash, plus live duration chip and 'Still asleep' in details
-    expect(html).toMatch(/10:00 AM–\d{1,2}:\d{2} (AM|PM)/);
+    expect(html).toMatch(/10:00 AM - \d{1,2}:\d{2} (AM|PM)/);
     expect(html).toContain('timeline-feed-duration');
   });
 
