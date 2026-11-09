@@ -6,6 +6,7 @@ import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
+import { maybeEndActiveSleepOnFeed } from '../utils/autoEndSleep';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
   // Check write permissions for expired accounts
@@ -78,6 +79,15 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     // Notify subscribers about activity creation (non-blocking)
     notifyActivityCreated(feedLog.babyId, 'feed', { accountId: authContext.accountId, caretakerId: authContext.caretakerId }, { type: body.type, amount: body.amount, unitAbbr: body.unitAbbr, food: body.food, side: body.side }).catch(console.error);
     resetTimerNotificationState(feedLog.babyId, 'feed').catch(console.error);
+
+    // Optionally end an active sleep session when the feeding starts
+    await maybeEndActiveSleepOnFeed({
+      babyId: feedLog.babyId,
+      familyId,
+      at: feedLog.startTime ?? feedLog.time,
+      accountId: authContext.accountId,
+      caretakerId: authContext.caretakerId,
+    });
 
     return NextResponse.json<ApiResponse<FeedLogResponse>>({
       success: true,

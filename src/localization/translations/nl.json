@@ -2765,5 +2765,7 @@
   "Zero “did anyone change him?” texts sent today.": "Nul „heeft iemand hem al verschoond?”-berichtjes vandaag verstuurd.",
   "Bath Warning Time (hh:mm)": "Bad waarschuwingstijd (hh:mm)",
   "Since last bath": "Sinds het laatste bad",
-  "Time since last bath": "Tijd sinds het laatste bad"
+  "Time since last bath": "Tijd sinds het laatste bad",
+  "Automatically end sleep when a feeding starts": "Slaap automatisch beëindigen wanneer een voeding start",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Indien ingeschakeld eindigt het starten van een voeding automatisch elke actieve slaapsessie van de baby"
 }

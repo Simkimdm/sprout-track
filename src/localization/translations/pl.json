@@ -2769,5 +2769,7 @@
   "Zero “did anyone change him?” texts sent today.": "Zero SMS-ów z pytaniem „czy ktoś go przewinął?” wysłanych dzisiaj.",
   "Bath Warning Time (hh:mm)": "Czas ostrzeżenia kąpieli (hh:mm)",
   "Since last bath": "Od ostatniej kąpieli",
-  "Time since last bath": "Czas od ostatniej kąpieli"
+  "Time since last bath": "Czas od ostatniej kąpieli",
+  "Automatically end sleep when a feeding starts": "Automatycznie kończ sen, gdy zaczyna się karmienie",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Po włączeniu rozpoczęcie karmienia automatycznie kończy każdą aktywną sesję snu dziecka"
 }

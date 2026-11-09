@@ -2765,5 +2765,7 @@
   "Zero “did anyone change him?” texts sent today.": "Zero mensagens de “alguém já lhe mudou a fralda?” enviadas hoje.",
   "Bath Warning Time (hh:mm)": "Tempo de aviso do banho (hh:mm)",
   "Since last bath": "Desde o último banho",
-  "Time since last bath": "Tempo desde o último banho"
+  "Time since last bath": "Tempo desde o último banho",
+  "Automatically end sleep when a feeding starts": "Terminar o sono automaticamente quando uma refeição começa",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Quando ativado, iniciar uma refeição termina automaticamente qualquer sessão de sono ativa do bebé"
 }

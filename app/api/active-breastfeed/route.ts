@@ -5,6 +5,7 @@ import { withAuthContext, AuthResult } from '../utils/auth';
 import { formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
 import { startBreastfeedSession, updateBreastfeedSession, endBreastfeedSession, SESSION_UPDATE_ACTIONS, SessionUpdateAction, resolveRequestedStartTime } from '../utils/activeBreastFeed';
+import { maybeEndActiveSleepOnFeed } from '../utils/autoEndSleep';
 
 function formatActiveBreastFeed(record: any): ActiveBreastFeedResponse {
   return {
@@ -89,6 +90,15 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     }
 
     const session = await startBreastfeedSession({ babyId, side, familyId: userFamilyId, caretakerId, startTime });
+
+    // Optionally end an active sleep session when the feeding starts
+    await maybeEndActiveSleepOnFeed({
+      babyId,
+      familyId: userFamilyId,
+      at: session.sessionStartTime,
+      accountId: authContext.accountId,
+      caretakerId,
+    });
 
     return NextResponse.json<ApiResponse<ActiveBreastFeedResponse>>({
       success: true,
