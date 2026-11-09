@@ -111,7 +111,7 @@ export function Calendar({
     const { days, rowCount } = getDaysInMonth(year, month);
     updateState({ calendarDays: days });
     setCalendarRowCount(rowCount);
-  }, [currentDate]);
+  }, [currentDate, weekStartsOn]);
 
   /**
    * Fetch events for the selected month
@@ -469,6 +469,7 @@ export function Calendar({
                 onSelect={handleDatePickerSelect}
                 variant="date-time-picker"
                 className="mx-auto"
+                weekStartsOn={weekStartsOn}
               />
             </PopoverContent>
           </Popover>
