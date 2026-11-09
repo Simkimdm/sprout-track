@@ -78,19 +78,6 @@ export function computeLatestStatus(
     status.lastBathTime = new Date(lastBath.time);
   }
 
-  // Latest medicine/supplement dose (MedicineLog rows are the only ones with
-  // `medicineId`); the dose interval of that medicine drives the tile timer
-  const lastMedicine = activities
-    .filter((a) => 'medicineId' in a && 'time' in a)
-    .sort(byTimeDesc('time'))[0] as any;
-  if (lastMedicine) {
-    status.lastMedicineLog = {
-      time: new Date(lastMedicine.time),
-      doseMinTime: lastMedicine.medicine?.doseMinTime ?? null,
-      medicineName: lastMedicine.medicine?.name ?? null,
-    };
-  }
-
   status.lastPumpTime = findLatestPumpTime(activities);
 
   const sleepLogs = activities.filter((a) =>

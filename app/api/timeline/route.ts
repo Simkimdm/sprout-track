@@ -68,6 +68,10 @@ export function buildFirstTryScopeWhere(params: {
   };
 }
 
+// Bath warning times can span several days (e.g. weekly baths), so the bath
+// query always looks this far back regardless of the requested display window.
+const BATH_LOOKBACK_MS = 42 * 24 * 60 * 60 * 1000;
+
 // Builds the caretaker badge fields for a timeline log. The system caretaker
 // (loginId '00') and nameless caretakers are omitted so no badge renders.
 function caretakerBadgeFields(caretaker: { name?: string | null; loginId?: string | null; badgeColor?: string | null } | null | undefined) {
@@ -215,6 +219,14 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
       sleepStartDateUTC = new Date(startDateUTC.getTime() - (12 * 60 * 60 * 1000));
     }
 
+    // Bath cycles can span several days (e.g. weekly baths), so the bath
+    // query always reaches at least this far back regardless of the requested
+    // display window — otherwise the "time since last bath" bubble vanishes
+    const bathLookbackStart = new Date(Date.now() - BATH_LOOKBACK_MS);
+    const bathStartDateUTC = startDateUTC
+      ? new Date(Math.min(startDateUTC.getTime(), bathLookbackStart.getTime()))
+      : undefined;
+
     // Optional: filter which activity types to fetch (comma-separated)
     // e.g., ?types=sleep,feed,diaper,pump — only runs those Prisma queries
     const typesParam = searchParams.get('types');
@@ -306,12 +318,14 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
         },
         orderBy: { time: 'desc' }
       }) : emptyPromise,
+      // Lookback extends past the display window so the "time since last
+      // bath" status bubble also finds baths older than the visible range
       shouldFetch('bath') ? prisma.bathLog.findMany({
         where: {
           babyId,
-          ...(startDateUTC && endDateUTC ? {
+          ...(bathStartDateUTC && endDateUTC ? {
             time: {
-              gte: startDateUTC,
+              gte: bathStartDateUTC,
               lte: endDateUTC
             }
           } : {}),
