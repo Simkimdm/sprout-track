@@ -160,10 +160,9 @@ export function StatusBubble({
   };
 
   const durationLabel = formatDurationLabel(displayDuration, t);
-  const statusLabel = label ? `${label} – ${getStatusLabel()}` : getStatusLabel();
   const ariaLabel = status === 'feedActive'
     ? t('Feeding')
-    : `${statusLabel}, ${durationLabel}`;
+    : `${getStatusLabel()}, ${durationLabel}${label ? ` – ${label}` : ''}`;
 
   return (
     <div
@@ -177,7 +176,7 @@ export function StatusBubble({
     >
       {icon}
       <span className="min-w-0 truncate">
-        {status === 'feedActive' ? t('Feeding') : (label ? `${label} · ${formatDuration(displayDuration)}` : formatDuration(displayDuration))}
+        {status === 'feedActive' ? t('Feeding') : (label ? `${formatDuration(displayDuration)} · ${label}` : formatDuration(displayDuration))}
       </span>
     </div>
   );
