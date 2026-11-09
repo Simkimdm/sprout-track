@@ -548,6 +548,7 @@ model Settings {
   timeFormat          String   @default("12h") // "12h" | "24h"
   growthChartStandard String   @default("CDC") // "CDC" | "WHO" — growth chart standard for percentile calculations
   weekStartsOn        String   @default("Sunday") // "Sunday" | "Monday" — first day of the week
+  nightSleepWindow    String? // JSON {"start":"HH:mm","end":"HH:mm"}; naps starting inside this daily window are stored as NIGHT_SLEEP; null = disabled (previous behavior)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

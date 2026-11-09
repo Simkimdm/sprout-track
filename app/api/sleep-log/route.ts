@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SleepType } from '@prisma/client';
 import prisma from '../db';
 import { ApiResponse, SleepLogCreate, SleepLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
@@ -6,6 +7,12 @@ import { toUTC, formatForResponse, calculateDurationMinutes } from '../utils/tim
 import { checkWritePermission } from '../utils/writeProtection';
 import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 import { DEFAULT_SLEEP_LOCATIONS } from '@/src/constants/sleepLocations';
+import { parseNightSleepWindow, resolveSleepType } from '@/src/utils/nightSleepWindow';
+
+async function getNightSleepWindow(familyId: string) {
+  const settings = await prisma.settings.findFirst({ where: { familyId } });
+  return parseNightSleepWindow(settings?.nightSleepWindow ?? null);
+}
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
   // Check write permissions for expired accounts
@@ -33,13 +40,18 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     // Convert times to UTC for storage
     const startTimeUTC = toUTC(body.startTime);
     const endTimeUTC = body.endTime ? toUTC(body.endTime) : null;
-    
+
+    // Naps starting inside the configured night window become night sleep
+    const nightWindow = await getNightSleepWindow(userFamilyId);
+    const sleepType = resolveSleepType(body.type, startTimeUTC, nightWindow) as SleepType;
+
     // Calculate duration if both start and end times are present
     const duration = endTimeUTC ? calculateDurationMinutes(startTimeUTC, endTimeUTC) : undefined;
 
     const sleepLog = await prisma.sleepLog.create({
       data: {
         ...body,
+        type: sleepType,
         startTime: startTimeUTC,
         ...(endTimeUTC && { endTime: endTimeUTC }),
         duration,
@@ -59,7 +71,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     };
 
     // Notify subscribers about activity creation (non-blocking)
-    notifyActivityCreated(sleepLog.babyId, 'sleep', { accountId: authContext.accountId, caretakerId: authContext.caretakerId }, { type: body.type }).catch(console.error);
+    notifyActivityCreated(sleepLog.babyId, 'sleep', { accountId: authContext.accountId, caretakerId: authContext.caretakerId }, { type: sleepType }).catch(console.error);
 
     return NextResponse.json<ApiResponse<SleepLogResponse>>({
       success: true,
@@ -121,7 +133,13 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     // Convert times to UTC for storage
     const startTimeUTC = body.startTime ? toUTC(body.startTime) : undefined;
     const endTimeUTC = body.endTime ? toUTC(body.endTime) : undefined;
-    
+
+    // Re-evaluate the night sleep window when type or start time change
+    const effectiveStartTime = startTimeUTC || existingSleepLog.startTime;
+    const effectiveType = body.type ?? existingSleepLog.type;
+    const nightWindow = await getNightSleepWindow(userFamilyId);
+    const sleepType = resolveSleepType(effectiveType, effectiveStartTime, nightWindow) as SleepType;
+
     // Calculate duration if end time is provided
     const duration = endTimeUTC 
       ? calculateDurationMinutes(startTimeUTC || existingSleepLog.startTime, endTimeUTC) 
@@ -131,6 +149,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       where: { id },
       data: {
         ...body,
+        type: sleepType,
         ...(startTimeUTC && { startTime: startTimeUTC }),
         ...(endTimeUTC && { endTime: endTimeUTC }),
         ...(duration !== undefined && { duration }),
