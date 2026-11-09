@@ -2768,5 +2768,10 @@
   "Time since last bath": "Timp de la ultima baie",
   "Automatically end sleep when a feeding starts": "Închide automat somnul când începe o hrănire",
   "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Când este activată, pornirea unei hrăniri închide automat orice sesiune de somn activă a bebelușului",
-  "Sleep & Feeding": "Somn și hrănire"
+  "Sleep & Feeding": "Somn și hrănire",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

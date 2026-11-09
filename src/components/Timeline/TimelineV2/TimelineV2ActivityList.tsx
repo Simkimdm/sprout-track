@@ -306,6 +306,14 @@ const TimelineV2ActivityList = ({
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
+                            // Calendar events show their end time inline (or "All day")
+                            if ('calendarEventId' in activity) {
+                              if (activity.allDay) {
+                                timeStr = t('All day');
+                              } else if (activity.endTime) {
+                                timeStr = `${timeStr} - ${formatTimeDisplay(new Date(activity.endTime), timeFormat)}`;
+                              }
+                            }
                             // Feeds with a duration also show the computed end inline: start-end
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity)) {
                               // amount is minutes only for legacy BREAST rows; for bottles it is a volume
@@ -349,6 +357,7 @@ const TimelineV2ActivityList = ({
                             if (bgClass.includes('border-red-500')) return '#EF4444'; // red - vaccine
                             if (bgClass.includes('border-[#e11d48]')) return '#e11d48'; // rose - photo
                             if (bgClass.includes('bg-[#BBD444]')) return '#BBD444'; // lime - food
+                            if (bgClass.includes('bg-violet-200')) return '#c4b5fd'; // violet-300 - calendar event
                             return '#9ca3af'; // default gray
                           };
                           
@@ -357,7 +366,8 @@ const TimelineV2ActivityList = ({
                           // Determine activity type class for styling
                           // Check play and pump FIRST since they also have duration and startTime
                           let activityTypeClass = '';
-                          if ('photoLogId' in activity) activityTypeClass = 'photo';
+                          if ('calendarEventId' in activity) activityTypeClass = 'calendar-event';
+                          else if ('photoLogId' in activity) activityTypeClass = 'photo';
                           else if (isFoodLogActivity(activity)) activityTypeClass = 'food';
                           else if ('activities' in activity && 'type' in activity && ['TUMMY_TIME', 'INDOOR_PLAY', 'OUTDOOR_PLAY', 'WALK', 'CUSTOM'].includes((activity as any).type)) activityTypeClass = 'play';
                           else if ('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)) activityTypeClass = 'breast-milk-adjustment';
@@ -419,6 +429,13 @@ const TimelineV2ActivityList = ({
                                 </div>
                                 <div className="text-xs text-gray-600 event-details">
                                   {(() => {
+
+                                    // Calendar event merged into the timeline: title + location
+                                    if ('calendarEventId' in activity) {
+                                      const parts = [activity.title];
+                                      if (activity.location) parts.push(activity.location);
+                                      return parts.join(' • ');
+                                    }
 
                                     // Food log (issue #203 / #247)
                                     if (isFoodLogActivity(activity)) {

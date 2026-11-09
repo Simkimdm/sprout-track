@@ -24,7 +24,8 @@ import {
   Syringe,
   Camera,
   Utensils,
-  Apple
+  Apple,
+  CalendarDays
 } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import {
@@ -59,6 +60,10 @@ const pngIcon = (src: string) => (
 );
 
 export const getActivityIcon = (activity: ActivityType) => {
+  // Calendar event merged into the timeline - check first (has title/startTime like other types)
+  if ('calendarEventId' in activity) {
+    return <CalendarDays className="h-4 w-4 text-violet-700" aria-hidden="true" />;
+  }
   // Photo log - check first since it has no overlapping fields with other types
   if ('photoLogId' in activity) {
     return pngIcon('/photo-192.png');
@@ -723,6 +728,16 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
 };
 
 export const getActivityDescription = (activity: ActivityType, settings: Settings | null, t: (key: string) => string): ActivityDescription => {
+  // Calendar event merged into the timeline
+  if ('calendarEventId' in activity) {
+    const parts = [activity.title];
+    if (activity.location) parts.push(activity.location);
+    if (activity.allDay) parts.push(t('All day'));
+    return {
+      type: t('Calendar event'),
+      details: parts.join(' • ')
+    };
+  }
   // Photo log - check first since it has no overlapping fields with other types
   if ('photoLogId' in activity) {
     const photos = activity.photos;
@@ -1140,6 +1155,7 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
 };
 
 export const getActivityEndpoint = (activity: ActivityType): string => {
+  if ('calendarEventId' in activity) return 'calendar-event';
   if ('photoLogId' in activity) return 'photo-log';
   // Food log (issue #203 / #247)
   if (isFoodLogActivity(activity)) return 'food-log';
@@ -1166,6 +1182,10 @@ export const getActivityEndpoint = (activity: ActivityType): string => {
 };
 
 export const getActivityStyle = (activity: ActivityType): ActivityStyle => {
+  // Calendar event merged into the timeline
+  if ('calendarEventId' in activity) {
+    return { bg: 'bg-violet-200', textColor: 'text-violet-900' };
+  }
   // Photo log - check first since it has no overlapping fields with other types
   if ('photoLogId' in activity) {
     return { bg: 'bg-white border-2 border-[#e11d48]', textColor: 'text-[#e11d48]' };

@@ -2768,5 +2768,10 @@
   "Zero “did anyone change him?” texts sent today.": "Null „Hat ihn schon jemand gewickelt?“-Nachrichten heute.",
   "Automatically end sleep when a feeding starts": "Schlaf automatisch beenden, wenn eine Fütterung beginnt",
   "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Wenn aktiviert, beendet der Start einer Fütterung automatisch jede aktive Schlafsession des Babys",
-  "Sleep & Feeding": "Schlaf & Fütterung"
+  "Sleep & Feeding": "Schlaf & Fütterung",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Kalendereinträge in der Timeline anzeigen",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "Wenn aktiviert, werden Kalendereinträge des ausgewählten Tages auch in der Timeline angezeigt",
+  "Calendar event": "Kalendereintrag",
+  "All day": "Ganztägig"
 }

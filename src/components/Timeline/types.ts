@@ -5,10 +5,28 @@ import { SleepLogResponse, PhotoLogResponse, TimelinePhotoInfo } from '@/app/api
 // Helper to add the optional batched photo-thumbnail info to attachable activity types
 type WithPhotos<T> = T & { photos?: TimelinePhotoInfo[] };
 
+// A calendar event merged into the timeline (settings: showCalendarEventsInTimeline).
+// `calendarEventId` is the discriminant that tells it apart from log entries.
+export interface TimelineCalendarEvent {
+  calendarEventId: string;
+  id: string;
+  babyId?: string;
+  title: string;
+  description?: string | null;
+  startTime: string;
+  endTime?: string | null;
+  allDay: boolean;
+  type: string;
+  location?: string | null;
+  color?: string | null;
+  photos?: TimelinePhotoInfo[];
+}
+
 // Define the extended ActivityType that includes caretaker information
 export type TimelineActivityType = (
   WithPhotos<ImportedActivityType>
   | (Omit<PhotoLogResponse, 'photos'> & { photoLogId: string; photos?: TimelinePhotoInfo[] })
+  | TimelineCalendarEvent
 ) & {
   caretakerId?: string | null;
   caretakerName?: string;
@@ -18,7 +36,7 @@ export type TimelineActivityType = (
 // Use TimelineActivityType for internal component logic
 export type ActivityType = TimelineActivityType;
 
-export type FilterType = 'sleep' | 'feed' | 'diaper' | 'wet' | 'poop' | 'medicine' | 'note' | 'bath' | 'pump' | 'breast-milk-adjustment' | 'milestone' | 'measurement' | 'play' | 'vaccine' | 'food' | 'photo' | null;
+export type FilterType = 'sleep' | 'feed' | 'diaper' | 'wet' | 'poop' | 'medicine' | 'note' | 'bath' | 'pump' | 'breast-milk-adjustment' | 'milestone' | 'measurement' | 'play' | 'vaccine' | 'food' | 'photo' | 'calendar' | null;
 
 export interface LatestStatusData {
   lastFeedTime?: Date;

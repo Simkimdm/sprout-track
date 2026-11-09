@@ -14,7 +14,7 @@ import VaccineForm from '@/src/components/forms/VaccineForm';
 import FoodForm from '@/src/components/forms/FoodForm';
 import PhotoForm from '@/src/components/forms/PhotoForm';
 import PhotoDetail from '@/src/components/PhotoDetail';
-import { ActivityType, FilterType, TimelineProps } from '../types';
+import { ActivityType, FilterType, TimelineCalendarEvent, TimelineProps } from '../types';
 import { computeLatestStatus } from '@/src/utils/latestStatus';
 import TimelineV2DailyStats from './TimelineV2DailyStats';
 import TimelineV2ActivityList from './TimelineV2ActivityList';
@@ -48,6 +48,9 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   }, [initialDate]);
 
   const [dateFilteredActivities, setDateFilteredActivities] = useState<ActivityType[]>([]);
+  // Calendar events of the selected day, merged into the display list when the
+  // family setting showCalendarEventsInTimeline is enabled (never part of stats/gaps)
+  const [calendarEvents, setCalendarEvents] = useState<TimelineCalendarEvent[]>([]);
   // Recent feed entries before the selected day, used as gap anchor for the day's first feeding
   const [historyFeeds, setHistoryFeeds] = useState<ActivityType[]>([]);
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
@@ -64,6 +67,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   const activityCache = useActivityCache();
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
+  const showCalendarEvents = (settings as any)?.showCalendarEventsInTimeline ?? false;
 
   // Gap since the previous same-type entry for every feed/sleep row of the day
   // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
@@ -184,6 +188,43 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     }
   }, [babyId]);
 
+  // Fetch the calendar events starting on `date` (for the optional timeline merge)
+  const fetchCalendarEvents = useCallback(async (date: Date) => {
+    if (!babyId || !showCalendarEvents) {
+      setCalendarEvents([]);
+      return;
+    }
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      const params = new URLSearchParams({
+        babyId,
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+      });
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`/api/calendar-event?${params.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCalendarEvents((data.data || []).map((event: any) => ({
+            ...event,
+            calendarEventId: event.id,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events for timeline:', error);
+    }
+  }, [babyId, showCalendarEvents]);
+
   // Fetch activities for date using cache
   const fetchActivitiesForDate = useCallback(async (date: Date, isAnimated: boolean) => {
     if (!babyId) return;
@@ -198,6 +239,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       setDateFilteredActivities(result.activities);
       setWindowActivities(result.allActivities);
       fetchHistoryFeeds(date);
+      fetchCalendarEvents(date);
       lastRefreshTimestamp.current = Date.now();
 
       // Only emit status when today is within the fetched window (prevents stale status on past dates)
@@ -220,7 +262,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         setIsLoadingActivities(false);
       }
     }
-  }, [babyId, activityCache, emitLatestStatus]);
+  }, [babyId, activityCache, emitLatestStatus, fetchCalendarEvents]);
 
   // Refresh just today's data (for polling — bypasses cache)
   const refreshCurrentDay = useCallback(async () => {
@@ -236,6 +278,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         return timeStr ? activityCache.toDateKey(new Date(timeStr)) === selectedDayKey : false;
       });
       setDateFilteredActivities(dayActivities);
+      fetchCalendarEvents(selectedDate);
       // Rebuild the ±1 day window from cache around the refreshed day
       const prevDay = new Date(selectedDate); prevDay.setDate(prevDay.getDate() - 1);
       const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1);
@@ -257,7 +300,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     } catch (error) {
       console.error('Error refreshing current day:', error);
     }
-  }, [babyId, selectedDate, activityCache, emitLatestStatus]);
+  }, [babyId, selectedDate, activityCache, emitLatestStatus, fetchCalendarEvents]);
 
   const fetchHeatmapData = useCallback(async () => {
     if (!babyId) return;
@@ -361,6 +404,13 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     }
   }, [babyId, settings?.defaultBottleUnit, defaultBottleUnit]);
 
+  // (Re)fetch calendar events when the setting or the day changes
+  useEffect(() => {
+    if (babyId) {
+      fetchCalendarEvents(selectedDate);
+    }
+  }, [babyId, selectedDate, fetchCalendarEvents]);
+
   // Handle refreshTrigger from parent (form submissions in log-entry page)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTrigger.current) {
@@ -421,9 +471,16 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       ? dateFilteredActivities.filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
       : dateFilteredActivities;
 
+    // Calendar events join the display list only when the setting is enabled
+    const withCalendarEvents = showCalendarEvents
+      ? [...baseActivities, ...calendarEvents]
+      : baseActivities;
+
     const filtered = !activeFilter || activeFilter === null
-      ? baseActivities
-      : baseActivities.filter(activity => {
+      ? withCalendarEvents
+      : withCalendarEvents.filter(activity => {
+          // Calendar events only show unfiltered or under their own filter
+          if ('calendarEventId' in activity) return activeFilter === 'calendar';
           switch (activeFilter) {
             case 'sleep':
               return 'duration' in activity;
@@ -476,7 +533,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     });
 
     return sorted;
-  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled]);
+  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled, showCalendarEvents, calendarEvents]);
 
   const handleDelete = async (activity: ActivityType) => {
     if (!confirm('Are you sure you want to delete this activity?')) return;
@@ -551,7 +608,11 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             isLoading={isLoadingActivities}
             isAnimated={isFetchAnimated}
             selectedDate={selectedDate}
-            onActivitySelect={(activity) => setSelectedActivity(activity)}
+            onActivitySelect={(activity) => {
+              // Calendar events have no log-entry details/edit drawer
+              if ('calendarEventId' in activity) return;
+              setSelectedActivity(activity);
+            }}
             onPhotoClick={handlePhotoClick}
             activeFilter={activeFilter}
             allActivities={dateFilteredActivities}
