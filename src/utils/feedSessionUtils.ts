@@ -276,17 +276,23 @@ export function buildFeedGapMap<T extends FeedGapRow>(
   from: 'start' | 'end' = 'start',
   historyFeeds: T[] = []
 ): Map<string, FeedGapInfo> {
+  return buildGapMap(buildFeedGapPoints(feeds, historyFeeds), from);
+}
+
+/**
+ * Gap points for feed rows. History rows (feeds before the viewed day) only serve as
+ * gap anchors so the first entry of a day can measure its gap across midnight; they are
+ * still included, which is harmless (their ids are never rendered). Every feed row is
+ * its own gap point, so the second side of a bracketed L+R session shows the pause
+ * since the first side ended. (Session grouping for the bracket itself happens in the
+ * component via groupBreastFeedSessions.)
+ */
+export function buildFeedGapPoints<T extends FeedGapRow>(
+  feeds: T[],
+  historyFeeds: T[] = []
+): GapPoint[] {
   const points: GapPoint[] = [];
-
-  // History rows (feeds before the viewed day) only serve as gap anchors so
-  // the first entry of a day can measure its gap across midnight; they are
-  // still included in the map, which is harmless (their ids are never rendered).
-  const allFeeds = [...historyFeeds, ...feeds];
-
-  // Every feed row is its own gap point, so the second side of a bracketed
-  // L+R session shows the pause since the first side ended. (Session grouping
-  // for the bracket itself happens in the component via groupBreastFeedSessions.)
-  for (const row of allFeeds) {
+  for (const row of [...historyFeeds, ...feeds]) {
     if (row.type === 'SOLIDS') continue;
     const startTs = new Date(breastFeedDisplayTime(row)).getTime();
     // BREAST: amount may hold legacy minutes; other types: amount is a volume
@@ -300,6 +306,34 @@ export function buildFeedGapMap<T extends FeedGapRow>(
       durationSeconds,
     });
   }
+  return points;
+}
 
-  return buildGapMap(points, from);
+/**
+ * Like buildGapMap, but keys each gap to the OLDER point of the pair: the list renders
+ * newest first and a divider renders above its entry, so keying the gap to the older
+ * entry places the divider between the two entries. When the older point is not part
+ * of the rendered list (history anchor across midnight), the gap stays on the newer
+ * point so it still shows above the first entry of the day.
+ */
+export function buildGapDividerMap(
+  points: GapPoint[],
+  from: 'start' | 'end' = 'start',
+  renderedRowIds?: Set<string>
+): Map<string, FeedGapInfo> {
+  const result = new Map<string, FeedGapInfo>();
+  const sorted = [...points].sort((a, b) => a.startTs - b.startTs);
+  sorted.forEach((point, index) => {
+    const prev = index > 0 ? sorted[index - 1] : null;
+    if (!prev) return;
+    const info: FeedGapInfo = {
+      gapSeconds: Math.max(0, point.startTs - (from === 'end' ? prev.endTs : prev.startTs)) / 1000,
+      durationSeconds: point.durationSeconds,
+    };
+    const target = renderedRowIds && !prev.rowIds.some(id => renderedRowIds.has(id)) ? point : prev;
+    for (const rowId of target.rowIds) {
+      result.set(rowId, info);
+    }
+  });
+  return result;
 }

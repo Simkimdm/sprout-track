@@ -4,6 +4,8 @@ import {
   countBreastFeedSessions,
   breastFeedDisplayTime,
   buildFeedGapMap,
+  buildGapDividerMap,
+  buildFeedGapPoints,
   formatSignedElapsedHM,
   formatDurationHM,
   formatDurationWords,
@@ -327,6 +329,49 @@ describe('buildFeedGapMap from start/end anchor', () => {
       { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T10:10:00Z'), amount: 100 },
     ];
     expect(buildFeedGapMap(overlapping, 'end').get('f2')!.gapSeconds).toBe(0);
+  });
+});
+
+describe('buildGapDividerMap', () => {
+  const points = [
+    { rowIds: ['old'], startTs: at('2026-07-22T01:00:00Z').getTime(), endTs: at('2026-07-22T01:00:00Z').getTime(), durationSeconds: 0 },
+    { rowIds: ['new'], startTs: at('2026-07-22T05:58:00Z').getTime(), endTs: at('2026-07-22T05:58:00Z').getTime(), durationSeconds: 0 },
+  ];
+
+  it('keys the gap to the older entry so the divider renders between the pair', () => {
+    const dividers = buildGapDividerMap(points, 'start', new Set(['old', 'new']));
+    expect(dividers.has('new')).toBe(false);
+    expect(dividers.get('old')!.gapSeconds).toBe(4 * 3600 + 58 * 60);
+  });
+
+  it('keeps the gap on the newer entry when the older one is an unrendered history anchor', () => {
+    const withHistory = [
+      { rowIds: ['hist'], startTs: at('2026-07-21T22:00:00Z').getTime(), endTs: at('2026-07-21T22:00:00Z').getTime(), durationSeconds: 0 },
+      { rowIds: ['f1'], startTs: at('2026-07-22T06:00:00Z').getTime(), endTs: at('2026-07-22T06:00:00Z').getTime(), durationSeconds: 0 },
+    ];
+    const dividers = buildGapDividerMap(withHistory, 'start', new Set(['f1']));
+    expect(dividers.get('f1')!.gapSeconds).toBe(8 * 3600);
+    expect(dividers.has('hist')).toBe(false);
+  });
+
+  it('anchors at the previous end when from is end', () => {
+    const withDuration = [
+      { rowIds: ['s1'], startTs: at('2026-07-22T10:00:00Z').getTime(), endTs: at('2026-07-22T11:00:00Z').getTime(), durationSeconds: 3600 },
+      { rowIds: ['s2'], startTs: at('2026-07-22T14:00:00Z').getTime(), endTs: at('2026-07-22T15:30:00Z').getTime(), durationSeconds: 5400 },
+    ];
+    const dividers = buildGapDividerMap(withDuration, 'end', new Set(['s1', 's2']));
+    expect(dividers.get('s1')!.gapSeconds).toBe(3 * 3600);
+    expect(dividers.has('s2')).toBe(false);
+  });
+
+  it('buildFeedGapPoints includes history rows as anchors and skips SOLIDS', () => {
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T06:00:00Z'), amount: 100 },
+      { id: 's1', type: 'SOLIDS', time: at('2026-07-22T12:00:00Z'), amount: 50 },
+    ];
+    const history = [{ id: 'h1', type: 'BOTTLE', time: at('2026-07-21T22:00:00Z'), amount: 90 }];
+    const points = buildFeedGapPoints(feeds as any, history as any);
+    expect(points.map(p => p.rowIds[0])).toEqual(['h1', 'f1']);
   });
 });
 
