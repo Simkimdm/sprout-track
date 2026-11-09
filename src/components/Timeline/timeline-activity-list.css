@@ -339,6 +339,18 @@ html.dark .timeline-caretaker-badge {
 }
 
 /* "+x:yy" gap since the previous feeding, shown next to the recording time */
+.timeline-feed-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #9ca3af; /* gray-400 */
+  font-size: 0.6875rem; /* 11px */
+}
+
+html.dark .timeline-feed-subline {
+  color: #9ca3af !important; /* gray-400 */
+}
+
 .timeline-feed-gap {
   display: inline-flex;
   align-items: center;
