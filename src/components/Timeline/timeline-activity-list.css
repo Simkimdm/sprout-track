@@ -313,6 +313,8 @@ html.dark .timeline-caretaker-badge {
 .event-time {
   font-size: 0.75rem; /* 12px */
   color: #6b7280; /* gray-500 */
+  min-width: 4.75rem; /* keeps the right edge stable regardless of content length */
+  text-align: right;
 }
 
 /* Filtered timeline: a linked/paired L+R breast-feed session is bracketed
@@ -342,6 +344,7 @@ html.dark .timeline-caretaker-badge {
 .timeline-feed-subline {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.25rem;
   color: #9ca3af; /* gray-400 */
   font-size: 0.6875rem; /* 11px */

@@ -621,7 +621,7 @@ const TimelineV2ActivityList = ({
                               )}
 
                               {/* Event Time: start on the first line, computed end + gap on the second */}
-                              <div className="flex-shrink-0 text-xs text-gray-500 event-time">
+                              <div className="flex-shrink-0 text-right text-xs text-gray-500 event-time">
                                 <div>{timeStr}</div>
                                 {(gapSuffix || durationSuffix) && (
                                   <div className="timeline-feed-subline">
