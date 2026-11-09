@@ -2,7 +2,7 @@ import { Baby as BabyIcon } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
-import { groupBreastFeedSessions, buildFeedGapMap, formatSignedElapsedHM, formatDurationHM, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, buildFeedGapMap, buildGapMap, formatDurationHM, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -204,6 +204,26 @@ const TimelineV2ActivityList = ({
     return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
   }, [isFiltering, allActivities, activities, historyActivities, feedTimerFrom]);
 
+  // Filtered view: same gap suffix for sleep entries (anchored at the previous sleep's end)
+  const sleepGapById = useMemo(() => {
+    if (!isFiltering) return new Map<string, FeedGapInfo>();
+    const source = allActivities ?? activities;
+    const points = source
+      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+      .map(a => {
+        const startTs = new Date((a as { startTime: string }).startTime).getTime();
+        const durationSeconds = (a as { duration?: number }).duration || 0;
+        const endTime = (a as { endTime?: string | null }).endTime;
+        return {
+          rowIds: [a.id],
+          startTs,
+          endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000,
+          durationSeconds,
+        };
+      });
+    return buildGapMap(points, 'end');
+  }, [isFiltering, allActivities, activities]);
+
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
@@ -268,19 +288,23 @@ const TimelineV2ActivityList = ({
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
                           }
                           
-                          // Filtered view: show "+x:yy" (since previous feeding) and duration next to the recording time
+                          // Filtered view: show "(x:yy)" next to the recording time = gap since the
+                          // previous same-type entry (0 if none) plus this entry's duration
                           let gapSuffix = '';
-                          if (isFiltering && 'amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
-                            const gapInfo = feedGapById.get(activity.id);
-                            if (gapInfo) {
+                          if (isFiltering) {
+                            let gapInfo: FeedGapInfo | undefined;
+                            let isAnchor = true;
+                            if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
+                              gapInfo = feedGapById.get(activity.id);
                               const session = sessionByRowId.get(activity.id);
-                              const isSessionAnchor = !session || session.rows.every(r =>
+                              isAnchor = !session || session.rows.every(r =>
                                 new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
                               );
-                              if (isSessionAnchor) {
-                                // gap since the previous feeding (0 if none) plus this feeding's duration as one +/- x:yy
-                                gapSuffix = ` (${formatSignedElapsedHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
-                              }
+                            } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
+                              gapInfo = sleepGapById.get(activity.id);
+                            }
+                            if (gapInfo && isAnchor) {
+                              gapSuffix = ` (${formatDurationHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
                             }
                           }
                           

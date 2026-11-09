@@ -47,13 +47,13 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
     // session anchor (earliest side): pause from 08:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session end 10:14 -> 3:01
-    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:01)', '(+2:14)', '(+0:00)']);
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:01)', '(2:14)', '(0:00)']);
   });
 
   it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
     const html = renderList('feed', 'start');
     // next bottle measured from session start 10:00 -> 3:15
-    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:15)', '(+2:14)', '(+0:00)']);
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:15)', '(2:14)', '(0:00)']);
   });
 
   it('measures the first entry of a day against the last feeding of the previous day', () => {
@@ -67,7 +67,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
       })
     );
     // 22:00 -> 06:00 = 8h gap, no duration on a bottle
-    expect(html).toContain('(+8:00)');
+    expect(html).toContain('(8:00)');
   });
 
   it('shows +0:00-based value for the very first feeding when no history exists', () => {
@@ -79,12 +79,28 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
       })
     );
-    expect(html).toContain('(+0:00)');
+    expect(html).toContain('(0:00)');
+  });
+
+  it('shows the same (x:yy) gap+duration suffix for sleep entries when filtered', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 3600 },
+      { id: 's2', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T14:00:00.000Z', endTime: '2026-07-22T15:30:00.000Z', duration: 5400 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+      })
+    );
+    // s2: gap from s1 end (11:00) to 14:00 = 3h, plus own duration 1:30 -> (4:30); s1 is first -> (1:00)
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(4:30)', '(1:00)']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {
     const html = renderList(null);
     expect(html).not.toContain('timeline-feed-session-bracket');
-    expect(html).not.toMatch(/\(\+\d+:\d{2}\)/);
+    expect(html).not.toMatch(/\(\d+:\d{2}\)/);
   });
 });
