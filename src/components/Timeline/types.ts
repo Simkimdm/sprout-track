@@ -94,6 +94,8 @@ export interface TimelineActivityListProps {
   historyActivities?: ActivityType[];
   /** Per-entry gap since the previous same-type entry (feeds + sleep), keyed by activity id */
   gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
+  /** End-anchored variant (pause since previous entry ENDED, durations included) for the between-entry dividers */
+  dividerGapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
 }
 
 export interface TimelineActivityDetailsProps {

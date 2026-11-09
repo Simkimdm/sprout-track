@@ -74,6 +74,7 @@ const TimelineV2ActivityList = ({
   historyActivities,
   feedTimerFrom,
   gapById,
+  dividerGapById,
 }: TimelineActivityListProps) => {
 
   const { t } = useLocalization();
@@ -225,13 +226,14 @@ const TimelineV2ActivityList = ({
         const firstRow = rows.find(r => new Date(getActivityTime(r)).getTime() === earliest) ?? rows[0];
         const isFeed = !!firstRow && 'amount' in firstRow && 'type' in firstRow && !('foodId' in firstRow);
         const isSleep = !!firstRow && 'duration' in firstRow && 'startTime' in firstRow && !('activities' in firstRow);
-        const gap = firstRow ? gapById?.get(firstRow.id)?.gapSeconds : undefined;
+        // the between-entry gap divider only shows when a type filter is active
+        const gap = activeFilter && firstRow ? dividerGapById?.get(firstRow.id)?.gapSeconds : undefined;
         if ((isFeed || isSleep) && gap && gap > 0) item.dividerGap = formatDurationWords(gap);
         items.push(item);
       }
       return { ...group, items };
     });
-  }, [groupedActivities, sessionByRowId, gapById]);
+  }, [groupedActivities, sessionByRowId, dividerGapById, activeFilter]);
 
   // Render one timeline event row (also used for each row of a grouped L+R session)
   const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {

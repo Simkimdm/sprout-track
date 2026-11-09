@@ -59,6 +59,7 @@ const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, history
       historyActivities,
       feedTimerFrom,
       gapById: computeGapById(activities, historyActivities ?? [], feedTimerFrom === 'end' ? 'end' : 'start'),
+      dividerGapById: computeGapById(activities, historyActivities ?? [], 'end'),
     })
   );
 
@@ -80,7 +81,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
   it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
     const html = renderList('feed', 'start');
     // next bottle measured from session start 10:00 -> gap 3:15
-    expect(gapValues(html)).toEqual(['3h 7m', '2h 0m']);
+    expect(gapValues(html)).toEqual(['3h 1m', '2h 0m']);
   });
 
   it('measures the first entry of a day against the last feeding of the previous day', () => {
@@ -91,7 +92,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, historyActivities: history, feedTimerFrom: 'start',
-        gapById: computeGapById(dayFeeds, history, 'start'),
+        gapById: computeGapById(dayFeeds, history, 'start'), dividerGapById: computeGapById(dayFeeds, history, 'end'),
       })
     );
     // 22:00 -> 06:00 = 8h gap, no duration on a bottle
@@ -105,7 +106,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
-        gapById: computeGapById(dayFeeds, [], 'start'),
+        gapById: computeGapById(dayFeeds, [], 'start'), dividerGapById: computeGapById(dayFeeds, [], 'end'),
       })
     );
     expect(gapValues(html)).toEqual([]);
@@ -121,7 +122,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
       })
     );
     // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
@@ -138,7 +139,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
       })
     );
     expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['21m']);
@@ -154,7 +155,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activities: sleeps, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
         activeFilter: 'sleep', allActivities: sleeps,
-        gapById: computeGapById(sleeps, [], 'start'),
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeGapById(sleeps, [], 'end'),
       })
     );
     // start–end range with a dash, plus live duration chip and 'Still asleep' in details
@@ -162,9 +163,9 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(html).toContain('timeline-feed-duration');
   });
 
-  it('renders bracket and gap by default, even without an active filter', () => {
+  it('renders the session bracket without a filter, but no gap dividers', () => {
     const html = renderList(null);
     expect(html).toContain('timeline-feed-session-bracket');
-    expect(gapValues(html)).toEqual(['3h 7m', '2h 0m']);
+    expect(gapValues(html)).toEqual([]);
   });
 });

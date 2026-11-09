@@ -84,6 +84,25 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     return new Map<string, FeedGapInfo>([...feedGaps, ...sleepGaps]);
   }, [dateFilteredActivities, historyFeeds, feedTimerFrom]);
 
+  // Dividers between same-type entries always anchor at the previous entry's END,
+  // so the logs' durations are included in the gap (pause between entries)
+  const dividerGapById = useMemo(() => {
+    const isFeedRow = (a: ActivityType) =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
+    const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
+    const feedGaps = buildFeedGapMap(feeds, 'end', history);
+    const sleepPoints = dateFilteredActivities
+      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+      .map(a => {
+        const startTs = new Date((a as { startTime: string }).startTime).getTime();
+        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
+        const endTime = (a as { endTime?: string | null }).endTime;
+        return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+      });
+    return new Map<string, FeedGapInfo>([...feedGaps, ...buildGapMap(sleepPoints, 'end')]);
+  }, [dateFilteredActivities, historyFeeds]);
+
   // Issue #225: feed categories that reset the "time since last feed" timer
   // (null = all feeds count)
   const feedTimerCategories = useMemo(() => parseFeedTimerTypes(feedTimerTypes), [feedTimerTypes]);
@@ -525,6 +544,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             historyActivities={historyFeeds}
             feedTimerFrom={feedTimerFrom}
             gapById={gapById}
+            dividerGapById={dividerGapById}
           />
         </div>
 
