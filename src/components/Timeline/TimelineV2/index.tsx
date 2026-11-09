@@ -85,6 +85,15 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     return new Map<string, FeedGapInfo>([...feedGaps, ...sleepGaps]);
   }, [dateFilteredActivities, historyFeeds, feedTimerFrom]);
 
+  // Activities of the previous day(s) from the fetched window, used as gap anchors so the
+  // first entry of the viewed day can show its divider to the last entry of the day before
+  const previousDayActivities = useMemo(() => {
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const startTs = startOfDay.getTime();
+    return windowActivities.filter(a => new Date(getActivityTime(a)).getTime() < startTs);
+  }, [windowActivities, selectedDate]);
+
   // Dividers between same-type entries always anchor at the previous entry's END,
   // so the logs' durations are included in the gap (pause between entries). Each gap is
   // keyed to the OLDER entry of the pair, so the divider renders between the two entries
@@ -93,20 +102,20 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   const dividerGapById = useMemo(() => {
     const isFeedRow = (a: ActivityType) =>
       'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const isSleepRow = (a: ActivityType) => 'duration' in a && 'startTime' in a && !('activities' in a);
     const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
     const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
     const renderedIds = new Set(dateFilteredActivities.map(a => a.id));
     const feedDividers = buildGapDividerMap(buildFeedGapPoints(feeds, history), 'end', renderedIds);
-    const sleepPoints = dateFilteredActivities
-      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
-      .map(a => {
-        const startTs = new Date((a as { startTime: string }).startTime).getTime();
-        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
-        const endTime = (a as { endTime?: string | null }).endTime;
-        return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
-      });
+    const toSleepPoint = (a: ActivityType) => {
+      const startTs = new Date((a as { startTime: string }).startTime).getTime();
+      const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
+      const endTime = (a as { endTime?: string | null }).endTime;
+      return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+    };
+    const sleepPoints = [...previousDayActivities.filter(isSleepRow), ...dateFilteredActivities.filter(isSleepRow)].map(toSleepPoint);
     return new Map<string, FeedGapInfo>([...feedDividers, ...buildGapDividerMap(sleepPoints, 'end', renderedIds)]);
-  }, [dateFilteredActivities, historyFeeds]);
+  }, [dateFilteredActivities, historyFeeds, previousDayActivities]);
 
   // Issue #225: feed categories that reset the "time since last feed" timer
   // (null = all feeds count)
@@ -546,7 +555,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             onPhotoClick={handlePhotoClick}
             activeFilter={activeFilter}
             allActivities={dateFilteredActivities}
-            historyActivities={historyFeeds}
+            historyActivities={previousDayActivities}
             feedTimerFrom={feedTimerFrom}
             gapById={gapById}
             dividerGapById={dividerGapById}

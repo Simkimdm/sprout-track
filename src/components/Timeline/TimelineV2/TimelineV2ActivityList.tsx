@@ -200,18 +200,22 @@ const TimelineV2ActivityList = ({
   // Gap map for other types (diaper, note, ...) when a filter is active: start-anchored,
   // no duration needed — the filtered list is homogeneous, so gaps chain per type.
   // Keyed to the older entry of each pair so the divider renders between the two entries.
+  // Previous-day activities (historyActivities) serve as anchors so the first entry of the
+  // day shows its divider to the last entry of the previous day.
   const otherGapById = useMemo(() => {
     if (!activeFilter) return new Map<string, FeedGapInfo>();
     const isFeedRow = (a: ActivityType) => 'amount' in a && 'type' in a && !('foodId' in a);
     const isSleepRow = (a: ActivityType) => 'duration' in a && 'startTime' in a && !('activities' in a);
-    const points = activities
-      .filter(a => !isFeedRow(a) && !isSleepRow(a))
-      .map(a => {
-        const startTs = new Date(getActivityTime(a)).getTime();
-        return { rowIds: [a.id], startTs, endTs: startTs, durationSeconds: 0 };
-      });
+    const toPoint = (a: ActivityType) => {
+      const startTs = new Date(getActivityTime(a)).getTime();
+      return { rowIds: [a.id], startTs, endTs: startTs, durationSeconds: 0 };
+    };
+    const points = [
+      ...(historyActivities ?? []).filter(a => !isFeedRow(a) && !isSleepRow(a)),
+      ...activities.filter(a => !isFeedRow(a) && !isSleepRow(a)),
+    ].map(toPoint);
     return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
-  }, [activities, activeFilter]);
+  }, [activities, activeFilter, historyActivities]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
   // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the

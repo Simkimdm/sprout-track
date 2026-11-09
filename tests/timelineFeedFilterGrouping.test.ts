@@ -37,8 +37,9 @@ const computeDividerGapById = (activities: any[], history: any[]): Map<string, F
     buildFeedGapPoints(activities.filter(isFeed) as FeedGapRow[], history.filter(isFeed) as FeedGapRow[]),
     'end', renderedIds
   );
-  const sleepPoints = activities
-    .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+  const isSleep = (a: any) => 'duration' in a && 'startTime' in a && !('activities' in a);
+  const sleepPoints = [...history, ...activities]
+    .filter(isSleep)
     .map(a => {
       const startTs = new Date(a.startTime).getTime();
       const dur = (a.duration || 0) * 60;
@@ -209,6 +210,43 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iNew).toBeGreaterThan(-1);
     expect(iNew).toBeLessThan(iGap);
     expect(iGap).toBeLessThan(iOld);
+  });
+
+  it('shows the first diaper of the day with a divider to the last diaper of the previous day', () => {
+    const diapers = [
+      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T22:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: diapers, historyActivities: history,
+      })
+    );
+    // 22:00 ( Vortag ) -> 10:00 = 12h gap on the first entry of the day
+    expect(gapValues(html)).toEqual(['12h 0m']);
+  });
+
+  it('shows the first sleep of the day with a divider to the last sleep of the previous day', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 60 },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'NAP', startTime: '2026-07-21T22:00:00.000Z', endTime: '2026-07-21T23:30:00.000Z', duration: 90 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps, historyActivities: history,
+        gapById: computeGapById(sleeps, history, 'start'), dividerGapById: computeDividerGapById(sleeps, history),
+      })
+    );
+    // end-anchored: 10:00 minus previous sleep end 23:30 = 10h 30m
+    expect(gapValues(html)).toEqual(['10h 30m']);
   });
 
   it('renders the session bracket without a filter, but no gap dividers', () => {
