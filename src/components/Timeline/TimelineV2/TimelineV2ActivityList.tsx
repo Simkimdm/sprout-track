@@ -301,14 +301,8 @@ const TimelineV2ActivityList = ({
                           let durationSuffix = '';
                           {
                             let gapInfo: FeedGapInfo | undefined;
-                            let isAnchor = true;
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
                               gapInfo = feedGapById.get(activity.id);
-                              const session = sessionByRowId.get(activity.id);
-                              // show the session's gap on its first rendered (newest) row
-                              isAnchor = !session || session.rows.every(r =>
-                                new Date(getActivityTime(r as unknown as ActivityType)).getTime() <= activityTime.getTime()
-                              );
                               const durSec = activity.type === 'BREAST'
                                 ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
                                 : (activity.feedDuration || 0);
@@ -317,7 +311,7 @@ const TimelineV2ActivityList = ({
                               gapInfo = sleepGapById.get(activity.id);
                               if (activity.duration) durationSuffix = formatDurationWords(activity.duration * 60);
                             }
-                            if (gapInfo && isAnchor) {
+                            if (gapInfo) {
                               gapSuffix = formatDurationWords(gapInfo.gapSeconds);
                             }
                           }
