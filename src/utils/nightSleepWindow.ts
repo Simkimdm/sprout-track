@@ -1,7 +1,7 @@
 /**
  * Night sleep window: an optional daily time window (e.g. 22:00-07:00) in
  * which sleep entries logged as NAP are automatically stored as NIGHT_SLEEP.
- * Stored per family on Settings.nightSleepWindow as JSON; null = disabled
+ * Stored per baby on Baby.nightSleepWindow as JSON; null = disabled
  * (previous behavior, no automatic reclassification).
  */
 

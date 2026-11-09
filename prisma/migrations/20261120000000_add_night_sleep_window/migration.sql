@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Settings" ADD COLUMN "nightSleepWindow" TEXT;
+ALTER TABLE "Baby" ADD COLUMN "nightSleepWindow" TEXT;

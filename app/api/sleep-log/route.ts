@@ -9,9 +9,9 @@ import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 import { DEFAULT_SLEEP_LOCATIONS } from '@/src/constants/sleepLocations';
 import { parseNightSleepWindow, resolveSleepType } from '@/src/utils/nightSleepWindow';
 
-async function getNightSleepWindow(familyId: string) {
-  const settings = await prisma.settings.findFirst({ where: { familyId } });
-  return parseNightSleepWindow(settings?.nightSleepWindow ?? null);
+async function getNightSleepWindow(babyId: string) {
+  const baby = await prisma.baby.findFirst({ where: { id: babyId } });
+  return parseNightSleepWindow(baby?.nightSleepWindow ?? null);
 }
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
@@ -41,8 +41,8 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     const startTimeUTC = toUTC(body.startTime);
     const endTimeUTC = body.endTime ? toUTC(body.endTime) : null;
 
-    // Naps starting inside the configured night window become night sleep
-    const nightWindow = await getNightSleepWindow(userFamilyId);
+    // Naps starting inside the baby's configured night window become night sleep
+    const nightWindow = parseNightSleepWindow(baby.nightSleepWindow ?? null);
     const sleepType = resolveSleepType(body.type, startTimeUTC, nightWindow) as SleepType;
 
     // Calculate duration if both start and end times are present
@@ -137,7 +137,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     // Re-evaluate the night sleep window when type or start time change
     const effectiveStartTime = startTimeUTC || existingSleepLog.startTime;
     const effectiveType = body.type ?? existingSleepLog.type;
-    const nightWindow = await getNightSleepWindow(userFamilyId);
+    const nightWindow = await getNightSleepWindow(existingSleepLog.babyId);
     const sleepType = resolveSleepType(effectiveType, effectiveStartTime, nightWindow) as SleepType;
 
     // Calculate duration if end time is provided

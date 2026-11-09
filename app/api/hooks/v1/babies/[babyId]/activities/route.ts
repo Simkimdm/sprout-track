@@ -11,6 +11,7 @@ import { FOOD_FIELDS, formatFoodDetails, getDefaultSolidsUnit, loadFoodCatalog, 
 import { buildFoodLogFoodFields, deriveMealAmountFromItems } from '@/src/utils/foodLogUtils';
 import { findExistingFoodLog } from '@/scripts/convert-solids-feeds-runner';
 import { resolveCatalogFoodName } from '@/scripts/convert-solids-feeds-core';
+import { parseNightSleepWindow, resolveSleepType } from '@/src/utils/nightSleepWindow';
 
 const VALID_TYPES = ['sleep', 'feed', 'diaper', 'note', 'pump', 'play', 'bath', 'measurement', 'medicine', 'supplement', 'food'] as const;
 type ActivityType = typeof VALID_TYPES[number];
@@ -672,12 +673,17 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
         const sleepNotesCheck = requireStringIfPresent(notes, 'notes');
         if (sleepNotesCheck.error) return hookError('INVALID_NOTES', sleepNotesCheck.error, 400, rl.headers);
 
+        // Naps starting inside the baby's configured night window become night sleep
+        const babyRecord = await prisma.baby.findFirst({ where: { id: babyId } });
+        const nightWindow = parseNightSleepWindow(babyRecord?.nightSleepWindow ?? null);
+        const effectiveSleepType = sleepType ? resolveSleepType(sleepType, time, nightWindow) : sleepType;
+
         if (action === 'start') {
           result = await prisma.sleepLog.create({
-            data: { startTime: time, type: sleepType, location: location || null, quality: quality || null, notes: notes || null, babyId, caretakerId, familyId },
+            data: { startTime: time, type: effectiveSleepType as any, location: location || null, quality: quality || null, notes: notes || null, babyId, caretakerId, familyId },
           });
-          notifyActivityCreated(babyId, 'sleep', { caretakerId }, { type: sleepType }).catch(console.error);
-          return hookSuccess({ activityType: 'sleep', id: result.id, time: result.startTime.toISOString(), details: { type: sleepType, action: 'start', isActive: true, notes: result.notes } }, { familyId, babyId }, rl.headers);
+          notifyActivityCreated(babyId, 'sleep', { caretakerId }, { type: effectiveSleepType }).catch(console.error);
+          return hookSuccess({ activityType: 'sleep', id: result.id, time: result.startTime.toISOString(), details: { type: effectiveSleepType, action: 'start', isActive: true, notes: result.notes } }, { familyId, babyId }, rl.headers);
         }
 
         if (action === 'end') {
@@ -705,10 +711,10 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
         const endTime = new Date(time.getTime() + sleepDuration * 60000);
         const startTime = time;
         result = await prisma.sleepLog.create({
-          data: { startTime, endTime, duration: sleepDuration, type: sleepType, location: location || null, quality: quality || null, notes: notes || null, babyId, caretakerId, familyId },
+          data: { startTime, endTime, duration: sleepDuration, type: effectiveSleepType as any, location: location || null, quality: quality || null, notes: notes || null, babyId, caretakerId, familyId },
         });
-        notifyActivityCreated(babyId, 'sleep', { caretakerId }, { type: sleepType }).catch(console.error);
-        return hookSuccess({ activityType: 'sleep', id: result.id, time: result.startTime.toISOString(), details: { type: sleepType, action: 'log', duration: sleepDuration, isActive: false, notes: result.notes } }, { familyId, babyId }, rl.headers);
+        notifyActivityCreated(babyId, 'sleep', { caretakerId }, { type: effectiveSleepType }).catch(console.error);
+        return hookSuccess({ activityType: 'sleep', id: result.id, time: result.startTime.toISOString(), details: { type: effectiveSleepType, action: 'log', duration: sleepDuration, isActive: false, notes: result.notes } }, { familyId, babyId }, rl.headers);
       }
 
       case 'note': {
