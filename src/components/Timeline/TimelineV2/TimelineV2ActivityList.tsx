@@ -692,8 +692,7 @@ const TimelineV2ActivityList = ({
                               </div>
                             )}
                             {item.sessionRows ? (
-                            <div key={item.key} className="relative timeline-feed-session">
-                              <span className="timeline-feed-session-bracket" aria-hidden="true" />
+                            <div key={item.key} className="timeline-feed-session">
                               {item.sessionRows.map((row, rowIndex) => renderActivity(row, groupIndex, itemIndex + rowIndex))}
                             </div>
                           ) : (
