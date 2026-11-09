@@ -2,7 +2,7 @@ import { Baby as BabyIcon, History } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
-import { groupBreastFeedSessions, buildFeedGapMap, buildGapMap, formatDurationHM, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, buildFeedGapMap, buildGapMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -312,7 +312,7 @@ const TimelineV2ActivityList = ({
                               gapInfo = sleepGapById.get(activity.id);
                             }
                             if (gapInfo && isAnchor) {
-                              gapSuffix = ` (${formatDurationHM(gapInfo.gapSeconds)})`;
+                              gapSuffix = formatDurationWords(gapInfo.gapSeconds);
                             }
                           }
                           

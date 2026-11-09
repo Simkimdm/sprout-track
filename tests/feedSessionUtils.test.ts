@@ -6,6 +6,7 @@ import {
   buildFeedGapMap,
   formatSignedElapsedHM,
   formatDurationHM,
+  formatDurationWords,
 } from '@/src/utils/feedSessionUtils';
 
 // Issue #198: a nursing session using both sides is stored as two FeedLog rows
@@ -324,5 +325,15 @@ describe('buildFeedGapMap from start/end anchor', () => {
       { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T10:10:00Z'), amount: 100 },
     ];
     expect(buildFeedGapMap(overlapping, 'end').get('f2')!.gapSeconds).toBe(0);
+  });
+});
+
+describe('formatDurationWords', () => {
+  it('formats as words like the details line', () => {
+    expect(formatDurationWords(704)).toBe('11m 44s');
+    expect(formatDurationWords(600)).toBe('10m');
+    expect(formatDurationWords(8100)).toBe('2h 15m');
+    expect(formatDurationWords(0)).toBe('0s');
+    expect(formatDurationWords(45)).toBe('45s');
   });
 });

@@ -217,6 +217,17 @@ export function formatDurationHM(totalSeconds: number): string {
   return `${hours}:${String(minutes).padStart(2, '0')}`;
 }
 
+/** Word-style duration, e.g. 704s -> "11m 44s", 8100s -> "2h 15m", 0 -> "0s". */
+export function formatDurationWords(totalSeconds: number): string {
+  const abs = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(abs / 3600);
+  const minutes = Math.floor((abs % 3600) / 60);
+  const seconds = abs % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  return `${seconds}s`;
+}
+
 /**
  * Map each feed row id to its "time since the previous feeding" gap and its own
  * duration. The gap is measured from the previous feeding's START by default
