@@ -112,6 +112,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'enableDebugTimer', 'enableDebugTimezone',
       'enableBreastMilkTracking',
       'autoEndSleepOnFeed',
+      'showCalendarEventsInTimeline',
       'photoQuotaMB',
     ];
 

@@ -2768,5 +2768,10 @@
   "Zero “did anyone change him?” texts sent today.": "Zero “did anyone change him?” texts sent today.",
   "Automatically end sleep when a feeding starts": "Automatically end sleep when a feeding starts",
   "When enabled, starting a feeding automatically ends any active sleep session for the baby": "When enabled, starting a feeding automatically ends any active sleep session for the baby",
-  "Sleep & Feeding": "Sleep & Feeding"
+  "Sleep & Feeding": "Sleep & Feeding",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

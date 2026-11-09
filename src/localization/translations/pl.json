@@ -2772,5 +2772,10 @@
   "Time since last bath": "Czas od ostatniej kąpieli",
   "Automatically end sleep when a feeding starts": "Automatycznie kończ sen, gdy zaczyna się karmienie",
   "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Po włączeniu rozpoczęcie karmienia automatycznie kończy każdą aktywną sesję snu dziecka",
-  "Sleep & Feeding": "Sen i karmienie"
+  "Sleep & Feeding": "Sen i karmienie",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

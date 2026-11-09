@@ -334,6 +334,24 @@ export default function ConfigTab({
         </div>
       </div>
 
+      {/* Timeline */}
+      <div className="border-t border-slate-200 pt-6">
+        <h3 className="form-label mb-4">{t('Timeline')}</h3>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="form-label">{t('Show calendar events in timeline')}</span>
+              <p className="text-sm text-gray-500">{t('When enabled, calendar events for the selected day are also shown in the timeline')}</p>
+            </div>
+            <Checkbox
+              variant="primary"
+              checked={(settings as any)?.showCalendarEventsInTimeline ?? false}
+              onCheckedChange={(checked) => onSettingsChange({ showCalendarEventsInTimeline: checked } as any)}
+            />
+          </label>
+        </div>
+      </div>
+
       {/* Sleep Locations */}
       <div className="border-t border-slate-200 pt-6">
         <h3 className="form-label mb-4">{t('Sleep Locations')}</h3>
