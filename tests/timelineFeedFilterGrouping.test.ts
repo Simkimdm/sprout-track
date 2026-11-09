@@ -125,9 +125,9 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(gapValues(html)).toEqual(['0s']);
   });
 
-  it('renders no bracket and no gap without an active filter', () => {
+  it('renders bracket and gap by default, even without an active filter', () => {
     const html = renderList(null);
-    expect(html).not.toContain('timeline-feed-session-bracket');
-    expect(html).not.toContain('timeline-feed-gap');
+    expect(html).toContain('timeline-feed-session-bracket');
+    expect(gapValues(html)).toEqual(['3h 15m', '2h 0m', '0s']);
   });
 });

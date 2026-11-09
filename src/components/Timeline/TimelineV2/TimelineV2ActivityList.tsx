@@ -174,12 +174,9 @@ const TimelineV2ActivityList = ({
   }, [activities, selectedDate]);
 
 
-  const isFiltering = !!activeFilter;
-
-  // Filtered view: breast-feed rows of one session (linked L+R) render as one bracketed group
+  // Breast-feed rows of one session (linked L+R) render as one bracketed group
   const sessionByRowId = useMemo(() => {
     const map = new Map<string, BreastFeedSession<FeedGapRow>>();
-    if (!isFiltering) return map;
     const breastRows = activities.filter(a =>
       'amount' in a && 'type' in a && (a as { type?: string }).type === 'BREAST'
     ) as unknown as FeedGapRow[];
@@ -188,12 +185,11 @@ const TimelineV2ActivityList = ({
       for (const row of session.rows) map.set(row.id, session);
     }
     return map;
-  }, [isFiltering, activities]);
+  }, [activities]);
 
-  // Filtered view: "+x:yy" gap since the previous feeding, computed over all feeds of the
-  // day plus recent history, so the day's first entry measures across midnight (0 if none)
+  // Gap since the previous feeding, computed over all feeds of the day plus recent
+  // history, so the day's first entry measures across midnight (0 if none)
   const feedGapById = useMemo(() => {
-    if (!isFiltering) return new Map<string, FeedGapInfo>();
     const source = allActivities ?? activities;
     const feeds = source.filter(a =>
       'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
@@ -202,11 +198,10 @@ const TimelineV2ActivityList = ({
       'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
     ) as unknown as FeedGapRow[];
     return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
-  }, [isFiltering, allActivities, activities, historyActivities, feedTimerFrom]);
+  }, [allActivities, activities, historyActivities, feedTimerFrom]);
 
-  // Filtered view: same gap suffix for sleep entries (anchored at the previous sleep's end)
+  // Same gap suffix for sleep entries (anchored at the previous sleep's end)
   const sleepGapById = useMemo(() => {
-    if (!isFiltering) return new Map<string, FeedGapInfo>();
     const source = allActivities ?? activities;
     const points = source
       .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
@@ -223,7 +218,7 @@ const TimelineV2ActivityList = ({
         };
       });
     return buildGapMap(points, 'end');
-  }, [isFiltering, allActivities, activities]);
+  }, [allActivities, activities]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item
   const renderGroups = useMemo(() => {
@@ -300,11 +295,11 @@ const TimelineV2ActivityList = ({
                             }
                           }
                           
-                          // Filtered view: show "(x:yy)" next to the recording time = gap since the
-                          // previous same-type entry (0 if none) plus this entry's duration
+                          // Sub-line next to the recording time: gap since the previous same-type
+                          // entry (0 if none) and this entry's duration
                           let gapSuffix = '';
                           let durationSuffix = '';
-                          if (isFiltering) {
+                          {
                             let gapInfo: FeedGapInfo | undefined;
                             let isAnchor = true;
                             if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
@@ -468,7 +463,7 @@ const TimelineV2ActivityList = ({
                                       const duration = activity.duration ? `${Math.floor(activity.duration / 60)}h ${activity.duration % 60}m` : '';
                                       const parts = [];
                                       if (location) parts.push(localizeSleepLocation(location, t));
-                                      if (duration && !isFiltering) parts.push(duration);
+
                                       if (!('endTime' in activity)) parts.push(t('Still asleep'));
                                       if ((activity as any).notes) {
                                         const notes = translateNotes((activity as any).notes);
@@ -489,7 +484,7 @@ const TimelineV2ActivityList = ({
                                         } else if (activity.amount) {
                                           duration = `${activity.amount} ${t('min')}`;
                                         }
-                                        const parts = [side, ...(isFiltering ? [] : [duration])].filter(Boolean);
+                                        const parts = [side].filter(Boolean);
                                         if ((activity as any).hadReaction) parts.push(t('Reaction'));
                                         if ((activity as any).notes) {
                                           const notes = translateNotes((activity as any).notes);
