@@ -1,8 +1,9 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useEffect, useState } from 'react';
 import { Unit } from '@prisma/client';
 import { Settings } from '@/app/api/types';
+import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import {
   Select,
@@ -14,6 +15,11 @@ import {
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
 import { DateFormatSetting, TimeFormatSetting } from '@/src/utils/dateFormat';
+import {
+  isValidTimeString,
+  parseNightSleepWindow,
+  serializeNightSleepWindow,
+} from '@/src/utils/nightSleepWindow';
 import NotificationSettings from './NotificationSettings';
 import { Baby } from '@prisma/client';
 import { useUnit } from '@/src/hooks/useUnit';
@@ -41,6 +47,31 @@ export default function UserSettingsTab({
   const idPrefix = useId();
   const dateFormatId = `${idPrefix}-date-format`;
   const timeFormatId = `${idPrefix}-time-format`;
+  const nightWindowEnabledId = `${idPrefix}-night-window-enabled`;
+  const nightWindowStartId = `${idPrefix}-night-window-start`;
+  const nightWindowEndId = `${idPrefix}-night-window-end`;
+
+  const [nightWindowEnabled, setNightWindowEnabled] = useState(false);
+  const [nightWindowStart, setNightWindowStart] = useState('22:00');
+  const [nightWindowEnd, setNightWindowEnd] = useState('07:00');
+
+  useEffect(() => {
+    const parsed = parseNightSleepWindow(settings?.nightSleepWindow ?? null);
+    setNightWindowEnabled(!!parsed);
+    if (parsed) {
+      setNightWindowStart(parsed.start);
+      setNightWindowEnd(parsed.end);
+    }
+  }, [settings?.nightSleepWindow]);
+
+  const persistNightWindow = (enabled: boolean, start: string, end: string) => {
+    if (!enabled) {
+      onSettingsChange({ nightSleepWindow: null });
+      return;
+    }
+    if (!isValidTimeString(start) || !isValidTimeString(end) || start === end) return;
+    onSettingsChange({ nightSleepWindow: serializeNightSleepWindow({ start, end }) });
+  };
 
   return (
     <div className="space-y-6">
@@ -261,6 +292,64 @@ export default function UserSettingsTab({
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* Night Sleep Window */}
+      <div>
+        <h3 className="form-label mb-4">{t('Night Sleep Window')}</h3>
+        <p className="text-sm text-gray-500 mb-4">{t('Naps starting within this daily time window are automatically tracked as night sleep.')}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label className="form-label" htmlFor={nightWindowEnabledId}>{t('Night Sleep Window')}</Label>
+            <Select
+              value={nightWindowEnabled ? 'enabled' : 'disabled'}
+              onValueChange={(value) => {
+                const enabled = value === 'enabled';
+                setNightWindowEnabled(enabled);
+                persistNightWindow(enabled, nightWindowStart, nightWindowEnd);
+              }}
+              disabled={loading}
+            >
+              <SelectTrigger id={nightWindowEnabledId}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="disabled">{t('Disabled')}</SelectItem>
+                <SelectItem value="enabled">{t('Enabled')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {nightWindowEnabled && (
+            <>
+              <div>
+                <Label className="form-label" htmlFor={nightWindowStartId}>{t('Start Time')}</Label>
+                <Input
+                  id={nightWindowStartId}
+                  type="time"
+                  value={nightWindowStart}
+                  onChange={(e) => {
+                    setNightWindowStart(e.target.value);
+                    persistNightWindow(true, e.target.value, nightWindowEnd);
+                  }}
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <Label className="form-label" htmlFor={nightWindowEndId}>{t('End Time')}</Label>
+                <Input
+                  id={nightWindowEndId}
+                  type="time"
+                  value={nightWindowEnd}
+                  onChange={(e) => {
+                    setNightWindowEnd(e.target.value);
+                    persistNightWindow(true, nightWindowStart, e.target.value);
+                  }}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

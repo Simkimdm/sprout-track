@@ -5,6 +5,7 @@ import { Settings } from '@prisma/client';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { checkWritePermission } from '../utils/writeProtection';
 import { isValidGrowthStandard } from '@/src/utils/growthStandard';
+import { parseNightSleepWindow } from '@/src/utils/nightSleepWindow';
 import { resolveFamilyScope } from '../utils/family-scope';
 
 // The family securityPin (login PIN) must never be returned to the client.
@@ -103,6 +104,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'defaultHeightUnit', 'defaultWeightUnit', 'defaultTempUnit',
       'growthChartStandard',
       'dateFormat', 'timeFormat',
+      'nightSleepWindow',
     ];
 
     // Additional fields only admins can update
@@ -142,6 +144,21 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
             );
           }
           (data as any)[field] = quota;
+          continue;
+        }
+        if (field === 'nightSleepWindow') {
+          // null (or empty) disables the window — the previous behavior.
+          if (body[field] === null || body[field] === '') {
+            (data as any)[field] = null;
+            continue;
+          }
+          if (typeof body[field] !== 'string' || !parseNightSleepWindow(body[field])) {
+            return NextResponse.json<ApiResponse<null>>(
+              { success: false, error: 'nightSleepWindow must be null or a JSON string {"start":"HH:mm","end":"HH:mm"} with start != end' },
+              { status: 400 }
+            );
+          }
+          (data as any)[field] = body[field];
           continue;
         }
         if (field === 'growthChartStandard') {
