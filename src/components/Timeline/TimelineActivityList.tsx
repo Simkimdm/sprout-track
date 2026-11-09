@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/src/components/ui/card';
 import { Baby as BabyIcon } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ActivityType, TimelineActivityListProps, FilterType } from './types';
-import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime } from './utils';
+import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, feedQualityLabel } from './utils';
 import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/src/context/theme';
@@ -455,14 +455,8 @@ const TimelineActivityList = ({
                                           
                                           if ('amount' in activity && !('foodId' in activity)) {
                                             // Feed activity
-                                            const feedQualityMap: Record<string, string> = {
-                                              'EXCELLENT': t('Drank very well'),
-                                              'GOOD': t('Drank well'),
-                                              'FAIR': t('Drank okay'),
-                                              'POOR': t('Only suckled')
-                                            };
                                             const quality = ('quality' in activity && (activity as any).quality)
-                                              ? (feedQualityMap[(activity as any).quality as string] || (activity as any).quality)
+                                              ? feedQualityLabel((activity as any).quality as string, t)
                                               : '';
                                             if (activity.type === 'BREAST') {
                                               const side = activity.side ? activity.side.charAt(0) + activity.side.slice(1).toLowerCase() : '';
