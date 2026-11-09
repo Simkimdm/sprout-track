@@ -46,14 +46,14 @@ describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
-    // session anchor (earliest side): pause from 08:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session end 10:14 -> 3:01
-    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:01)', '(2:14)', '(0:00)']);
+    // suffix = gap only (duration is visible via start-end): session anchor 2:00 after 08:00; bottle 3:01 after session end 10:14
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:01)', '(2:00)', '(0:00)']);
   });
 
   it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
     const html = renderList('feed', 'start');
-    // next bottle measured from session start 10:00 -> 3:15
-    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:15)', '(2:14)', '(0:00)']);
+    // next bottle measured from session start 10:00 -> gap 3:15
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:15)', '(2:00)', '(0:00)']);
   });
 
   it('measures the first entry of a day against the last feeding of the previous day', () => {
@@ -94,8 +94,8 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activeFilter: 'sleep', allActivities: sleeps,
       })
     );
-    // s2: gap from s1 end (11:00) to 14:00 = 3h, plus own duration 1:30 -> (4:30); s1 is first -> (1:00)
-    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(4:30)', '(1:00)']);
+    // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
+    expect(html.match(/\(\d+:\d{2}\)/g)).toEqual(['(3:00)', '(0:00)']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {

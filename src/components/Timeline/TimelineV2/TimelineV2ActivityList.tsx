@@ -1,4 +1,4 @@
-import { Baby as BabyIcon } from 'lucide-react';
+import { Baby as BabyIcon, History } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
@@ -286,6 +286,14 @@ const TimelineV2ActivityList = ({
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
+                            // Feeds with a duration also show the computed end: start-end
+                            if ('amount' in activity && 'type' in activity && !('foodId' in activity)) {
+                              const durSec = activity.feedDuration || (activity.amount ? activity.amount * 60 : 0);
+                              if (durSec > 0) {
+                                const end = new Date(activityTime.getTime() + durSec * 1000);
+                                timeStr = `${timeStr}–${formatTimeDisplay(end, timeFormat)}`;
+                              }
+                            }
                           }
                           
                           // Filtered view: show "(x:yy)" next to the recording time = gap since the
@@ -304,7 +312,7 @@ const TimelineV2ActivityList = ({
                               gapInfo = sleepGapById.get(activity.id);
                             }
                             if (gapInfo && isAnchor) {
-                              gapSuffix = ` (${formatDurationHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
+                              gapSuffix = ` (${formatDurationHM(gapInfo.gapSeconds)})`;
                             }
                           }
                           
@@ -610,7 +618,12 @@ const TimelineV2ActivityList = ({
                               {/* Event Time */}
                               <div className="flex-shrink-0 text-xs text-gray-500 event-time">
                                 {timeStr}
-                                {gapSuffix && <span className="timeline-feed-gap">{gapSuffix}</span>}
+                                {gapSuffix && (
+                                  <span className="timeline-feed-gap">
+                                    <History className="h-3 w-3" aria-hidden="true" />
+                                    {gapSuffix}
+                                  </span>
+                                )}
                               </div>
                             </motion.div>
                           );

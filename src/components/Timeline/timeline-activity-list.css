@@ -340,6 +340,10 @@ html.dark .timeline-caretaker-badge {
 
 /* "+x:yy" gap since the previous feeding, shown next to the recording time */
 .timeline-feed-gap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-left: 0.25rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
