@@ -1,5 +1,5 @@
 import { Baby as BabyIcon, History, Timer } from 'lucide-react';
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
 import { groupBreastFeedSessions, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
@@ -196,28 +196,42 @@ const TimelineV2ActivityList = ({
   }, [activities]);
 
 
-  // Group each time-of-day bucket into render items; multi-row breast sessions become one item
+  // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
+  // Feed/sleep items carry a dividerGap: the gap since the previous same-type entry, rendered
+  // as a divider line between the entries (only when > 0, i.e. a previous entry exists).
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
     return groupedActivities.map(group => {
-      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null }[] = [];
+      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string }[] = [];
       for (const activity of group.activities) {
         if (emitted.has(activity.id)) continue;
         const session = sessionByRowId.get(activity.id);
+        let item: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string };
         if (session) {
           const rows = [...session.rows]
             .sort((a, b) => new Date(getActivityTime(b as unknown as ActivityType)).getTime() - new Date(getActivityTime(a as unknown as ActivityType)).getTime())
             .map(r => r as unknown as ActivityType);
           rows.forEach(r => emitted.add(r.id));
-          items.push({ key: `session-${session.sessionId ?? session.rows[0].id}`, sessionRows: rows, activity: null });
+          item = { key: `session-${session.sessionId ?? session.rows[0].id}`, sessionRows: rows, activity: null };
         } else {
           emitted.add(activity.id);
-          items.push({ key: activity.id, sessionRows: null, activity });
+          item = { key: activity.id, sessionRows: null, activity };
         }
+        const rows = item.sessionRows ?? (item.activity ? [item.activity] : []);
+        const earliest = rows.reduce((min, r) => {
+          const t = new Date(getActivityTime(r)).getTime();
+          return t < min ? t : min;
+        }, Infinity);
+        const firstRow = rows.find(r => new Date(getActivityTime(r)).getTime() === earliest) ?? rows[0];
+        const isFeed = !!firstRow && 'amount' in firstRow && 'type' in firstRow && !('foodId' in firstRow);
+        const isSleep = !!firstRow && 'duration' in firstRow && 'startTime' in firstRow && !('activities' in firstRow);
+        const gap = firstRow ? gapById?.get(firstRow.id)?.gapSeconds : undefined;
+        if ((isFeed || isSleep) && gap && gap > 0) item.dividerGap = formatDurationWords(gap);
+        items.push(item);
       }
       return { ...group, items };
     });
-  }, [groupedActivities, sessionByRowId]);
+  }, [groupedActivities, sessionByRowId, gapById]);
 
   // Render one timeline event row (also used for each row of a grouped L+R session)
   const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {
@@ -272,28 +286,19 @@ const TimelineV2ActivityList = ({
                             }
                           }
                           
-                          // Sub-line next to the recording time: gap since the previous same-type
-                          // entry (0 if none) and this entry's duration
-                          let gapSuffix = '';
+                          // Sub-line next to the recording time: this entry's duration
+                          // (the gap since the previous same-type entry is the divider between entries)
                           let durationSuffix = '';
-                          {
-                            let gapInfo: FeedGapInfo | undefined;
-                            if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
-                              gapInfo = gapById?.get(activity.id);
-                              const durSec = activity.type === 'BREAST'
-                                ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
-                                : (activity.feedDuration || 0);
-                              if (durSec > 0) durationSuffix = formatDurationWords(durSec);
-                            } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
-                              gapInfo = gapById?.get(activity.id);
-                              if (!(activity as { endTime?: string | null }).endTime) {
-                                durationSuffix = formatDurationWords((now.getTime() - activityTime.getTime()) / 1000);
-                              } else if (activity.duration) {
-                                durationSuffix = formatDurationWords(activity.duration * 60);
-                              }
-                            }
-                            if (gapInfo) {
-                              gapSuffix = formatDurationWords(gapInfo.gapSeconds);
+                          if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
+                            const durSec = activity.type === 'BREAST'
+                              ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
+                              : (activity.feedDuration || 0);
+                            if (durSec > 0) durationSuffix = formatDurationWords(durSec);
+                          } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
+                            if (!(activity as { endTime?: string | null }).endTime) {
+                              durationSuffix = formatDurationWords((now.getTime() - activityTime.getTime()) / 1000);
+                            } else if (activity.duration) {
+                              durationSuffix = formatDurationWords(activity.duration * 60);
                             }
                           }
                           
@@ -599,14 +604,8 @@ const TimelineV2ActivityList = ({
                               {/* Event Time: start on the first line, computed end + gap on the second */}
                               <div className="flex-shrink-0 text-right text-xs text-gray-500 event-time">
                                 <div>{timeStr}</div>
-                                {(gapSuffix || durationSuffix) && (
+                                {durationSuffix && (
                                   <div className="timeline-feed-subline">
-                                    {gapSuffix && (
-                                      <span className="timeline-feed-gap">
-                                        <History className="h-3 w-3" aria-hidden="true" />
-                                        {gapSuffix}
-                                      </span>
-                                    )}
                                     {durationSuffix && (
                                       <span className="timeline-feed-duration">
                                         <Timer className="h-3 w-3" aria-hidden="true" />
@@ -657,16 +656,28 @@ const TimelineV2ActivityList = ({
                       
                       {/* Activities in this time period */}
                       <div className="space-y-0 pb-4">
-                        {group.items.map((item, itemIndex) =>
-                          item.sessionRows ? (
+                        {group.items.map((item, itemIndex) => (
+                          <Fragment key={item.key}>
+                            {item.dividerGap && (
+                              <div className="timeline-gap-divider" aria-hidden="true">
+                                <span className="timeline-gap-divider-line" />
+                                <span className="timeline-feed-gap">
+                                  <History className="h-3 w-3" aria-hidden="true" />
+                                  {item.dividerGap}
+                                </span>
+                                <span className="timeline-gap-divider-line" />
+                              </div>
+                            )}
+                            {item.sessionRows ? (
                             <div key={item.key} className="relative timeline-feed-session">
                               <span className="timeline-feed-session-bracket" aria-hidden="true" />
                               {item.sessionRows.map((row, rowIndex) => renderActivity(row, groupIndex, itemIndex + rowIndex))}
                             </div>
                           ) : (
                             renderActivity(item.activity as ActivityType, groupIndex, itemIndex)
-                          )
-                        )}
+                          )}
+                          </Fragment>
+                        ))}
                       </div>
                     </motion.div>
                   ))}
