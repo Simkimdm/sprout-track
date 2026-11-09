@@ -128,11 +128,19 @@ export default function BabyForm({
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
+      // UI-only helper fields must not reach the API (they are not Baby columns)
+      const {
+        nightSleepWindowEnabled,
+        nightSleepWindowStart,
+        nightSleepWindowEnd,
+        ...babyFields
+      } = formData;
+
       const response = await fetch('/api/baby', {
         method: isEditing ? 'PUT' : 'POST',
         headers,
         body: JSON.stringify({
-          ...formData,
+          ...babyFields,
           id: baby?.id,
           birthDate: formData.birthDate,
           gender: formData.gender as Gender,
@@ -142,13 +150,13 @@ export default function BabyForm({
             : JSON.stringify(formData.feedTimerTypes),
           // null = window disabled (previous behavior)
           nightSleepWindow:
-            formData.nightSleepWindowEnabled &&
-            isValidTimeString(formData.nightSleepWindowStart) &&
-            isValidTimeString(formData.nightSleepWindowEnd) &&
-            formData.nightSleepWindowStart !== formData.nightSleepWindowEnd
+            nightSleepWindowEnabled &&
+            isValidTimeString(nightSleepWindowStart) &&
+            isValidTimeString(nightSleepWindowEnd) &&
+            nightSleepWindowStart !== nightSleepWindowEnd
               ? serializeNightSleepWindow({
-                  start: formData.nightSleepWindowStart,
-                  end: formData.nightSleepWindowEnd,
+                  start: nightSleepWindowStart,
+                  end: nightSleepWindowEnd,
                 })
               : null,
         }),
