@@ -272,10 +272,12 @@ const TimelineV2ActivityList = ({
                                 new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
                               );
                               if (isSessionAnchor) {
-                                const parts: string[] = [];
-                                if (gapInfo.gapSeconds != null) parts.push(formatSignedElapsedHM(gapInfo.gapSeconds));
-                                if (gapInfo.durationSeconds > 0) parts.push(formatDurationHM(gapInfo.durationSeconds));
-                                if (parts.length > 0) gapSuffix = ` (${parts.join(' \u00b7 ')})`;
+                                if (gapInfo.gapSeconds != null) {
+                                  // gap since the previous feeding plus this feeding's duration as one +/- x:yy
+                                  gapSuffix = ` (${formatSignedElapsedHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
+                                } else if (gapInfo.durationSeconds > 0) {
+                                  gapSuffix = ` (${formatDurationHM(gapInfo.durationSeconds)})`;
+                                }
                               }
                             }
                           }
