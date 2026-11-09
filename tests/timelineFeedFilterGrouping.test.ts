@@ -163,6 +163,22 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(html).toContain('timeline-feed-duration');
   });
 
+  it('shows gap dividers for other types (diaper) when filtered, without duration', () => {
+    const diapers = [
+      { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
+      { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: diapers,
+      })
+    );
+    // start-anchored gap between the two diapers: 10:00 -> 12:30 = 2h 30m; first entry: none
+    expect(gapValues(html)).toEqual(['2h 30m']);
+  });
+
   it('renders the session bracket without a filter, but no gap dividers', () => {
     const html = renderList(null);
     expect(html).toContain('timeline-feed-session-bracket');
