@@ -195,7 +195,14 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
 
     try {
       const activities = await activityCache.refreshDate(babyId, selectedDate);
-      setDateFilteredActivities(activities);
+      // The API returns baths from a wide lookback (for the status bubble);
+      // the day-scoped display list must only show the selected day
+      const selectedDayKey = activityCache.toDateKey(selectedDate);
+      const dayActivities = activities.filter(a => {
+        const timeStr = getActivityTime(a);
+        return timeStr ? activityCache.toDateKey(new Date(timeStr)) === selectedDayKey : false;
+      });
+      setDateFilteredActivities(dayActivities);
       // Rebuild the ±1 day window from cache around the refreshed day
       const prevDay = new Date(selectedDate); prevDay.setDate(prevDay.getDate() - 1);
       const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1);
