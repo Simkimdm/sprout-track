@@ -5,6 +5,7 @@ import { FeedType } from '@prisma/client';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 import { maybeEndActiveSleepOnFeed } from '../utils/autoEndSleep';
 
@@ -172,9 +173,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       ...(body.reactionCause !== undefined
         ? { reactionCause: body.reactionCause && body.reactionCause.trim() ? body.reactionCause : null }
         : {}),
-      ...Object.entries(body)
-        .filter(([key]) => !['time', 'startTime', 'endTime', 'feedDuration', 'notes', 'bottleType', 'breastMilkAmount', 'hadReaction', 'reactionDescription', 'reactionCause', 'familyId', 'sourcePumpId'].includes(key))
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
+      ...pickFields(body, ['babyId', 'type', 'amount', 'unitAbbr', 'side', 'food', 'sessionId']),
     };
 
     const feedLog = await prisma.feedLog.update({

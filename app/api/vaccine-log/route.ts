@@ -4,6 +4,7 @@ import { ApiResponse, VaccineLogCreate, VaccineLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 import { deleteEncryptedFile } from '@/src/lib/file-encryption';
 
@@ -62,11 +63,11 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     }
 
     const timeUTC = toUTC(body.time);
-    const { contactIds, ...vaccineData } = body;
+    const { contactIds } = body;
 
     const vaccineLog = await prisma.vaccineLog.create({
       data: {
-        ...vaccineData,
+        ...pickFields(body, ['babyId', 'vaccineName', 'doseNumber', 'notes']),
         time: timeUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -151,14 +152,11 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
-    const { contactIds, ...updateData } = body;
-    const data: any = { ...updateData };
-    if (body.time) {
-      data.time = toUTC(body.time);
-    }
-    delete data.familyId;
-    delete data.babyId;
-    delete data.caretakerId;
+    const { contactIds } = body;
+    const data: any = {
+      ...pickFields(body, ['vaccineName', 'doseNumber', 'notes']),
+      ...(body.time ? { time: toUTC(body.time) } : {}),
+    };
 
     // Update contact links if contactIds provided
     if (contactIds !== undefined) {

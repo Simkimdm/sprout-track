@@ -4,6 +4,7 @@ import { ApiResponse, DiaperLogCreate, DiaperLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
@@ -33,7 +34,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const diaperLog = await prisma.diaperLog.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'type', 'condition', 'color', 'blowout', 'creamApplied', 'notes']),
         time: timeUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -110,14 +111,11 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
-    // Convert time to UTC if provided and strip relation fields
-    const data: any = { ...body };
-    if (body.time) {
-      data.time = toUTC(body.time);
-    }
-    delete data.babyId;
-    delete data.familyId;
-    delete data.caretakerId;
+    // Convert time to UTC if provided; only whitelisted columns are updated
+    const data = {
+      ...pickFields(body, ['type', 'condition', 'color', 'blowout', 'creamApplied', 'notes']),
+      ...(body.time ? { time: toUTC(body.time) } : {}),
+    };
 
     const diaperLog = await prisma.diaperLog.update({
       where: { id },

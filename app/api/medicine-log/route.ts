@@ -4,6 +4,7 @@ import { ApiResponse, MedicineLogCreate, MedicineLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 
 /**
@@ -41,7 +42,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const medicineLog = await prisma.medicineLog.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'medicineId', 'doseAmount', 'unitAbbr', 'notes']),
         time: timeUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -122,14 +123,10 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
-    const data: any = { ...body };
-    if (body.time) {
-      data.time = toUTC(body.time);
-    }
-    delete data.familyId;
-    delete data.babyId;
-    delete data.medicineId;
-    delete data.caretakerId;
+    const data = {
+      ...pickFields(body, ['doseAmount', 'unitAbbr', 'notes']),
+      ...(body.time ? { time: toUTC(body.time) } : {}),
+    };
 
     const medicineLog = await prisma.medicineLog.update({
       where: { id },

@@ -4,6 +4,7 @@ import { ApiResponse, BathLogCreate, BathLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
@@ -33,7 +34,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const bathLog = await prisma.bathLog.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'bathType', 'soapUsed', 'shampooUsed', 'notes']),
         time: timeUTC,
         caretakerId: caretakerId,
         soapUsed: body.soapUsed ?? true,
@@ -113,10 +114,8 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
 
     // Process date fields - convert to UTC
     const data = {
+      ...pickFields(body, ['babyId', 'bathType', 'soapUsed', 'shampooUsed', 'notes']),
       ...(body.time ? { time: toUTC(body.time) } : {}),
-      ...Object.entries(body)
-        .filter(([key]) => !['time'].includes(key))
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     };
 
     const bathLog = await prisma.bathLog.update({

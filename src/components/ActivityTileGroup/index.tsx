@@ -121,8 +121,6 @@ export function ActivityTileGroup({
     return durationMinutes >= 1440; // 24 hours = 1440 minutes
   };
   
-  if (!selectedBaby?.id) return null;
-
   // Define all activity types
   const allActivityTypes: ActivityType[] = [...DEFAULT_ACTIVITY_TILE_ORDER];
   
@@ -434,7 +432,10 @@ export function ActivityTileGroup({
     
     return () => clearTimeout(timeoutId);
   }, [activityOrder, visibleActivities, settingsLoaded, settingsModified, caretakerId]);
-  
+
+  // Early return must come after all hooks (rules-of-hooks)
+  if (!selectedBaby?.id) return null;
+
   // Toggle activity visibility
   const toggleActivity = (activity: ActivityType) => {
     const newVisibleActivities = new Set(visibleActivities);
