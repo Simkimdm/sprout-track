@@ -11,6 +11,8 @@ import { Textarea } from '@/src/components/ui/textarea';
 import { useState, useEffect, useRef } from 'react';
 import { NoteResponse } from '@/app/api/types';
 import { useLocalization } from '@/src/context/localization';
+import { DateTimePicker } from '@/src/components/ui/date-time-picker';
+import { formatLocalDateTimeInput, parseLocalDateTimeInput } from '@/src/utils/dateTimeInput';
 
 interface NoteModalProps {
   open: boolean;
@@ -93,19 +95,11 @@ export default function NoteModal({
     setSelectedIndex(-1);
   }, [formData.category]);
 
-  // Format date string to be compatible with datetime-local input
+  // Format date string as a local YYYY-MM-DDTHH:mm value for form state
   const formatDateForInput = (dateStr: string) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '';
-    
-    // Format as YYYY-MM-DDThh:mm in local time
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return formatLocalDateTimeInput(date);
   };
 
   useEffect(() => {
@@ -186,15 +180,11 @@ export default function NoteModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="form-label">{t('Time')}</label>
-                <Input
-                  type="datetime-local"
-                  value={formData.time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, time: e.target.value })
+                <DateTimePicker
+                  value={parseLocalDateTimeInput(formData.time)}
+                  onChange={(date) =>
+                    setFormData({ ...formData, time: formatLocalDateTimeInput(date) })
                   }
-                  className="w-full"
-                  required
-                  tabIndex={-1}
                 />
               </div>
               <div>
