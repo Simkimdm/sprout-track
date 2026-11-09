@@ -2767,5 +2767,6 @@
   "Since last bath": "Dall'ultimo bagno",
   "Time since last bath": "Tempo dall'ultimo bagno",
   "Automatically end sleep when a feeding starts": "Termina automaticamente il sonno quando inizia una poppata",
-  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Se abilitato, l'inizio di una poppata termina automaticamente qualsiasi sessione di sonno attiva del bambino"
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Se abilitato, l'inizio di una poppata termina automaticamente qualsiasi sessione di sonno attiva del bambino",
+  "Sleep & Feeding": "Sonno e poppate"
 }
