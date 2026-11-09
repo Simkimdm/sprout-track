@@ -2766,5 +2766,6 @@
   "Since last bath": "Siden siste bad",
   "Time since last bath": "Tid siden siste bad",
   "Automatically end sleep when a feeding starts": "Avslutt søvn automatisk når en mating starter",
-  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Når aktivert avsluttes enhver aktiv søvnøkt for babyen når en mating startes"
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Når aktivert avsluttes enhver aktiv søvnøkt for babyen når en mating startes",
+  "Sleep & Feeding": "Søvn og mating"
 }

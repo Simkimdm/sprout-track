@@ -316,9 +316,9 @@ export default function ConfigTab({
         </div>
       </div>
 
-      {/* Sleep */}
+      {/* Sleep & Feeding */}
       <div className="border-t border-slate-200 pt-6">
-        <h3 className="form-label mb-4">{t('Sleep')}</h3>
+        <h3 className="form-label mb-4">{t('Sleep & Feeding')}</h3>
         <div className="space-y-4">
           <label className="flex items-center justify-between cursor-pointer">
             <div>

@@ -2766,5 +2766,6 @@
   "Since last bath": "Desde o último banho",
   "Time since last bath": "Tempo desde o último banho",
   "Automatically end sleep when a feeding starts": "Encerrar o sono automaticamente quando uma alimentação começar",
-  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Quando ativado, iniciar uma alimentação encerra automaticamente qualquer sessão de sono ativa do bebê"
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Quando ativado, iniciar uma alimentação encerra automaticamente qualquer sessão de sono ativa do bebê",
+  "Sleep & Feeding": "Sono e alimentação"
 }
