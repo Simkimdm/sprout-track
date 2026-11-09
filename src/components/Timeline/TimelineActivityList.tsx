@@ -357,10 +357,6 @@ const TimelineActivityList = ({
                         
                         // Extract background color for timeline connector and hover border
                         const getActivityColor = (bgClass: string) => {
-                          if (bgClass.includes('bg-gradient-to-br from-green-500')) return '#22c55e'; // green-500 - feed quality EXCELLENT
-                          if (bgClass.includes('bg-gradient-to-br from-lime-300')) return '#a3e635'; // lime-400 - feed quality GOOD
-                          if (bgClass.includes('bg-gradient-to-br from-amber-300')) return '#fcd34d'; // amber-300 - feed quality FAIR
-                          if (bgClass.includes('bg-gradient-to-br from-orange-400 to-red-500')) return '#ef4444'; // red-500 - feed quality POOR
                           if (bgClass.includes('bg-gradient-to-br from-gray-400')) return '#9ca3af'; // gray-400
                           if (bgClass.includes('bg-sky-200')) return '#7dd3fc'; // sky-300
                           if (bgClass.includes('bg-gradient-to-r from-teal-600')) return '#0d9488'; // teal-600

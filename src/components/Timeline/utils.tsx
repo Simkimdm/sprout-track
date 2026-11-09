@@ -1249,20 +1249,6 @@ export const getActivityStyle = (activity: ActivityType): ActivityStyle => {
       };
     }
     if ('amount' in activity) {
-      // Drinking quality gets a color gradient (green = well drunk, red = only suckled)
-      const feedQuality = (activity as any).quality as string | undefined;
-      if (feedQuality === 'EXCELLENT') {
-        return { bg: 'bg-gradient-to-br from-green-500 to-emerald-600', textColor: 'text-white' };
-      }
-      if (feedQuality === 'GOOD') {
-        return { bg: 'bg-gradient-to-br from-lime-300 to-green-400', textColor: 'text-green-900' };
-      }
-      if (feedQuality === 'FAIR') {
-        return { bg: 'bg-gradient-to-br from-amber-300 to-yellow-400', textColor: 'text-amber-900' };
-      }
-      if (feedQuality === 'POOR') {
-        return { bg: 'bg-gradient-to-br from-orange-400 to-red-500', textColor: 'text-white' };
-      }
       return {
         bg: 'bg-sky-200',
         textColor: 'text-gray-700',
