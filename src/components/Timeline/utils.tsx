@@ -59,6 +59,17 @@ const pngIcon = (src: string) => (
   <img src={src} alt="" aria-hidden="true" className="timeline-png-icon block h-9 w-9 object-contain" />
 );
 
+/** Localized label for a feed's drinking quality (EXCELLENT..POOR). */
+export const feedQualityLabel = (quality: string, t: (key: string) => string): string => {
+  switch (quality) {
+    case 'EXCELLENT': return t('Drank very well');
+    case 'GOOD': return t('Drank well');
+    case 'FAIR': return t('Drank okay');
+    case 'POOR': return t('Only suckled');
+    default: return quality;
+  }
+};
+
 export const getActivityIcon = (activity: ActivityType) => {
   // Calendar event merged into the timeline - check first (has title/startTime like other types)
   if ('calendarEventId' in activity) {
@@ -202,15 +213,7 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
     { label: t('Caretaker'), value: activity.caretakerName }
   ] : [];
 
-  const formatFeedQuality = (quality: string) => {
-    switch (quality) {
-      case 'EXCELLENT': return t('Drank very well');
-      case 'GOOD': return t('Drank well');
-      case 'FAIR': return t('Drank okay');
-      case 'POOR': return t('Only suckled');
-      default: return quality;
-    }
-  };
+  const formatFeedQuality = (quality: string) => feedQualityLabel(quality, t);
 
   // Food log (issue #203 / #247)
   if (isFoodLogActivity(activity)) {
@@ -945,13 +948,7 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       // Add drinking quality for breast and bottle feeds
       let qualityText = '';
       if ((activity as any).quality && (activity.type === 'BREAST' || activity.type === 'BOTTLE')) {
-        const qualityMap: Record<string, string> = {
-          'EXCELLENT': t('Drank very well'),
-          'GOOD': t('Drank well'),
-          'FAIR': t('Drank okay'),
-          'POOR': t('Only suckled')
-        };
-        qualityText = qualityMap[(activity as any).quality] || (activity as any).quality;
+        qualityText = feedQualityLabel((activity as any).quality, t);
       }
 
       const time = formatTime(activity.time, settings, true, t);
