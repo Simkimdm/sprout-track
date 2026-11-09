@@ -17,8 +17,7 @@ export function StatusBubble({
   warningTime,
   className,
   startTime,
-  activityType,
-  label
+  activityType
 }: StatusBubbleProps & { startTime?: string }) {
   const { userTimezone, calculateDurationMinutes, formatDuration } = useTimezone();
   const { t } = useLocalization();
@@ -162,7 +161,7 @@ export function StatusBubble({
   const durationLabel = formatDurationLabel(displayDuration, t);
   const ariaLabel = status === 'feedActive'
     ? t('Feeding')
-    : `${getStatusLabel()}, ${durationLabel}${label ? ` – ${label}` : ''}`;
+    : `${getStatusLabel()}, ${durationLabel}`;
 
   return (
     <div
@@ -176,7 +175,7 @@ export function StatusBubble({
     >
       {icon}
       <span className="min-w-0 truncate">
-        {status === 'feedActive' ? t('Feeding') : (label ? `${formatDuration(displayDuration)} · ${label}` : formatDuration(displayDuration))}
+        {status === 'feedActive' ? t('Feeding') : formatDuration(displayDuration)}
       </span>
     </div>
   );

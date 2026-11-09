@@ -635,6 +635,7 @@ function HomeContent(): React.ReactElement {
             refreshTrigger={refreshTrigger}
             initialDate={initialTimelineDate}
             feedTimerTypes={selectedBaby.feedTimerTypes}
+            feedTimerFrom={selectedBaby.feedTimerFrom}
             onLatestStatusReady={handleLatestStatusReady}
           />
         </Card>

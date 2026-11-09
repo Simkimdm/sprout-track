@@ -14,6 +14,7 @@ import ActivityForm from '@/src/components/forms/ActivityForm';
 import VaccineForm from '@/src/components/forms/VaccineForm';
 import FoodForm from '@/src/components/forms/FoodForm';
 import { ActivityType, FilterType, FullLogTimelineProps } from './full-log-timeline.types';
+import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import FullLogFilter from './FullLogFilter';
 import FullLogSearchBar from './FullLogSearchBar';
 import FullLogActivityList from './FullLogActivityList';
@@ -295,6 +296,10 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
               return 'amount' in activity && !('foodId' in activity);
             case 'diaper':
               return 'condition' in activity;
+            case 'wet':
+              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
+            case 'poop':
+              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
             case 'note':
               return 'content' in activity;
             case 'bath':
@@ -354,6 +359,10 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
               return 'amount' in activity && !('foodId' in activity);
             case 'diaper':
               return 'condition' in activity;
+            case 'wet':
+              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
+            case 'poop':
+              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
             case 'note':
               return 'content' in activity;
             case 'bath':

@@ -1,0 +1,257 @@
+import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
+
+vi.mock('@/src/context/localization', () => ({ useLocalization: () => ({ t: (k: string) => k }) }));
+vi.mock('@/src/context/theme', () => ({ useTheme: () => ({ theme: 'light' }) }));
+vi.mock('@/app/context/timezone', () => ({ useTimezone: () => ({ dateFormat: 'MM/DD/YYYY', timeFormat: '12h' }) }));
+vi.mock('@/src/hooks/useUnit', () => ({ useUnit: () => ({ unitSymbol: (u: string) => u }) }));
+vi.mock('@/src/hooks/useAuthedImage', () => ({
+  useAuthedImage: () => ({ src: null }),
+  useInView: () => ({ ref: () => {}, inView: false }),
+  photoFileUrl: () => '',
+}));
+
+import TimelineV2ActivityList from '@/src/components/Timeline/TimelineV2/TimelineV2ActivityList';
+import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
+
+// mirror of TimelineV2's gapById computation
+const computeGapById = (activities: any[], history: any[], from: 'start' | 'end'): Map<string, FeedGapInfo> => {
+  const isFeed = (a: any) => 'amount' in a && 'type' in a && !('foodId' in a) && a.type !== 'SOLIDS';
+  const feedGaps = buildFeedGapMap(activities.filter(isFeed) as FeedGapRow[], from, history.filter(isFeed) as FeedGapRow[]);
+  const sleepPoints = activities
+    .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+    .map(a => {
+      const startTs = new Date(a.startTime).getTime();
+      const dur = (a.duration || 0) * 60;
+      return { rowIds: [a.id], startTs, endTs: a.endTime ? new Date(a.endTime).getTime() : startTs + dur * 1000, durationSeconds: dur };
+    });
+  return new Map([...feedGaps, ...buildGapMap(sleepPoints, 'end')]);
+};
+
+// mirror of TimelineV2's dividerGapById computation (gaps keyed to the older entry)
+const computeDividerGapById = (activities: any[], history: any[]): Map<string, FeedGapInfo> => {
+  const isFeed = (a: any) => 'amount' in a && 'type' in a && !('foodId' in a) && a.type !== 'SOLIDS';
+  const renderedIds = new Set(activities.map(a => a.id));
+  const feedDividers = buildGapDividerMap(
+    buildFeedGapPoints(activities.filter(isFeed) as FeedGapRow[], history.filter(isFeed) as FeedGapRow[]),
+    'end', renderedIds
+  );
+  const isSleep = (a: any) => 'duration' in a && 'startTime' in a && !('activities' in a);
+  const sleepPoints = [...history, ...activities]
+    .filter(isSleep)
+    .map(a => {
+      const startTs = new Date(a.startTime).getTime();
+      const dur = (a.duration || 0) * 60;
+      return { rowIds: [a.id], startTs, endTs: a.endTime ? new Date(a.endTime).getTime() : startTs + dur * 1000, durationSeconds: dur };
+    });
+  return new Map([...feedDividers, ...buildGapDividerMap(sleepPoints, 'end', renderedIds)]);
+};
+
+const feed = (id: string, type: string, time: string, extra: Record<string, unknown> = {}) => ({
+  id, babyId: 'b1', type, time, amount: type === 'BREAST' ? null : 100, ...extra,
+});
+
+// A linked L+R breast session plus bottle feeds around it
+const activities = [
+  feed('b1', 'BOTTLE', '2026-07-22T08:00:00.000Z'),
+  feed('l1', 'BREAST', '2026-07-22T10:10:00.000Z', { startTime: '2026-07-22T10:00:00.000Z', side: 'LEFT', feedDuration: 480, sessionId: 's1' }),
+  feed('r1', 'BREAST', '2026-07-22T10:10:00.000Z', { startTime: '2026-07-22T10:08:00.000Z', side: 'RIGHT', feedDuration: 360, sessionId: 's1' }),
+  feed('b2', 'BOTTLE', '2026-07-22T13:15:00.000Z'),
+];
+
+// gap values as rendered inside the timeline-feed-gap span (word format, no parens)
+const gapValues = (html: string) =>
+  [...html.matchAll(/timeline-feed-gap">[\s\S]*?>([\dhms ]+)<\/span>/g)].map(m => m[1].trim());
+
+const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, historyActivities?: any[]) =>
+  renderToString(
+    React.createElement(TimelineV2ActivityList as any, {
+      activities,
+      settings: null,
+      isLoading: false,
+      isAnimated: false,
+      selectedDate: new Date('2026-07-22T12:00:00'),
+      onActivitySelect: () => {},
+      activeFilter,
+      allActivities: activities,
+      historyActivities,
+      feedTimerFrom,
+      gapById: computeGapById(activities, historyActivities ?? [], feedTimerFrom === 'end' ? 'end' : 'start'),
+      dividerGapById: computeDividerGapById(activities, historyActivities ?? []),
+    })
+  );
+
+describe('TimelineV2ActivityList filtered feed view', () => {
+  it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
+    const html = renderList('feed', 'end');
+    expect(html).toContain('timeline-feed-session');
+    // computed end inline on the first line (anchor side starts 10:00 + 8m)
+    expect(html).toContain('10:00 AM - 10:08 AM');
+    // sub-line: gap (history icon) + duration (timer icon), duration removed from the details line
+    expect(html).toContain('timeline-feed-subline');
+    expect(html).toContain('timeline-feed-duration');
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['6m', '8m']);
+    expect(html).not.toContain('Left Side • 8m');
+    // suffix = gap only (duration is visible via start-end): session anchor 2:00 after 08:00; bottle 3:01 after session end 10:14
+    expect(gapValues(html)).toEqual(['3h 1m', '2h 0m']);
+  });
+
+  it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
+    const html = renderList('feed', 'start');
+    // next bottle measured from session start 10:00 -> gap 3:15
+    expect(gapValues(html)).toEqual(['3h 1m', '2h 0m']);
+  });
+
+  it('measures the first entry of a day against the last feeding of the previous day', () => {
+    const dayFeeds = [feed('f1', 'BOTTLE', '2026-07-22T06:00:00.000Z')];
+    const history = [feed('h1', 'BOTTLE', '2026-07-21T22:00:00.000Z')];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: dayFeeds, historyActivities: history, feedTimerFrom: 'start',
+        gapById: computeGapById(dayFeeds, history, 'start'), dividerGapById: computeDividerGapById(dayFeeds, history),
+      })
+    );
+    // 22:00 -> 06:00 = 8h gap, no duration on a bottle
+    expect(gapValues(html)).toEqual(['8h 0m']);
+  });
+
+  it('shows +0:00-based value for the very first feeding when no history exists', () => {
+    const dayFeeds = [feed('f1', 'BOTTLE', '2026-07-22T06:00:00.000Z')];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
+        gapById: computeGapById(dayFeeds, [], 'start'), dividerGapById: computeDividerGapById(dayFeeds, []),
+      })
+    );
+    expect(gapValues(html)).toEqual([]);
+  });
+
+  it('shows the same (x:yy) gap+duration suffix for sleep entries when filtered', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 60 },
+      { id: 's2', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T14:00:00.000Z', endTime: '2026-07-22T15:30:00.000Z', duration: 90 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
+      })
+    );
+    // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
+    expect(gapValues(html)).toEqual(['3h 0m']);
+    // the gap divider sits between the two sleep entries (s2 newest first), not above s2
+    const iNew = html.indexOf('2:00 PM');
+    const iGap = html.indexOf('3h 0m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iNew).toBeGreaterThan(-1);
+    expect(iNew).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iOld);
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['1h 30m', '1h 0m']);
+  });
+
+  it('treats sleep duration as minutes (21 -> "21m", not "21s")', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T10:21:00.000Z', duration: 21 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
+      })
+    );
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['21m']);
+    expect(gapValues(html)).toEqual([]);
+  });
+
+  it('shows a live end time range for an ongoing sleep (no endTime)', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: null, duration: null },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+        gapById: computeGapById(sleeps, [], 'start'), dividerGapById: computeDividerGapById(sleeps, []),
+      })
+    );
+    // start–end range with a dash, plus live duration chip and 'Still asleep' in details
+    expect(html).toMatch(/10:00 AM - \d{1,2}:\d{2} (AM|PM)/);
+    expect(html).toContain('timeline-feed-duration');
+  });
+
+  it('shows gap dividers for other types (diaper) when filtered, without duration', () => {
+    const diapers = [
+      { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
+      { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: diapers,
+      })
+    );
+    // start-anchored gap between the two diapers: 10:00 -> 12:30 = 2h 30m; first entry: none
+    expect(gapValues(html)).toEqual(['2h 30m']);
+    // the divider renders BETWEEN the two entries (newest first), not above the first one
+    const iNew = html.indexOf('12:30 PM');
+    const iGap = html.indexOf('2h 30m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iNew).toBeGreaterThan(-1);
+    expect(iNew).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iOld);
+  });
+
+  it('shows the first diaper of the day with a divider to the last diaper of the previous day', () => {
+    const diapers = [
+      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T22:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: diapers, historyActivities: history,
+      })
+    );
+    // 22:00 ( Vortag ) -> 10:00 = 12h gap on the first entry of the day
+    expect(gapValues(html)).toEqual(['12h 0m']);
+  });
+
+  it('shows the first sleep of the day with a divider to the last sleep of the previous day', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 60 },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'NAP', startTime: '2026-07-21T22:00:00.000Z', endTime: '2026-07-21T23:30:00.000Z', duration: 90 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps, historyActivities: history,
+        gapById: computeGapById(sleeps, history, 'start'), dividerGapById: computeDividerGapById(sleeps, history),
+      })
+    );
+    // end-anchored: 10:00 minus previous sleep end 23:30 = 10h 30m
+    expect(gapValues(html)).toEqual(['10h 30m']);
+  });
+
+  it('renders the session bracket without a filter, but no gap dividers', () => {
+    const html = renderList(null);
+    expect(html).toContain('timeline-feed-session');
+    expect(gapValues(html)).toEqual([]);
+  });
+});

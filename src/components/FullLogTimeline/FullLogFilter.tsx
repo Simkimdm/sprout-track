@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/src/components/ui/button';
 import {
   Moon,
@@ -16,6 +16,7 @@ import {
   Baby,
   Syringe,
   Apple,
+  Droplets,
 } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { FilterType, FullLogFilterProps } from './full-log-timeline.types';
@@ -34,7 +35,8 @@ import { Calendar } from '@/src/components/ui/calendar';
 import { cn } from '@/src/lib/utils';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
-import { formatDateDisplay } from '@/src/utils/dateFormat';
+import { formatDateDisplay, WeekStartSetting } from '@/src/utils/dateFormat';
+import { Settings } from '@/app/api/types';
 
 /**
  * FullLogFilter Component
@@ -58,12 +60,38 @@ const FullLogFilter: React.FC<FullLogFilterProps> = ({
 
   // State for popover open/close
   const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // Settings state for week start preference
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const headers: HeadersInit = authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {};
+
+        const response = await fetch('/api/settings', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
   
   // Define filter types and their icons
   const filterOptions = [
     { type: 'sleep', icon: <Moon className="h-4 w-4" aria-hidden="true" />, labelKey: 'Sleep' },
     { type: 'feed', icon: <Icon iconNode={bottleBaby} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Feed' },
     { type: 'diaper', icon: <Icon iconNode={diaper} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Diaper' },
+    { type: 'wet', icon: <Droplets className="h-4 w-4" aria-hidden="true" />, labelKey: 'Wet Diapers' },
+    { type: 'poop', icon: <Icon iconNode={diaper} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Poops' },
     { type: 'bath', icon: <Bath className="h-4 w-4" aria-hidden="true" />, labelKey: 'Bath' },
     { type: 'note', icon: <Edit className="h-4 w-4" aria-hidden="true" />, labelKey: 'Note' },
     { type: 'pump', icon: <LampWallDown className="h-4 w-4" aria-hidden="true" />, labelKey: 'Pump' },
@@ -100,6 +128,7 @@ const FullLogFilter: React.FC<FullLogFilterProps> = ({
               mode="range"
               rangeFrom={startDate}
               rangeTo={endDate}
+              weekStartsOn={settings?.weekStartsOn as WeekStartSetting | undefined}
               onRangeChange={(from, to) => {
                 const newStartDate = from ? new Date(from) : null;
                 if (newStartDate) newStartDate.setHours(0, 0, 0, 0);

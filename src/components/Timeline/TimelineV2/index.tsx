@@ -14,20 +14,22 @@ import VaccineForm from '@/src/components/forms/VaccineForm';
 import FoodForm from '@/src/components/forms/FoodForm';
 import PhotoForm from '@/src/components/forms/PhotoForm';
 import PhotoDetail from '@/src/components/PhotoDetail';
-import { ActivityType, FilterType, TimelineProps } from '../types';
+import { ActivityType, FilterType, TimelineCalendarEvent, TimelineProps } from '../types';
 import { computeLatestStatus } from '@/src/utils/latestStatus';
 import TimelineV2DailyStats from './TimelineV2DailyStats';
 import TimelineV2ActivityList from './TimelineV2ActivityList';
 import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime } from '../utils';
+import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
 import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
-const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
+const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultBottleUnit, setDefaultBottleUnit] = useState(() => readCachedDefaultBottleUnit());
   const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
@@ -46,6 +48,11 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
   }, [initialDate]);
 
   const [dateFilteredActivities, setDateFilteredActivities] = useState<ActivityType[]>([]);
+  // Calendar events of the selected day, merged into the display list when the
+  // family setting showCalendarEventsInTimeline is enabled (never part of stats/gaps)
+  const [calendarEvents, setCalendarEvents] = useState<TimelineCalendarEvent[]>([]);
+  // Recent feed entries before the selected day, used as gap anchor for the day's first feeding
+  const [historyFeeds, setHistoryFeeds] = useState<ActivityType[]>([]);
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
   const [windowActivities, setWindowActivities] = useState<ActivityType[]>([]);
   const [heatmapActivities, setHeatmapActivities] = useState<ActivityType[]>([]);
@@ -60,6 +67,59 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
   const activityCache = useActivityCache();
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
+  const showCalendarEvents = (settings as any)?.showCalendarEventsInTimeline ?? false;
+
+  // Gap since the previous same-type entry for every feed/sleep row of the day
+  // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
+  const gapById = useMemo(() => {
+    const isFeedRow = (a: ActivityType) =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
+    const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
+    const feedGaps = buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
+    const sleepPoints = dateFilteredActivities
+      .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
+      .map(a => {
+        const startTs = new Date((a as { startTime: string }).startTime).getTime();
+        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60; // SleepLog.duration is minutes
+        const endTime = (a as { endTime?: string | null }).endTime;
+        return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+      });
+    const sleepGaps = buildGapMap(sleepPoints, 'end');
+    return new Map<string, FeedGapInfo>([...feedGaps, ...sleepGaps]);
+  }, [dateFilteredActivities, historyFeeds, feedTimerFrom]);
+
+  // Activities of the previous day(s) from the fetched window, used as gap anchors so the
+  // first entry of the viewed day can show its divider to the last entry of the day before
+  const previousDayActivities = useMemo(() => {
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const startTs = startOfDay.getTime();
+    return windowActivities.filter(a => new Date(getActivityTime(a)).getTime() < startTs);
+  }, [windowActivities, selectedDate]);
+
+  // Dividers between same-type entries always anchor at the previous entry's END,
+  // so the logs' durations are included in the gap (pause between entries). Each gap is
+  // keyed to the OLDER entry of the pair, so the divider renders between the two entries
+  // (the list is newest first); a gap anchored at an unrendered history row stays on the
+  // first entry of the day and shows above it.
+  const dividerGapById = useMemo(() => {
+    const isFeedRow = (a: ActivityType) =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS';
+    const isSleepRow = (a: ActivityType) => 'duration' in a && 'startTime' in a && !('activities' in a);
+    const feeds = dateFilteredActivities.filter(isFeedRow) as unknown as FeedGapRow[];
+    const history = historyFeeds.filter(isFeedRow) as unknown as FeedGapRow[];
+    const renderedIds = new Set(dateFilteredActivities.map(a => a.id));
+    const feedDividers = buildGapDividerMap(buildFeedGapPoints(feeds, history), 'end', renderedIds);
+    const toSleepPoint = (a: ActivityType) => {
+      const startTs = new Date((a as { startTime: string }).startTime).getTime();
+      const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
+      const endTime = (a as { endTime?: string | null }).endTime;
+      return { rowIds: [a.id], startTs, endTs: endTime ? new Date(endTime).getTime() : startTs + durationSeconds * 1000, durationSeconds };
+    };
+    const sleepPoints = [...previousDayActivities.filter(isSleepRow), ...dateFilteredActivities.filter(isSleepRow)].map(toSleepPoint);
+    return new Map<string, FeedGapInfo>([...feedDividers, ...buildGapDividerMap(sleepPoints, 'end', renderedIds)]);
+  }, [dateFilteredActivities, historyFeeds, previousDayActivities]);
 
   // Issue #225: feed categories that reset the "time since last feed" timer
   // (null = all feeds count)
@@ -100,6 +160,71 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
     }
   };
 
+  // Fetch the most recent feeds before the start of `date` (gap anchor for the day's first entry)
+  const fetchHistoryFeeds = useCallback(async (date: Date) => {
+    if (!babyId) return;
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(
+        `/api/feed-log?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}&limit=50`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Expires': '0',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setHistoryFeeds(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching history feeds:', error);
+    }
+  }, [babyId]);
+
+  // Fetch the calendar events starting on `date` (for the optional timeline merge)
+  const fetchCalendarEvents = useCallback(async (date: Date) => {
+    if (!babyId || !showCalendarEvents) {
+      setCalendarEvents([]);
+      return;
+    }
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      const params = new URLSearchParams({
+        babyId,
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+      });
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`/api/calendar-event?${params.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCalendarEvents((data.data || []).map((event: any) => ({
+            ...event,
+            calendarEventId: event.id,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events for timeline:', error);
+    }
+  }, [babyId, showCalendarEvents]);
+
   // Fetch activities for date using cache
   const fetchActivitiesForDate = useCallback(async (date: Date, isAnimated: boolean) => {
     if (!babyId) return;
@@ -113,6 +238,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
       const result = await activityCache.fetchWindow(babyId, date, 1);
       setDateFilteredActivities(result.activities);
       setWindowActivities(result.allActivities);
+      fetchHistoryFeeds(date);
+      fetchCalendarEvents(date);
       lastRefreshTimestamp.current = Date.now();
 
       // Only emit status when today is within the fetched window (prevents stale status on past dates)
@@ -135,7 +262,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
         setIsLoadingActivities(false);
       }
     }
-  }, [babyId, activityCache, emitLatestStatus]);
+  }, [babyId, activityCache, emitLatestStatus, fetchCalendarEvents]);
 
   // Refresh just today's data (for polling — bypasses cache)
   const refreshCurrentDay = useCallback(async () => {
@@ -143,7 +270,15 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
 
     try {
       const activities = await activityCache.refreshDate(babyId, selectedDate);
-      setDateFilteredActivities(activities);
+      // The API returns baths from a wide lookback (for the status bubble);
+      // the day-scoped display list must only show the selected day
+      const selectedDayKey = activityCache.toDateKey(selectedDate);
+      const dayActivities = activities.filter(a => {
+        const timeStr = getActivityTime(a);
+        return timeStr ? activityCache.toDateKey(new Date(timeStr)) === selectedDayKey : false;
+      });
+      setDateFilteredActivities(dayActivities);
+      fetchCalendarEvents(selectedDate);
       // Rebuild the ±1 day window from cache around the refreshed day
       const prevDay = new Date(selectedDate); prevDay.setDate(prevDay.getDate() - 1);
       const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1);
@@ -165,7 +300,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
     } catch (error) {
       console.error('Error refreshing current day:', error);
     }
-  }, [babyId, selectedDate, activityCache, emitLatestStatus]);
+  }, [babyId, selectedDate, activityCache, emitLatestStatus, fetchCalendarEvents]);
 
   const fetchHeatmapData = useCallback(async () => {
     if (!babyId) return;
@@ -269,6 +404,13 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
     }
   }, [babyId, settings?.defaultBottleUnit, defaultBottleUnit]);
 
+  // (Re)fetch calendar events when the setting or the day changes
+  useEffect(() => {
+    if (babyId) {
+      fetchCalendarEvents(selectedDate);
+    }
+  }, [babyId, selectedDate, fetchCalendarEvents]);
+
   // Handle refreshTrigger from parent (form submissions in log-entry page)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTrigger.current) {
@@ -329,9 +471,16 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
       ? dateFilteredActivities.filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
       : dateFilteredActivities;
 
+    // Calendar events join the display list only when the setting is enabled
+    const withCalendarEvents = showCalendarEvents
+      ? [...baseActivities, ...calendarEvents]
+      : baseActivities;
+
     const filtered = !activeFilter || activeFilter === null
-      ? baseActivities
-      : baseActivities.filter(activity => {
+      ? withCalendarEvents
+      : withCalendarEvents.filter(activity => {
+          // Calendar events only show unfiltered or under their own filter
+          if ('calendarEventId' in activity) return activeFilter === 'calendar';
           switch (activeFilter) {
             case 'sleep':
               return 'duration' in activity;
@@ -342,11 +491,11 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
               return 'amount' in activity && 'type' in activity &&
                      (activity as any).type !== 'SOLIDS';
             case 'diaper':
-              return 'condition' in activity && 'type' in activity &&
-                     (activity.type === 'WET' || activity.type === 'BOTH');
+              return 'condition' in activity;
+            case 'wet':
+              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
             case 'poop':
-              return 'condition' in activity && 'type' in activity &&
-                     (activity.type === 'DIRTY' || activity.type === 'BOTH');
+              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
             case 'medicine':
               return 'doseAmount' in activity && 'medicineId' in activity;
             case 'note':
@@ -384,7 +533,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
     });
 
     return sorted;
-  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled]);
+  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled, showCalendarEvents, calendarEvents]);
 
   const handleDelete = async (activity: ActivityType) => {
     if (!confirm('Are you sure you want to delete this activity?')) return;
@@ -459,8 +608,18 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
             isLoading={isLoadingActivities}
             isAnimated={isFetchAnimated}
             selectedDate={selectedDate}
-            onActivitySelect={(activity) => setSelectedActivity(activity)}
+            onActivitySelect={(activity) => {
+              // Calendar events have no log-entry details/edit drawer
+              if ('calendarEventId' in activity) return;
+              setSelectedActivity(activity);
+            }}
             onPhotoClick={handlePhotoClick}
+            activeFilter={activeFilter}
+            allActivities={dateFilteredActivities}
+            historyActivities={previousDayActivities}
+            feedTimerFrom={feedTimerFrom}
+            gapById={gapById}
+            dividerGapById={dividerGapById}
           />
         </div>
 
@@ -485,6 +644,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, onLat
         onDelete={handleDelete}
         onEdit={handleEdit}
         onPhotoClick={handlePhotoClick}
+        gapById={gapById}
       />
 
       {/* Photo Detail - opened from a timeline thumbnail click */}

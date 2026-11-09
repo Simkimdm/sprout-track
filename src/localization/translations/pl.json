@@ -2431,6 +2431,7 @@
   "Time Format": "Format czasu",
   "Time since last diaper": "Czas od ostatniej pieluchy",
   "Time since last feed": "Czas od ostatniego karmienia",
+  "Time since last sleep": "Czas od ostatniego snu",
   "Time since last pump": "Czas od ostatniego odciągania",
   "Time since last dose": "Czas od ostatniej dawki",
   "Timeline view of daily activities": "Oś czasu dziennych aktywności",
@@ -2770,5 +2771,13 @@
   "Zero “did anyone change him?” texts sent today.": "Zero SMS-ów z pytaniem „czy ktoś go przewinął?” wysłanych dzisiaj.",
   "Bath Warning Time (hh:mm)": "Czas ostrzeżenia kąpieli (hh:mm)",
   "Since last bath": "Od ostatniej kąpieli",
-  "Time since last bath": "Czas od ostatniej kąpieli"
+  "Time since last bath": "Czas od ostatniej kąpieli",
+  "Automatically end sleep when a feeding starts": "Automatycznie kończ sen, gdy zaczyna się karmienie",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Po włączeniu rozpoczęcie karmienia automatycznie kończy każdą aktywną sesję snu dziecka",
+  "Sleep & Feeding": "Sen i karmienie",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

@@ -7,7 +7,8 @@ A clock wheel interface for time selection with an intuitive UI similar to mobil
 - Interactive clock face for selecting hours and minutes
 - Visual clock hand that rotates to show the selected time
 - Emerald green header with large time display
-- AM/PM toggle buttons
+- AM/PM toggle buttons (12h mode only)
+- 24h mode with a dual-ring clock face (outer ring 1–12, inner ring 0/13–23) and no AM/PM toggle
 - Mode switching between hours and minutes
 - Minute markers with 5-minute increments and tick marks for individual minutes
 - Smooth animations for value changes
@@ -56,11 +57,15 @@ Main component for time selection with a clock wheel interface.
 ## Visual Behavior
 
 - Displays an emerald green header with the current time in large text
-- Shows AM/PM toggle buttons in the header
-- Presents a clock face with hour markers (1-12)
+- Shows AM/PM toggle buttons in the header in 12h mode (hidden in 24h mode)
+- Presents a clock face with hour markers (1-12, plus an inner 0/13-23 ring in 24h mode)
 - Highlights the currently selected hour or minute
 - Shows a clock hand pointing to the selected value
 - Automatically switches from hours to minutes mode after selecting an hour
+
+## 12h / 24h Time Format
+
+The component reads the user's `timeFormat` preference (`'12h' | '24h'`) from `useTimezone()`. With `24h` selected, the header shows zero-padded 24h time (e.g. `13:30`), the AM/PM toggle is hidden, the clock face renders the additional inner ring (0, 13–23), and the hour spinbutton accepts 0–23. The preference is set per family in Settings → User Settings → Time Format.
 
 ## Implementation Details
 

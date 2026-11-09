@@ -20,7 +20,8 @@ import {
   Baby,
   Syringe,
   Camera,
-  Apple
+  Apple,
+  Droplets
 } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { Button } from '@/src/components/ui/button';
@@ -29,6 +30,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/src/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from '@/src/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/src/components/ui/calendar';
 import { FilterType } from '../types';
 import { ActivityType } from '../types';
@@ -126,6 +133,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     endOfDay.setHours(23, 59, 59, 999);
     
     let totalSleepMinutes = 0;
+    let diaperCount = 0;
     let wetCount = 0;
     let dirtyCount = 0;
     let poopCount = 0;
@@ -185,7 +193,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       if ('condition' in activity && 'type' in activity) {
         const time = new Date(activity.time);
         if (time >= startOfDay && time <= endOfDay) {
-          // Count wet and dirty diapers. BOTH counts as both; DRY as neither.
+          // Every diaper log is a change; wet/dirty split below (BOTH counts as both, DRY as neither).
+          diaperCount++;
           if (isWetDiaper(activity.type)) {
             wetCount++;
           }
@@ -416,10 +425,24 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       });
     }
 
+    // Diaper changes tile - combined "Wickeln" filter (all changes incl. DRY)
+    if (diaperCount > 0) {
+      tiles.push({
+        filter: 'diaper',
+        label: t('Diaper'),
+        value: diaperCount.toString(),
+        icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
+        bgColor: 'bg-gray-50',
+        iconColor: 'text-gray-600',
+        borderColor: 'border-gray-500',
+        bgActiveColor: 'bg-gray-100'
+      });
+    }
+
     // Wet diaper tile
     if (wetCount > 0) {
       tiles.push({
-        filter: 'diaper',
+        filter: 'wet',
         label: t('Wet Diapers'),
         value: wetCount.toString(),
         icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
@@ -647,6 +670,27 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     return formatDateLong(date, dateFormat);
   };
 
+  // Same filter options as the full log dropdown, so /log-entry can filter
+  // by all activity types — including the split diaper filters and the
+  // combined diaper-change ("Wickeln") summary.
+  const filterOptions = [
+    { type: 'sleep', icon: <Moon className="h-4 w-4" aria-hidden="true" />, labelKey: 'Sleep' },
+    { type: 'feed', icon: <Icon iconNode={bottleBaby} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Feed' },
+    { type: 'diaper', icon: <Icon iconNode={diaper} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Diaper' },
+    { type: 'wet', icon: <Droplets className="h-4 w-4" aria-hidden="true" />, labelKey: 'Wet Diapers' },
+    { type: 'poop', icon: <Icon iconNode={diaper} className="h-4 w-4" aria-hidden="true" />, labelKey: 'Poops' },
+    { type: 'bath', icon: <Bath className="h-4 w-4" aria-hidden="true" />, labelKey: 'Bath' },
+    { type: 'note', icon: <Edit className="h-4 w-4" aria-hidden="true" />, labelKey: 'Note' },
+    { type: 'pump', icon: <LampWallDown className="h-4 w-4" aria-hidden="true" />, labelKey: 'Pump' },
+    ...(enableBreastMilkTracking ? [{ type: 'breast-milk-adjustment' as const, icon: <LampWallDown className="h-4 w-4" aria-hidden="true" />, labelKey: 'Milk Adjust' as const }] : []),
+    { type: 'milestone', icon: <Trophy className="h-4 w-4" aria-hidden="true" />, labelKey: 'Milestone' },
+    { type: 'measurement', icon: <Ruler className="h-4 w-4" aria-hidden="true" />, labelKey: 'Measurement' },
+    { type: 'medicine', icon: <PillBottle className="h-4 w-4" aria-hidden="true" />, labelKey: 'Medicine' },
+    { type: 'play', icon: <Baby className="h-4 w-4" aria-hidden="true" />, labelKey: 'Activity' },
+    { type: 'vaccine', icon: <Syringe className="h-4 w-4" aria-hidden="true" />, labelKey: 'Vaccine' },
+    { type: 'food', icon: <Apple className="h-4 w-4" aria-hidden="true" />, labelKey: 'Food' },
+  ] as const;
+
   return (
     <section aria-label={t('Daily Summary')} className="overflow-hidden border-0 bg-white timeline-v2-daily-stats relative z-10">
       <div className="px-5 py-1 relative z-10">
@@ -716,6 +760,32 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Filters Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 h-8 px-2 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  {t('Filters')} <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {filterOptions.map((option) => (
+                  <DropdownMenuCheckboxItem
+                    key={option.type}
+                    checked={activeFilter === option.type}
+                    onCheckedChange={() => onFilterChange(activeFilter === option.type ? null : option.type as FilterType)}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="flex items-center justify-center w-6">{option.icon}</span>
+                    <span>{t(option.labelKey)}</span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Mobile toggle */}
             <button
               type="button"

@@ -2427,6 +2427,7 @@
   "Time Format": "समय प्रारूप",
   "Time since last diaper": "पिछले डायपर से समय",
   "Time since last feed": "पिछली फीड से समय",
+  "Time since last sleep": "पिछली نیند سے وقت",
   "Time since last pump": "पिछली पंपिंग से समय",
   "Time since last dose": "पिछली खुराक के बाद का समय",
   "Timeline view of daily activities": "दैनिक गतिविधियों का टाइमलाइन दृश्य",
@@ -2766,5 +2767,13 @@
   "Zero “did anyone change him?” texts sent today.": "आज “क्या किसी ने उसका डायपर बदला?” वाला एक भी मैसेज नहीं भेजा गया।",
   "Bath Warning Time (hh:mm)": "स्नान चेतावनी समय (hh:mm)",
   "Since last bath": "अंतिम स्नान के बाद से",
-  "Time since last bath": "अंतिम स्नान के बाद का समय"
+  "Time since last bath": "अंतिम स्नान के बाद का समय",
+  "Automatically end sleep when a feeding starts": "फीडिंग शुरू होने पर नींद खत्म करें",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "जब फीडिंग प्रारंभ होते ही नींद खत्म हो जाती हैं",
+  "Sleep & Feeding": "नींद और फीडिंग",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

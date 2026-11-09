@@ -104,6 +104,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'defaultHeightUnit', 'defaultWeightUnit', 'defaultTempUnit',
       'growthChartStandard',
       'dateFormat', 'timeFormat',
+      'weekStartsOn',
       'nightSleepWindow',
     ];
 
@@ -112,6 +113,8 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'familyName', 'securityPin', 'authType',
       'enableDebugTimer', 'enableDebugTimezone',
       'enableBreastMilkTracking',
+      'autoEndSleepOnFeed',
+      'showCalendarEventsInTimeline',
       'photoQuotaMB',
     ];
 
@@ -165,6 +168,16 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
           if (!isValidGrowthStandard(body[field])) {
             return NextResponse.json<ApiResponse<null>>(
               { success: false, error: 'growthChartStandard must be CDC or WHO' },
+              { status: 400 }
+            );
+          }
+          (data as any)[field] = body[field];
+          continue;
+        }
+        if (field === 'weekStartsOn') {
+          if (body[field] !== 'Sunday' && body[field] !== 'Monday') {
+            return NextResponse.json<ApiResponse<null>>(
+              { success: false, error: 'weekStartsOn must be Sunday or Monday' },
               { status: 400 }
             );
           }

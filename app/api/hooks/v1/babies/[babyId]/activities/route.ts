@@ -5,6 +5,7 @@ import { checkRateLimit } from '../../../rate-limiter';
 import { hookSuccess, hookError } from '../../../response';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 import { startBreastfeedSession, updateBreastfeedSession, endBreastfeedSession } from '../../../../../utils/activeBreastFeed';
+import { maybeEndActiveSleepOnFeed } from '../../../../../utils/autoEndSleep';
 import { BATH_TYPES, BOTTLE_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, FEED_SIDES, PUMP_ACTIONS, SLEEP_QUALITIES, normalizeEnumValue } from '../../../field-values';
 import { FOOD_FIELDS, formatFoodDetails, getDefaultSolidsUnit, loadFoodCatalog, parseEnjoyment, parseFoodAmount, parseFoodItemInputs, planFoodUnit, resolveFoodItems, resolveItemUnits } from '../../../food';
 import { buildFoodLogFoodFields, deriveMealAmountFromItems } from '@/src/utils/foodLogUtils';
@@ -538,6 +539,7 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
               }
               throw e;
             }
+            await maybeEndActiveSleepOnFeed({ babyId, familyId, at: session.sessionStartTime, caretakerId });
             return hookSuccess({ activityType: 'feed', id: session.id, time: session.sessionStartTime.toISOString(), details: { type: 'BREAST', action: 'start', activeSide: session.activeSide, isActive: true } }, { familyId, babyId }, rl.headers);
           }
 
@@ -624,6 +626,7 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
         });
         notifyActivityCreated(babyId, 'feed', { caretakerId }, { type: feedType, amount: result.amount, unitAbbr, food, side }).catch(console.error);
         resetTimerNotificationState(babyId, 'feed').catch(console.error);
+        await maybeEndActiveSleepOnFeed({ babyId, familyId, at: result.startTime ?? result.time, caretakerId });
         return hookSuccess({ activityType: 'feed', id: result.id, time: result.time.toISOString(), details: { type: feedType, amount: result.amount, unitAbbr, bottleType, side, food, ...(result.feedDuration ? { duration, feedDuration: result.feedDuration } : {}) } }, { familyId, babyId }, rl.headers);
       }
 

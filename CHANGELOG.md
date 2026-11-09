@@ -4,6 +4,10 @@
 
 ### Changes
 
+#### Log & Timeline
+
+- Unified the diaper filters across the daily timeline and full log: **Diaper** now summarizes all diaper changes ("Wickeln"), with separate **Wet Diapers** ("Nasse Windel", WET+BOTH) and **Poops** ("Stuhlgang", DIRTY+BOTH) filters alongside it; with no filter active, entries stay separated as before
+
 #### Medicines & Supplements
 
 - Each medicine/supplement can now have its own **dose reminder timer** (`warningTime`, "H:MM" — hours may exceed 24, same format as the bath/feed/diaper/pump warning times), set in the medicine form

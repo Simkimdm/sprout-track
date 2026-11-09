@@ -1,7 +1,8 @@
-import { Baby as BabyIcon } from 'lucide-react';
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { Baby as BabyIcon, History, Timer } from 'lucide-react';
+import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
+import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -68,6 +69,12 @@ const TimelineV2ActivityList = ({
   selectedDate,
   onActivitySelect,
   onPhotoClick,
+  activeFilter,
+  allActivities,
+  historyActivities,
+  feedTimerFrom,
+  gapById,
+  dividerGapById,
 }: TimelineActivityListProps) => {
 
   const { t } = useLocalization();
@@ -83,6 +90,13 @@ const TimelineV2ActivityList = ({
   };
   
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Ticking clock so ongoing activities (e.g. sleep without endTime) show a live end time
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Group activities by time of day
   const getTimeOfDay = (date: Date): string => {
@@ -169,44 +183,91 @@ const TimelineV2ActivityList = ({
   }, [activities, selectedDate]);
 
 
-  return (
-    <>
-      {/* Scrollable Content */}
-      <div 
-        className="h-full overflow-y-auto relative bg-white timeline-activity-scroll-container" 
-        ref={contentRef}
-      >
-        {/* Timeline View */}
-        <div className="min-h-full bg-white relative timeline-activity-list px-5 pb-5">
-          {/* Fade gradient at top - from white to transparent */}
-          <div className="absolute position: sticky top-0 left-0 right-0 h-2 bg-gradient-to-b from-white to-transparent pointer-events-none z-20 timeline-top-gradient"></div>
-          {activities.length > 0 ? (
-            <div className="relative">
-              {/* Timeline vertical line */}
-              <div className="border-l-2 border-gray-200 pl-5 ml-2.5 timeline-container">
-                <AnimatePresence>
-                  {groupedActivities.map((group, groupIndex) => (
-                    <motion.div
-                      key={group.timeOfDay}
-                      className="relative timeline-hour-group mb-6"
-                      initial={isAnimated ? { opacity: 0, y: -10 } : false}
-                      animate={isAnimated ? { opacity: 1, y: 0 } : false}
-                      transition={isAnimated ? {
-                        delay: groupIndex * 0.05,
-                        duration: 0.2,
-                        ease: "easeOut"
-                      } : { duration: 0 }}
-                    >
-                      {/* Time of Day Header */}
-                      <div className="flex items-center mb-3 ml-2">
-                        <div className="text-sm font-semibold text-gray-500">
-                          {getTimeOfDayLabel(group.timeOfDay)}
-                        </div>
-                      </div>
-                      
-                      {/* Activities in this time period */}
-                      <div className="space-y-0 pb-4">
-                        {group.activities.map((activity, activityIndex) => {
+  // Breast-feed rows of one session (linked L+R) render as one bracketed group
+  const sessionByRowId = useMemo(() => {
+    const map = new Map<string, BreastFeedSession<FeedGapRow>>();
+    const breastRows = activities.filter(a =>
+      'amount' in a && 'type' in a && (a as { type?: string }).type === 'BREAST'
+    ) as unknown as FeedGapRow[];
+    for (const session of groupBreastFeedSessions(breastRows)) {
+      if (session.rows.length < 2) continue;
+      for (const row of session.rows) map.set(row.id, session);
+    }
+    return map;
+  }, [activities]);
+
+
+  // Gap map for other types (diaper, note, ...) when a filter is active: start-anchored,
+  // no duration needed — the filtered list is homogeneous, so gaps chain per type.
+  // Keyed to the older entry of each pair so the divider renders between the two entries.
+  // Previous-day activities (historyActivities) serve as anchors so the first entry of the
+  // day shows its divider to the last entry of the previous day.
+  const otherGapById = useMemo(() => {
+    if (!activeFilter) return new Map<string, FeedGapInfo>();
+    const isFeedRow = (a: ActivityType) => 'amount' in a && 'type' in a && !('foodId' in a);
+    const isSleepRow = (a: ActivityType) => 'duration' in a && 'startTime' in a && !('activities' in a);
+    const toPoint = (a: ActivityType) => {
+      const startTs = new Date(getActivityTime(a)).getTime();
+      return { rowIds: [a.id], startTs, endTs: startTs, durationSeconds: 0 };
+    };
+    const points = [
+      ...(historyActivities ?? []).filter(a => !isFeedRow(a) && !isSleepRow(a)),
+      ...activities.filter(a => !isFeedRow(a) && !isSleepRow(a)),
+    ].map(toPoint);
+    return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
+  }, [activities, activeFilter, historyActivities]);
+
+  // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
+  // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the
+  // older entry of the pair so the divider renders between the two entries (only when > 0).
+  const renderGroups = useMemo(() => {
+    const emitted = new Set<string>();
+    return groupedActivities.map(group => {
+      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string }[] = [];
+      for (const activity of group.activities) {
+        if (emitted.has(activity.id)) continue;
+        const session = sessionByRowId.get(activity.id);
+        let item: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string };
+        if (session) {
+          const rows = [...session.rows]
+            .sort((a, b) => new Date(getActivityTime(b as unknown as ActivityType)).getTime() - new Date(getActivityTime(a as unknown as ActivityType)).getTime())
+            .map(r => r as unknown as ActivityType);
+          rows.forEach(r => emitted.add(r.id));
+          item = { key: `session-${session.sessionId ?? session.rows[0].id}`, sessionRows: rows, activity: null };
+        } else {
+          emitted.add(activity.id);
+          item = { key: activity.id, sessionRows: null, activity };
+        }
+        const rows = item.sessionRows ?? (item.activity ? [item.activity] : []);
+        const earliest = rows.reduce((min, r) => {
+          const t = new Date(getActivityTime(r)).getTime();
+          return t < min ? t : min;
+        }, Infinity);
+        const firstRow = rows.find(r => new Date(getActivityTime(r)).getTime() === earliest) ?? rows[0];
+        const isFeed = !!firstRow && 'amount' in firstRow && 'type' in firstRow && !('foodId' in firstRow);
+        const isSleep = !!firstRow && 'duration' in firstRow && 'startTime' in firstRow && !('activities' in firstRow);
+        // divider maps are keyed to the older entry of a pair; for a multi-row session the
+        // relevant key sits on its newest row (the pair with the next newer entry)
+        const anchorRow = rows.reduce((newest, r) =>
+          new Date(getActivityTime(r)).getTime() > new Date(getActivityTime(newest)).getTime() ? r : newest
+        , rows[0]);
+        // the between-entry gap divider only shows when a type filter is active;
+        // feeds/sleep use the end-anchored map (durations included), other types start-anchored
+        let gap: number | undefined;
+        if (activeFilter && anchorRow) {
+          gap = isFeed || isSleep
+            ? dividerGapById?.get(anchorRow.id)?.gapSeconds
+            : otherGapById.get(anchorRow.id)?.gapSeconds;
+        }
+        if (gap && gap > 0) item.dividerGap = formatDurationWords(gap);
+        items.push(item);
+      }
+      return { ...group, items };
+    });
+  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter]);
+
+  // Render one timeline event row (also used for each row of a grouped L+R session)
+  const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {
                           const style = getActivityStyle(activity);
                           const description = getActivityDescription(activity, settings, t);
                           const activityTime = new Date(getActivityTime(activity));
@@ -240,10 +301,46 @@ const TimelineV2ActivityList = ({
                                 timeStr = `${startTimeStr} - ${endTimeStr}`;
                               }
                             } else {
-                              timeStr = formatTimeDisplay(startTime, timeFormat);
+                              // ongoing: live end time (ticks every 30s)
+                              timeStr = `${formatTimeDisplay(startTime, timeFormat)} - ${formatTimeDisplay(now, timeFormat)}`;
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
+                            // Calendar events show their end time inline (or "All day")
+                            if ('calendarEventId' in activity) {
+                              if (activity.allDay) {
+                                timeStr = t('All day');
+                              } else if (activity.endTime) {
+                                timeStr = `${timeStr} - ${formatTimeDisplay(new Date(activity.endTime), timeFormat)}`;
+                              }
+                            }
+                            // Feeds with a duration also show the computed end inline: start-end
+                            if ('amount' in activity && 'type' in activity && !('foodId' in activity)) {
+                              // amount is minutes only for legacy BREAST rows; for bottles it is a volume
+                              const durSec = activity.type === 'BREAST'
+                                ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
+                                : (activity.feedDuration || 0);
+                              if (durSec > 0) {
+                                const end = new Date(activityTime.getTime() + durSec * 1000);
+                                timeStr = `${timeStr} - ${formatTimeDisplay(end, timeFormat)}`;
+                              }
+                            }
+                          }
+                          
+                          // Sub-line next to the recording time: this entry's duration
+                          // (the gap since the previous same-type entry is the divider between entries)
+                          let durationSuffix = '';
+                          if ('amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
+                            const durSec = activity.type === 'BREAST'
+                              ? (activity.feedDuration || (activity.amount ? activity.amount * 60 : 0))
+                              : (activity.feedDuration || 0);
+                            if (durSec > 0) durationSuffix = formatDurationWords(durSec);
+                          } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
+                            if (!(activity as { endTime?: string | null }).endTime) {
+                              durationSuffix = formatDurationWords((now.getTime() - activityTime.getTime()) / 1000);
+                            } else if (activity.duration) {
+                              durationSuffix = formatDurationWords(activity.duration * 60);
+                            }
                           }
                           
                           const getActivityColor = (bgClass: string) => {
@@ -260,6 +357,7 @@ const TimelineV2ActivityList = ({
                             if (bgClass.includes('border-red-500')) return '#EF4444'; // red - vaccine
                             if (bgClass.includes('border-[#e11d48]')) return '#e11d48'; // rose - photo
                             if (bgClass.includes('bg-[#BBD444]')) return '#BBD444'; // lime - food
+                            if (bgClass.includes('bg-violet-200')) return '#c4b5fd'; // violet-300 - calendar event
                             return '#9ca3af'; // default gray
                           };
                           
@@ -268,7 +366,8 @@ const TimelineV2ActivityList = ({
                           // Determine activity type class for styling
                           // Check play and pump FIRST since they also have duration and startTime
                           let activityTypeClass = '';
-                          if ('photoLogId' in activity) activityTypeClass = 'photo';
+                          if ('calendarEventId' in activity) activityTypeClass = 'calendar-event';
+                          else if ('photoLogId' in activity) activityTypeClass = 'photo';
                           else if (isFoodLogActivity(activity)) activityTypeClass = 'food';
                           else if ('activities' in activity && 'type' in activity && ['TUMMY_TIME', 'INDOOR_PLAY', 'OUTDOOR_PLAY', 'WALK', 'CUSTOM'].includes((activity as any).type)) activityTypeClass = 'play';
                           else if ('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)) activityTypeClass = 'breast-milk-adjustment';
@@ -331,6 +430,13 @@ const TimelineV2ActivityList = ({
                                 <div className="text-xs text-gray-600 event-details">
                                   {(() => {
 
+                                    // Calendar event merged into the timeline: title + location
+                                    if ('calendarEventId' in activity) {
+                                      const parts = [activity.title];
+                                      if (activity.location) parts.push(activity.location);
+                                      return parts.join(' • ');
+                                    }
+
                                     // Food log (issue #203 / #247)
                                     if (isFoodLogActivity(activity)) {
                                       const foodLog = activity as any;
@@ -388,7 +494,7 @@ const TimelineV2ActivityList = ({
                                       const duration = activity.duration ? `${Math.floor(activity.duration / 60)}h ${activity.duration % 60}m` : '';
                                       const parts = [];
                                       if (location) parts.push(localizeSleepLocation(location, t));
-                                      if (duration) parts.push(duration);
+
                                       if (!('endTime' in activity)) parts.push(t('Still asleep'));
                                       if ((activity as any).notes) {
                                         const notes = translateNotes((activity as any).notes);
@@ -409,7 +515,7 @@ const TimelineV2ActivityList = ({
                                         } else if (activity.amount) {
                                           duration = `${activity.amount} ${t('min')}`;
                                         }
-                                        const parts = [side, duration].filter(Boolean);
+                                        const parts = [side].filter(Boolean);
                                         if ((activity as any).hadReaction) parts.push(t('Reaction'));
                                         if ((activity as any).notes) {
                                           const notes = translateNotes((activity as any).notes);
@@ -545,13 +651,82 @@ const TimelineV2ActivityList = ({
                                 </div>
                               )}
 
-                              {/* Event Time */}
-                              <div className="flex-shrink-0 text-xs text-gray-500 event-time">
-                                {timeStr}
+                              {/* Event Time: start on the first line, computed end + gap on the second */}
+                              <div className="flex-shrink-0 text-right text-xs text-gray-500 event-time">
+                                <div>{timeStr}</div>
+                                {durationSuffix && (
+                                  <div className="timeline-feed-subline">
+                                    {durationSuffix && (
+                                      <span className="timeline-feed-duration">
+                                        <Timer className="h-3 w-3" aria-hidden="true" />
+                                        {durationSuffix}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </motion.div>
                           );
-                        })}
+  };
+
+  return (
+    <>
+      {/* Scrollable Content */}
+      <div 
+        className="h-full overflow-y-auto relative bg-white timeline-activity-scroll-container" 
+        ref={contentRef}
+      >
+        {/* Timeline View */}
+        <div className="min-h-full bg-white relative timeline-activity-list px-5 pb-5">
+          {/* Fade gradient at top - from white to transparent */}
+          <div className="absolute position: sticky top-0 left-0 right-0 h-2 bg-gradient-to-b from-white to-transparent pointer-events-none z-20 timeline-top-gradient"></div>
+          {activities.length > 0 ? (
+            <div className="relative">
+              {/* Timeline vertical line */}
+              <div className="border-l-2 border-gray-200 pl-5 ml-2.5 timeline-container">
+                <AnimatePresence>
+                  {renderGroups.map((group, groupIndex) => (
+                    <motion.div
+                      key={group.timeOfDay}
+                      className="relative timeline-hour-group mb-6"
+                      initial={isAnimated ? { opacity: 0, y: -10 } : false}
+                      animate={isAnimated ? { opacity: 1, y: 0 } : false}
+                      transition={isAnimated ? {
+                        delay: groupIndex * 0.05,
+                        duration: 0.2,
+                        ease: "easeOut"
+                      } : { duration: 0 }}
+                    >
+                      {/* Time of Day Header */}
+                      <div className="flex items-center mb-3 ml-2">
+                        <div className="text-sm font-semibold text-gray-500">
+                          {getTimeOfDayLabel(group.timeOfDay)}
+                        </div>
+                      </div>
+                      
+                      {/* Activities in this time period */}
+                      <div className="space-y-0 pb-4">
+                        {group.items.map((item, itemIndex) => (
+                          <Fragment key={item.key}>
+                            {item.dividerGap && (
+                              <div className="timeline-gap-divider" aria-hidden="true">
+                                <span className="timeline-gap-divider-line" />
+                                <span className="timeline-feed-gap">
+                                  <History className="h-3 w-3" aria-hidden="true" />
+                                  {item.dividerGap}
+                                </span>
+                                <span className="timeline-gap-divider-line" />
+                              </div>
+                            )}
+                            {item.sessionRows ? (
+                            <div key={item.key} className="timeline-feed-session">
+                              {item.sessionRows.map((row, rowIndex) => renderActivity(row, groupIndex, itemIndex + rowIndex))}
+                            </div>
+                          ) : (
+                            renderActivity(item.activity as ActivityType, groupIndex, itemIndex)
+                          )}
+                          </Fragment>
+                        ))}
                       </div>
                     </motion.div>
                   ))}

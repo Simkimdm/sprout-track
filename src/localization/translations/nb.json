@@ -2427,6 +2427,7 @@
   "Time Format": "Tidsformat",
   "Time since last diaper": "Tid siden forrige bleie",
   "Time since last feed": "Tid siden forrige mating",
+  "Time since last sleep": "Tid siden siste søvn",
   "Time since last pump": "Tid siden siste pumping",
   "Time since last dose": "Tid siden siste dose",
   "Timeline view of daily activities": "Tidslinjevisning av daglige aktiviteter",
@@ -2766,5 +2767,13 @@
   "Zero “did anyone change him?” texts sent today.": "Null «har noen skiftet på ham?»-meldinger sendt i dag.",
   "Bath Warning Time (hh:mm)": "Badet varselstid (hh:mm)",
   "Since last bath": "Siden siste bad",
-  "Time since last bath": "Tid siden siste bad"
+  "Time since last bath": "Tid siden siste bad",
+  "Automatically end sleep when a feeding starts": "Avslutt søvn automatisk når en mating starter",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Når aktivert avsluttes enhver aktiv søvnøkt for babyen når en mating startes",
+  "Sleep & Feeding": "Søvn og mating",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

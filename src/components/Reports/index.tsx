@@ -248,6 +248,7 @@ const Reports: React.FC<ReportsProps> = ({ className }) => {
                 rangeTo={dateRange.to}
                 onRangeChange={handleRangeChange}
                 maxDate={new Date()}
+                weekStartsOn={settings?.weekStartsOn as WeekStartSetting | undefined}
               />
             </PopoverContent>
           </Popover>

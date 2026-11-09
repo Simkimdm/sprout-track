@@ -3,6 +3,7 @@ import { Baby as BabyIcon } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ActivityType, TimelineActivityListProps, FilterType } from './types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime } from './utils';
+import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/src/context/theme';
 import { useLocalization } from '@/src/context/localization';
@@ -46,6 +47,10 @@ const TimelineActivityList = ({
           return 'amount' in activity && !('foodId' in activity);
         case 'diaper':
           return 'condition' in activity;
+        case 'wet':
+          return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
+        case 'poop':
+          return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
         case 'note':
           return 'content' in activity;
         case 'bath':

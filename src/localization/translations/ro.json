@@ -2427,6 +2427,7 @@
   "Time Format": "Format Oră",
   "Time since last diaper": "Timp de la ultimul scutec",
   "Time since last feed": "Timp de la ultima hrănire",
+  "Time since last sleep": "Timp de la ultimul somn",
   "Time since last pump": "Timp de la ultima pompare",
   "Time since last dose": "Timp de la ultima doză",
   "Timeline view of daily activities": "Vizualizare cronologică a activităților zilnice",
@@ -2766,5 +2767,13 @@
   "Zero “did anyone change him?” texts sent today.": "Zero mesaje de tipul „i-a schimbat cineva scutecul?” trimise azi.",
   "Bath Warning Time (hh:mm)": "Timp de avertizare al băii (hh:mm)",
   "Since last bath": "De la ultima baie",
-  "Time since last bath": "Timp de la ultima baie"
+  "Time since last bath": "Timp de la ultima baie",
+  "Automatically end sleep when a feeding starts": "Închide automat somnul când începe o hrănire",
+  "When enabled, starting a feeding automatically ends any active sleep session for the baby": "Când este activată, pornirea unei hrăniri închide automat orice sesiune de somn activă a bebelușului",
+  "Sleep & Feeding": "Somn și hrănire",
+  "Timeline": "Timeline",
+  "Show calendar events in timeline": "Show calendar events in timeline",
+  "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
+  "Calendar event": "Calendar event",
+  "All day": "All day"
 }

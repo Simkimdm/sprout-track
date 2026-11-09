@@ -180,7 +180,7 @@ export async function endBreastfeedSession(session: ActiveBreastFeed, opts: EndS
     firstSide,
     leftDuration: leftDur,
     rightDuration: rightDur,
-    pauseDuration: finalPauseDuration,
+    pauseDuration: session.pauseDuration,
   });
 
   // Both rows share a sessionId so they always count as one nursing session
