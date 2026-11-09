@@ -249,14 +249,27 @@ describe('formatDurationHM', () => {
 });
 
 describe('buildFeedGapMap', () => {
-  it('gives the first feeding a null gap and later feeds the gap to the previous one', () => {
+  it('gives the first feeding a 0 gap and later feeds the gap to the previous one', () => {
     const feeds = [
       { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T10:00:00Z'), amount: 120 },
       { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T12:30:00Z'), amount: 100 },
     ];
     const gaps = buildFeedGapMap(feeds);
-    expect(gaps.get('f1')).toEqual({ gapSeconds: null, durationSeconds: 0 });
+    expect(gaps.get('f1')).toEqual({ gapSeconds: 0, durationSeconds: 0 });
     expect(gaps.get('f2')).toEqual({ gapSeconds: 9000, durationSeconds: 0 });
+  });
+
+  it('anchors the first entry of a day at the last feeding before that day (history)', () => {
+    const history = [
+      { id: 'h1', type: 'BOTTLE', time: at('2026-07-21T22:00:00Z'), amount: 120 },
+    ];
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T06:00:00Z'), amount: 100 },
+    ];
+    // start-to-start: 22:00 -> 06:00 = 8h
+    expect(buildFeedGapMap(feeds, 'start', history).get('f1')!.gapSeconds).toBe(28800);
+    // no history at all -> 0
+    expect(buildFeedGapMap(feeds, 'start').get('f1')!.gapSeconds).toBe(0);
   });
 
   it('treats a linked L+R breast session as one feeding with summed duration', () => {

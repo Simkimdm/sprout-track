@@ -46,6 +46,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   }, [initialDate]);
 
   const [dateFilteredActivities, setDateFilteredActivities] = useState<ActivityType[]>([]);
+  // Recent feed entries before the selected day, used as gap anchor for the day's first feeding
+  const [historyFeeds, setHistoryFeeds] = useState<ActivityType[]>([]);
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
   const [windowActivities, setWindowActivities] = useState<ActivityType[]>([]);
   const [heatmapActivities, setHeatmapActivities] = useState<ActivityType[]>([]);
@@ -100,6 +102,34 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     }
   };
 
+  // Fetch the most recent feeds before the start of `date` (gap anchor for the day's first entry)
+  const fetchHistoryFeeds = useCallback(async (date: Date) => {
+    if (!babyId) return;
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(
+        `/api/feed-log?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}&limit=50`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Expires': '0',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setHistoryFeeds(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching history feeds:', error);
+    }
+  }, [babyId]);
+
   // Fetch activities for date using cache
   const fetchActivitiesForDate = useCallback(async (date: Date, isAnimated: boolean) => {
     if (!babyId) return;
@@ -113,6 +143,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       const result = await activityCache.fetchWindow(babyId, date, 1);
       setDateFilteredActivities(result.activities);
       setWindowActivities(result.allActivities);
+      fetchHistoryFeeds(date);
       lastRefreshTimestamp.current = Date.now();
 
       // Only emit status when today is within the fetched window (prevents stale status on past dates)
@@ -463,6 +494,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             onPhotoClick={handlePhotoClick}
             activeFilter={activeFilter}
             allActivities={dateFilteredActivities}
+            historyActivities={historyFeeds}
             feedTimerFrom={feedTimerFrom}
           />
         </div>

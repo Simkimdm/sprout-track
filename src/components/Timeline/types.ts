@@ -90,6 +90,8 @@ export interface TimelineActivityListProps {
   feedTimerFrom?: string | null;
   /** Unfiltered activities of the selected day, used to compute the gap to the previous feeding */
   allActivities?: ActivityType[];
+  /** Feed entries before the selected day, used as gap anchor for the day's first feeding */
+  historyActivities?: ActivityType[];
 }
 
 export interface TimelineActivityDetailsProps {

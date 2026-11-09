@@ -190,8 +190,8 @@ export interface FeedGapRow extends BreastFeedLike {
 }
 
 export interface FeedGapInfo {
-  /** Seconds since the previous feeding ENDED (pause between feedings); null for the very first feeding. */
-  gapSeconds: number | null;
+  /** Seconds since the previous feeding (END = pause, START = start-to-start); 0 when no previous feeding exists at all. */
+  gapSeconds: number;
   /** Duration of this feeding in seconds (summed over all rows of a breast session). */
   durationSeconds: number;
 }
@@ -229,13 +229,19 @@ export function formatDurationHM(totalSeconds: number): string {
  */
 export function buildFeedGapMap<T extends FeedGapRow>(
   feeds: T[],
-  from: 'start' | 'end' = 'start'
+  from: 'start' | 'end' = 'start',
+  historyFeeds: T[] = []
 ): Map<string, FeedGapInfo> {
   const result = new Map<string, FeedGapInfo>();
 
   const points: { rowIds: string[]; startTs: number; endTs: number; durationSeconds: number }[] = [];
 
-  for (const session of groupBreastFeedSessions(feeds)) {
+  // History rows (feeds before the viewed day) only serve as gap anchors so
+  // the first entry of a day can measure its gap across midnight; they are
+  // still included in the map, which is harmless (their ids are never rendered).
+  const allFeeds = [...historyFeeds, ...feeds];
+
+  for (const session of groupBreastFeedSessions(allFeeds)) {
     // Session start = earliest side start; session end = latest side end
     // (start + own duration), so a pause between sides still counts as part
     // of the session, not as "time since last feeding".
@@ -252,7 +258,7 @@ export function buildFeedGapMap<T extends FeedGapRow>(
     });
   }
 
-  for (const row of feeds) {
+  for (const row of allFeeds) {
     if (row.type === 'BREAST' || row.type === 'SOLIDS') continue;
     const startTs = new Date(breastFeedDisplayTime(row)).getTime();
     points.push({
@@ -271,9 +277,10 @@ export function buildFeedGapMap<T extends FeedGapRow>(
     const info: FeedGapInfo = {
       // Gap since the previous feeding, anchored per the feedTimerFrom
       // setting: its end (pause between feedings) or its start; clamped at 0
+      // 0 when no previous feeding exists at all (e.g. very first entry ever)
       gapSeconds: prev
         ? Math.max(0, point.startTs - (from === 'end' ? prev.endTs : prev.startTs)) / 1000
-        : null,
+        : 0,
       durationSeconds: point.durationSeconds,
     };
     for (const rowId of point.rowIds) {

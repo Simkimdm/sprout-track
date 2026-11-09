@@ -26,7 +26,7 @@ const activities = [
   feed('b2', 'BOTTLE', '2026-07-22T13:15:00.000Z'),
 ];
 
-const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string) =>
+const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, historyActivities?: any[]) =>
   renderToString(
     React.createElement(TimelineV2ActivityList as any, {
       activities,
@@ -37,6 +37,7 @@ const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string) =>
       onActivitySelect: () => {},
       activeFilter,
       allActivities: activities,
+      historyActivities,
       feedTimerFrom,
     })
   );
@@ -46,13 +47,39 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     const html = renderList('feed', 'end');
     expect(html).toContain('timeline-feed-session-bracket');
     // session anchor (earliest side): pause from 08:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session end 10:14 -> 3:01
-    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:01)', '(+2:14)']);
+    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:01)', '(+2:14)', '(+0:00)']);
   });
 
   it("anchors the gap at the previous feeding start when feedTimerFrom is 'start'", () => {
     const html = renderList('feed', 'start');
     // next bottle measured from session start 10:00 -> 3:15
-    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:15)', '(+2:14)']);
+    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:15)', '(+2:14)', '(+0:00)']);
+  });
+
+  it('measures the first entry of a day against the last feeding of the previous day', () => {
+    const dayFeeds = [feed('f1', 'BOTTLE', '2026-07-22T06:00:00.000Z')];
+    const history = [feed('h1', 'BOTTLE', '2026-07-21T22:00:00.000Z')];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: dayFeeds, historyActivities: history, feedTimerFrom: 'start',
+      })
+    );
+    // 22:00 -> 06:00 = 8h gap, no duration on a bottle
+    expect(html).toContain('(+8:00)');
+  });
+
+  it('shows +0:00-based value for the very first feeding when no history exists', () => {
+    const dayFeeds = [feed('f1', 'BOTTLE', '2026-07-22T06:00:00.000Z')];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: dayFeeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: dayFeeds, feedTimerFrom: 'start',
+      })
+    );
+    expect(html).toContain('(+0:00)');
   });
 
   it('renders no bracket and no gap without an active filter', () => {

@@ -71,6 +71,7 @@ const TimelineV2ActivityList = ({
   onPhotoClick,
   activeFilter,
   allActivities,
+  historyActivities,
   feedTimerFrom,
 }: TimelineActivityListProps) => {
 
@@ -189,15 +190,19 @@ const TimelineV2ActivityList = ({
     return map;
   }, [isFiltering, activities]);
 
-  // Filtered view: "+x:yy" gap since the previous feeding, computed over all feeds of the day
+  // Filtered view: "+x:yy" gap since the previous feeding, computed over all feeds of the
+  // day plus recent history, so the day's first entry measures across midnight (0 if none)
   const feedGapById = useMemo(() => {
     if (!isFiltering) return new Map<string, FeedGapInfo>();
     const source = allActivities ?? activities;
     const feeds = source.filter(a =>
       'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
     ) as unknown as FeedGapRow[];
-    return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start');
-  }, [isFiltering, allActivities, activities, feedTimerFrom]);
+    const history = (historyActivities ?? []).filter(a =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
+    ) as unknown as FeedGapRow[];
+    return buildFeedGapMap(feeds, feedTimerFrom === 'end' ? 'end' : 'start', history);
+  }, [isFiltering, allActivities, activities, historyActivities, feedTimerFrom]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item
   const renderGroups = useMemo(() => {
@@ -273,12 +278,8 @@ const TimelineV2ActivityList = ({
                                 new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
                               );
                               if (isSessionAnchor) {
-                                if (gapInfo.gapSeconds != null) {
-                                  // gap since the previous feeding plus this feeding's duration as one +/- x:yy
-                                  gapSuffix = ` (${formatSignedElapsedHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
-                                } else if (gapInfo.durationSeconds > 0) {
-                                  gapSuffix = ` (${formatDurationHM(gapInfo.durationSeconds)})`;
-                                }
+                                // gap since the previous feeding (0 if none) plus this feeding's duration as one +/- x:yy
+                                gapSuffix = ` (${formatSignedElapsedHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
                               }
                             }
                           }

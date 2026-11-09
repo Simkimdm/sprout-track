@@ -205,6 +205,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const typeParam = searchParams.get('type');
+    const limitParam = searchParams.get('limit');
     const { familyId } = authContext;
 
     const queryParams: any = {
@@ -257,6 +258,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
       orderBy: {
         time: 'desc',
       },
+      ...(limitParam && { take: Math.min(Math.max(parseInt(limitParam, 10) || 0, 1), 500) }),
     });
 
     // Format dates as ISO strings for response
