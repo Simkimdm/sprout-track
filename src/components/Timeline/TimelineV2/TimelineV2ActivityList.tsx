@@ -249,13 +249,13 @@ const TimelineV2ActivityList = ({
                                 // Show dates for overnight entries
                                 const startDateFormatted = formatDateShort(startTime, dateFormat);
                                 const endDateFormatted = formatDateShort(endTime, dateFormat);
-                                timeStr = `${startDateFormatted} ${startTimeStr}–${endDateFormatted} ${endTimeStr}`;
+                                timeStr = `${startDateFormatted} ${startTimeStr} - ${endDateFormatted} ${endTimeStr}`;
                               } else {
-                                timeStr = `${startTimeStr}–${endTimeStr}`;
+                                timeStr = `${startTimeStr} - ${endTimeStr}`;
                               }
                             } else {
                               // ongoing: live end time (ticks every 30s)
-                              timeStr = `${formatTimeDisplay(startTime, timeFormat)}–${formatTimeDisplay(now, timeFormat)}`;
+                              timeStr = `${formatTimeDisplay(startTime, timeFormat)} - ${formatTimeDisplay(now, timeFormat)}`;
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
@@ -267,7 +267,7 @@ const TimelineV2ActivityList = ({
                                 : (activity.feedDuration || 0);
                               if (durSec > 0) {
                                 const end = new Date(activityTime.getTime() + durSec * 1000);
-                                timeStr = `${timeStr}–${formatTimeDisplay(end, timeFormat)}`;
+                                timeStr = `${timeStr} - ${formatTimeDisplay(end, timeFormat)}`;
                               }
                             }
                           }
