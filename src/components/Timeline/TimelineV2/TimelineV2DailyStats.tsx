@@ -133,6 +133,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     endOfDay.setHours(23, 59, 59, 999);
     
     let totalSleepMinutes = 0;
+    let diaperCount = 0;
     let wetCount = 0;
     let dirtyCount = 0;
     let poopCount = 0;
@@ -192,7 +193,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       if ('condition' in activity && 'type' in activity) {
         const time = new Date(activity.time);
         if (time >= startOfDay && time <= endOfDay) {
-          // Count wet and dirty diapers. BOTH counts as both; DRY as neither.
+          // Every diaper log is a change; wet/dirty split below (BOTH counts as both, DRY as neither).
+          diaperCount++;
           if (isWetDiaper(activity.type)) {
             wetCount++;
           }
@@ -418,6 +420,20 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         icon: <Apple className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#BBD444]', // matches food timeline entries
+        borderColor: 'border-gray-500',
+        bgActiveColor: 'bg-gray-100'
+      });
+    }
+
+    // Diaper changes tile - combined "Wickeln" filter (all changes incl. DRY)
+    if (diaperCount > 0) {
+      tiles.push({
+        filter: 'diaper',
+        label: t('Diaper'),
+        value: diaperCount.toString(),
+        icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
+        bgColor: 'bg-gray-50',
+        iconColor: 'text-gray-600',
         borderColor: 'border-gray-500',
         bgActiveColor: 'bg-gray-100'
       });
