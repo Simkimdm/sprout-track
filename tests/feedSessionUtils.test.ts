@@ -270,8 +270,9 @@ describe('buildFeedGapMap', () => {
     // Both session rows share the session's gap (10:00 - 08:00 = 2h) and summed duration (840s)
     expect(gaps.get('l')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
     expect(gaps.get('r')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
-    // The next feeding measures its gap from the session start, not the last side
-    expect(gaps.get('b2')).toEqual({ gapSeconds: 11700, durationSeconds: 0 });
+    // The next feeding measures its gap from the session END (latest side
+    // start + its duration = 10:14), not from the session start
+    expect(gaps.get('b2')).toEqual({ gapSeconds: 10860, durationSeconds: 0 });
   });
 
   it('ignores SOLIDS rows (food logs are not feedings here)', () => {
@@ -283,5 +284,25 @@ describe('buildFeedGapMap', () => {
     const gaps = buildFeedGapMap(feeds);
     expect(gaps.has('s1')).toBe(false);
     expect(gaps.get('f2')!.gapSeconds).toBe(7200);
+  });
+});
+
+describe('buildFeedGapMap end-to-start gap', () => {
+  it('measures the gap from the previous feeding end (start + duration), not its start', () => {
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T10:00:00Z'), amount: 120, feedDuration: 600 },
+      { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T10:20:00Z'), amount: 100 },
+    ];
+    const gaps = buildFeedGapMap(feeds);
+    // f1 ends at 10:10 -> pause until 10:20 is 10 min, not 20
+    expect(gaps.get('f2')).toEqual({ gapSeconds: 600, durationSeconds: 0 });
+  });
+
+  it('clamps the gap at 0 when entries overlap', () => {
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T10:00:00Z'), amount: 120, feedDuration: 1800 },
+      { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T10:10:00Z'), amount: 100 },
+    ];
+    expect(buildFeedGapMap(feeds).get('f2')!.gapSeconds).toBe(0);
   });
 });

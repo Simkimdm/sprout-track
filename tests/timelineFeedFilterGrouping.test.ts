@@ -44,8 +44,8 @@ describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
     const html = renderList('feed');
     expect(html).toContain('timeline-feed-session-bracket');
-    // session anchor (earliest side): gap from session start 10:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session start: 3:15
-    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:15)', '(+2:14)']);
+    // session anchor (earliest side): pause from 08:00 -> 2:00 + duration 0:14 = (+2:14); next bottle measured from session end 10:14 -> 3:01
+    expect(html.match(/\(\+\d+:\d{2}\)/g)).toEqual(['(+3:01)', '(+2:14)']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {

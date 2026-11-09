@@ -190,7 +190,7 @@ export interface FeedGapRow extends BreastFeedLike {
 }
 
 export interface FeedGapInfo {
-  /** Seconds since the previous feeding (session start for breast sessions); null for the very first feeding. */
+  /** Seconds since the previous feeding ENDED (pause between feedings); null for the very first feeding. */
   gapSeconds: number | null;
   /** Duration of this feeding in seconds (summed over all rows of a breast session). */
   durationSeconds: number;
@@ -219,40 +219,54 @@ export function formatDurationHM(totalSeconds: number): string {
 
 /**
  * Map each feed row id to its "time since the previous feeding" gap and its own
- * duration. Breast rows are grouped into sessions first (a linked/paired L+R
- * session is one feeding: the gap is measured from the session start and the
- * duration is the summed side durations); other feed types count per row.
- * SOLIDS rows are not feedings for this purpose (they live under the food log).
+ * duration. The gap is the pause between feedings: current start minus previous
+ * END (start + duration). Breast rows are grouped into sessions first (a
+ * linked/paired L+R session is one feeding with summed side durations; other
+ * feed types count per row). SOLIDS rows are not feedings (they live under the
+ * food log).
  */
 export function buildFeedGapMap<T extends FeedGapRow>(feeds: T[]): Map<string, FeedGapInfo> {
   const result = new Map<string, FeedGapInfo>();
 
-  const points: { rowIds: string[]; ts: number; durationSeconds: number }[] = [];
+  const points: { rowIds: string[]; startTs: number; endTs: number; durationSeconds: number }[] = [];
 
   for (const session of groupBreastFeedSessions(feeds)) {
+    // Session start = earliest side start; session end = latest side end
+    // (start + own duration), so a pause between sides still counts as part
+    // of the session, not as "time since last feeding".
+    let endTs = session.time.getTime();
+    for (const row of session.rows) {
+      const rowStart = new Date(breastFeedDisplayTime(row)).getTime();
+      endTs = Math.max(endTs, rowStart + feedRowDurationSeconds(row) * 1000);
+    }
     points.push({
       rowIds: session.rows.map(r => r.id),
-      ts: session.time.getTime(),
+      startTs: session.time.getTime(),
+      endTs,
       durationSeconds: session.totalDuration,
     });
   }
 
   for (const row of feeds) {
     if (row.type === 'BREAST' || row.type === 'SOLIDS') continue;
+    const startTs = new Date(breastFeedDisplayTime(row)).getTime();
     points.push({
       rowIds: [row.id],
-      ts: new Date(breastFeedDisplayTime(row)).getTime(),
+      startTs,
+      endTs: startTs + (row.feedDuration || 0) * 1000,
       // Non-breast rows: amount is a volume, not minutes — only feedDuration counts
       durationSeconds: row.feedDuration || 0,
     });
   }
 
-  points.sort((a, b) => a.ts - b.ts);
+  points.sort((a, b) => a.startTs - b.startTs);
 
   points.forEach((point, index) => {
     const prev = index > 0 ? points[index - 1] : null;
     const info: FeedGapInfo = {
-      gapSeconds: prev ? (point.ts - prev.ts) / 1000 : null,
+      // Gap since the previous feeding ENDED (pause between feedings),
+      // clamped at 0 for overlapping entries
+      gapSeconds: prev ? Math.max(0, point.startTs - prev.endTs) / 1000 : null,
       durationSeconds: point.durationSeconds,
     };
     for (const rowId of point.rowIds) {
