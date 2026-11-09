@@ -249,9 +249,9 @@ const TimelineV2ActivityList = ({
                                 // Show dates for overnight entries
                                 const startDateFormatted = formatDateShort(startTime, dateFormat);
                                 const endDateFormatted = formatDateShort(endTime, dateFormat);
-                                timeStr = `${startDateFormatted} ${startTimeStr} - ${endDateFormatted} ${endTimeStr}`;
+                                timeStr = `${startDateFormatted} ${startTimeStr}–${endDateFormatted} ${endTimeStr}`;
                               } else {
-                                timeStr = `${startTimeStr} - ${endTimeStr}`;
+                                timeStr = `${startTimeStr}–${endTimeStr}`;
                               }
                             } else {
                               // ongoing: live end time (ticks every 30s)
