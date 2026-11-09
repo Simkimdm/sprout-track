@@ -2775,5 +2775,11 @@
   "Show calendar events in timeline": "Kalendereinträge in der Timeline anzeigen",
   "When enabled, calendar events for the selected day are also shown in the timeline": "Wenn aktiviert, werden Kalendereinträge des ausgewählten Tages auch in der Timeline angezeigt",
   "Calendar event": "Kalendereintrag",
-  "All day": "Ganztägig"
+  "All day": "Ganztägig",
+  "Drinking Quality": "Trinkqualität",
+  "How well did they drink?": "Wie gut hat das Baby getrunken?",
+  "Drank very well": "Sehr gut getrunken",
+  "Drank well": "Gut getrunken",
+  "Drank okay": "Mittel getrunken",
+  "Only suckled": "Nur genuckelt"
 }

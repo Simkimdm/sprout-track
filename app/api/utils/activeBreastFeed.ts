@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { ActiveBreastFeed, BreastSide } from '@prisma/client';
+import { ActiveBreastFeed, BreastSide, FeedQuality } from '@prisma/client';
 import prisma from '../db';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 import { layoutBreastFeedSession } from '@/src/utils/feedSessionLayout';
@@ -135,6 +135,8 @@ export interface EndSessionOptions {
   /** Optional duration overrides (seconds), e.g. from form adjustments */
   leftDuration?: number;
   rightDuration?: number;
+  /** Optional drinking quality recorded when ending the session */
+  quality?: FeedQuality | null;
 }
 
 export interface EndSessionResult {
@@ -202,6 +204,7 @@ export async function endBreastfeedSession(session: ActiveBreastFeed, opts: EndS
         feedDuration: block.duration,
         pauseDuration: finalPauseDuration,
         sessionId,
+        ...(opts.quality && { quality: opts.quality }),
         caretakerId: opts.caretakerId,
         familyId: opts.familyId,
       },

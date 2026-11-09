@@ -357,6 +357,10 @@ const TimelineActivityList = ({
                         
                         // Extract background color for timeline connector and hover border
                         const getActivityColor = (bgClass: string) => {
+                          if (bgClass.includes('bg-gradient-to-br from-green-500')) return '#22c55e'; // green-500 - feed quality EXCELLENT
+                          if (bgClass.includes('bg-gradient-to-br from-lime-300')) return '#a3e635'; // lime-400 - feed quality GOOD
+                          if (bgClass.includes('bg-gradient-to-br from-amber-300')) return '#fcd34d'; // amber-300 - feed quality FAIR
+                          if (bgClass.includes('bg-gradient-to-br from-orange-400 to-red-500')) return '#ef4444'; // red-500 - feed quality POOR
                           if (bgClass.includes('bg-gradient-to-br from-gray-400')) return '#9ca3af'; // gray-400
                           if (bgClass.includes('bg-sky-200')) return '#7dd3fc'; // sky-300
                           if (bgClass.includes('bg-gradient-to-r from-teal-600')) return '#0d9488'; // teal-600
@@ -451,6 +455,15 @@ const TimelineActivityList = ({
                                           
                                           if ('amount' in activity && !('foodId' in activity)) {
                                             // Feed activity
+                                            const feedQualityMap: Record<string, string> = {
+                                              'EXCELLENT': t('Drank very well'),
+                                              'GOOD': t('Drank well'),
+                                              'FAIR': t('Drank okay'),
+                                              'POOR': t('Only suckled')
+                                            };
+                                            const quality = ('quality' in activity && (activity as any).quality)
+                                              ? (feedQualityMap[(activity as any).quality as string] || (activity as any).quality)
+                                              : '';
                                             if (activity.type === 'BREAST') {
                                               const side = activity.side ? activity.side.charAt(0) + activity.side.slice(1).toLowerCase() : '';
                                               let duration = '';
@@ -461,10 +474,10 @@ const TimelineActivityList = ({
                                               } else if (activity.amount) {
                                                 duration = `${activity.amount} min`;
                                               }
-                                              return [side ? `${side} ${t('Side')}` : '', duration].filter(Boolean).join(' • ');
+                                              return [side ? `${side} ${t('Side')}` : '', duration, quality].filter(Boolean).join(' • ');
                                             } else if (activity.type === 'BOTTLE') {
                                               const unit = ((activity as any).unitAbbr || 'oz').toLowerCase();
-                                              return `${activity.amount} ${unit}`;
+                                              return [quality, `${activity.amount} ${unit}`].filter(Boolean).join(' • ');
                                             } else if (activity.type === 'SOLIDS') {
                                               const unit = ((activity as any).unitAbbr || 'g').toLowerCase();
                                               const food = activity.food ? ` of ${activity.food}` : '';

@@ -195,6 +195,7 @@ async function handleDelete(req: NextRequest, authContext: AuthResult) {
       accountId: authContext.accountId,
       leftDuration: body.leftDuration,
       rightDuration: body.rightDuration,
+      quality: body.quality || null,
     });
 
     return NextResponse.json<ApiResponse<{ feedLogsCreated: number; feedLogIds: string[] }>>({

@@ -2779,5 +2779,11 @@
   "Show calendar events in timeline": "Show calendar events in timeline",
   "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
   "Calendar event": "Calendar event",
-  "All day": "All day"
+  "All day": "All day",
+  "Drinking Quality": "Jakość picia",
+  "How well did they drink?": "Jak dobrze piło?",
+  "Drank very well": "Piło znakomicie",
+  "Drank well": "Piło dobrze",
+  "Drank okay": "Piło średnio",
+  "Only suckled": "Tylko ssało"
 }

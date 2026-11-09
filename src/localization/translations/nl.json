@@ -2775,5 +2775,11 @@
   "Show calendar events in timeline": "Show calendar events in timeline",
   "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
   "Calendar event": "Calendar event",
-  "All day": "All day"
+  "All day": "All day",
+  "Drinking Quality": "Drinkkwaliteit",
+  "How well did they drink?": "Hoe goed heeft hij/zij gedronken?",
+  "Drank very well": "Heel goed gedronken",
+  "Drank well": "Goed gedronken",
+  "Drank okay": "Redelijk gedronken",
+  "Only suckled": "Alleen gezogen"
 }

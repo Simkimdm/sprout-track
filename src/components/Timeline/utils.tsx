@@ -202,6 +202,16 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
     { label: t('Caretaker'), value: activity.caretakerName }
   ] : [];
 
+  const formatFeedQuality = (quality: string) => {
+    switch (quality) {
+      case 'EXCELLENT': return t('Drank very well');
+      case 'GOOD': return t('Drank well');
+      case 'FAIR': return t('Drank okay');
+      case 'POOR': return t('Only suckled');
+      default: return quality;
+    }
+  };
+
   // Food log (issue #203 / #247)
   if (isFoodLogActivity(activity)) {
     const foodLog = activity as any;
@@ -426,6 +436,11 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           label: t('Bottle Type'),
           value: t(bottleType)
         });
+      }
+
+      // Show drinking quality for breast and bottle feeds
+      if ((activity as any).quality && (activity.type === 'BREAST' || activity.type === 'BOTTLE')) {
+        details.push({ label: t('Drinking Quality'), value: formatFeedQuality((activity as any).quality) });
       }
 
       // Show reaction for all feed types if flagged
@@ -926,11 +941,23 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       if (notes.length > 30) {
         notes = notes.slice(0, 30) + '...';
       }
-      
+
+      // Add drinking quality for breast and bottle feeds
+      let qualityText = '';
+      if ((activity as any).quality && (activity.type === 'BREAST' || activity.type === 'BOTTLE')) {
+        const qualityMap: Record<string, string> = {
+          'EXCELLENT': t('Drank very well'),
+          'GOOD': t('Drank well'),
+          'FAIR': t('Drank okay'),
+          'POOR': t('Only suckled')
+        };
+        qualityText = qualityMap[(activity as any).quality] || (activity as any).quality;
+      }
+
       const time = formatTime(activity.time, settings, true, t);
       return {
         type: formatFeedType(activity.type),
-        details: [time, details, notes].filter(Boolean).join(' • ')
+        details: [time, details, qualityText, notes].filter(Boolean).join(' • ')
       };
     }
     if ('condition' in activity) {
@@ -1225,6 +1252,20 @@ export const getActivityStyle = (activity: ActivityType): ActivityStyle => {
       };
     }
     if ('amount' in activity) {
+      // Drinking quality gets a color gradient (green = well drunk, red = only suckled)
+      const feedQuality = (activity as any).quality as string | undefined;
+      if (feedQuality === 'EXCELLENT') {
+        return { bg: 'bg-gradient-to-br from-green-500 to-emerald-600', textColor: 'text-white' };
+      }
+      if (feedQuality === 'GOOD') {
+        return { bg: 'bg-gradient-to-br from-lime-300 to-green-400', textColor: 'text-green-900' };
+      }
+      if (feedQuality === 'FAIR') {
+        return { bg: 'bg-gradient-to-br from-amber-300 to-yellow-400', textColor: 'text-amber-900' };
+      }
+      if (feedQuality === 'POOR') {
+        return { bg: 'bg-gradient-to-br from-orange-400 to-red-500', textColor: 'text-white' };
+      }
       return {
         bg: 'bg-sky-200',
         textColor: 'text-gray-700',
