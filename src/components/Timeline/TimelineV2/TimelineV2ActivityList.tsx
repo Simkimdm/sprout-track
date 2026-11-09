@@ -212,7 +212,8 @@ const TimelineV2ActivityList = ({
       .filter(a => 'duration' in a && 'startTime' in a && !('activities' in a))
       .map(a => {
         const startTs = new Date((a as { startTime: string }).startTime).getTime();
-        const durationSeconds = (a as { duration?: number }).duration || 0;
+        // SleepLog.duration is stored in MINUTES (schema), feed durations are seconds
+        const durationSeconds = ((a as { duration?: number }).duration || 0) * 60;
         const endTime = (a as { endTime?: string | null }).endTime;
         return {
           rowIds: [a.id],
@@ -318,7 +319,7 @@ const TimelineV2ActivityList = ({
                               if (durSec > 0) durationSuffix = formatDurationWords(durSec);
                             } else if ('duration' in activity && 'startTime' in activity && !('activities' in activity)) {
                               gapInfo = sleepGapById.get(activity.id);
-                              if (activity.duration) durationSuffix = formatDurationWords(activity.duration);
+                              if (activity.duration) durationSuffix = formatDurationWords(activity.duration * 60);
                             }
                             if (gapInfo && isAnchor) {
                               gapSuffix = formatDurationWords(gapInfo.gapSeconds);

@@ -95,8 +95,8 @@ describe('TimelineV2ActivityList filtered feed view', () => {
 
   it('shows the same (x:yy) gap+duration suffix for sleep entries when filtered', () => {
     const sleeps = [
-      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 3600 },
-      { id: 's2', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T14:00:00.000Z', endTime: '2026-07-22T15:30:00.000Z', duration: 5400 },
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: '2026-07-22T11:00:00.000Z', duration: 60 },
+      { id: 's2', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T14:00:00.000Z', endTime: '2026-07-22T15:30:00.000Z', duration: 90 },
     ];
     const html = renderToString(
       React.createElement(TimelineV2ActivityList as any, {
@@ -108,6 +108,21 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     // s2: gap from s1 end (11:00) to 14:00 = 3h -> (3:00); s1 is first of day -> (0:00)
     expect(gapValues(html)).toEqual(['3h 0m', '0s']);
     expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['1h 30m', '1h 0m']);
+  });
+
+  it('treats sleep duration as minutes (21 -> "21m", not "21s")', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T10:00:00.000Z', endTime: null, duration: 21 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+      })
+    );
+    expect([...html.matchAll(/timeline-feed-duration">[\s\S]*?>([\dhms ]+)</g)].map(m => m[1].trim())).toEqual(['21m']);
+    expect(gapValues(html)).toEqual(['0s']);
   });
 
   it('renders no bracket and no gap without an active filter', () => {
