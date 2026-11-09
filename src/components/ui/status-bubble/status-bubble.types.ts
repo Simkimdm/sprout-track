@@ -14,8 +14,6 @@ export interface StatusBubbleProps {
   className?: string;
   /** Type of activity this status bubble is for (used to filter relevant activities) */
   activityType?: 'sleep' | 'feed' | 'diaper' | 'pump' | 'bath' | 'medicine';
-  /** Optional name shown in front of the duration (e.g. the next-due medicine) */
-  label?: string;
 }
 
 export interface StatusStyle {

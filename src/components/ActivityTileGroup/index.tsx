@@ -891,7 +891,6 @@ export function ActivityTileGroup({
                 startTime={nextMedicineDue[selectedBaby.id].lastDoseTime.toISOString()}
                 warningTime={nextMedicineDue[selectedBaby.id].warningTime}
                 activityType="medicine"
-                label={nextMedicineDue[selectedBaby.id].medicineName ?? undefined}
               />
             )}
           </div>
