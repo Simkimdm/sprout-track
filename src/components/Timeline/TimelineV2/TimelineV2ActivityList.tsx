@@ -2,6 +2,7 @@ import { Baby as BabyIcon } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
+import { groupBreastFeedSessions, buildFeedGapMap, formatSignedElapsedHM, formatDurationHM, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -68,6 +69,8 @@ const TimelineV2ActivityList = ({
   selectedDate,
   onActivitySelect,
   onPhotoClick,
+  activeFilter,
+  allActivities,
 }: TimelineActivityListProps) => {
 
   const { t } = useLocalization();
@@ -169,44 +172,57 @@ const TimelineV2ActivityList = ({
   }, [activities, selectedDate]);
 
 
-  return (
-    <>
-      {/* Scrollable Content */}
-      <div 
-        className="h-full overflow-y-auto relative bg-white timeline-activity-scroll-container" 
-        ref={contentRef}
-      >
-        {/* Timeline View */}
-        <div className="min-h-full bg-white relative timeline-activity-list px-5 pb-5">
-          {/* Fade gradient at top - from white to transparent */}
-          <div className="absolute position: sticky top-0 left-0 right-0 h-2 bg-gradient-to-b from-white to-transparent pointer-events-none z-20 timeline-top-gradient"></div>
-          {activities.length > 0 ? (
-            <div className="relative">
-              {/* Timeline vertical line */}
-              <div className="border-l-2 border-gray-200 pl-5 ml-2.5 timeline-container">
-                <AnimatePresence>
-                  {groupedActivities.map((group, groupIndex) => (
-                    <motion.div
-                      key={group.timeOfDay}
-                      className="relative timeline-hour-group mb-6"
-                      initial={isAnimated ? { opacity: 0, y: -10 } : false}
-                      animate={isAnimated ? { opacity: 1, y: 0 } : false}
-                      transition={isAnimated ? {
-                        delay: groupIndex * 0.05,
-                        duration: 0.2,
-                        ease: "easeOut"
-                      } : { duration: 0 }}
-                    >
-                      {/* Time of Day Header */}
-                      <div className="flex items-center mb-3 ml-2">
-                        <div className="text-sm font-semibold text-gray-500">
-                          {getTimeOfDayLabel(group.timeOfDay)}
-                        </div>
-                      </div>
-                      
-                      {/* Activities in this time period */}
-                      <div className="space-y-0 pb-4">
-                        {group.activities.map((activity, activityIndex) => {
+  const isFiltering = !!activeFilter;
+
+  // Filtered view: breast-feed rows of one session (linked L+R) render as one bracketed group
+  const sessionByRowId = useMemo(() => {
+    const map = new Map<string, BreastFeedSession<FeedGapRow>>();
+    if (!isFiltering) return map;
+    const breastRows = activities.filter(a =>
+      'amount' in a && 'type' in a && (a as { type?: string }).type === 'BREAST'
+    ) as unknown as FeedGapRow[];
+    for (const session of groupBreastFeedSessions(breastRows)) {
+      if (session.rows.length < 2) continue;
+      for (const row of session.rows) map.set(row.id, session);
+    }
+    return map;
+  }, [isFiltering, activities]);
+
+  // Filtered view: "+x:yy" gap since the previous feeding, computed over all feeds of the day
+  const feedGapById = useMemo(() => {
+    if (!isFiltering) return new Map<string, FeedGapInfo>();
+    const source = allActivities ?? activities;
+    const feeds = source.filter(a =>
+      'amount' in a && 'type' in a && !('foodId' in a) && (a as { type?: string }).type !== 'SOLIDS'
+    ) as unknown as FeedGapRow[];
+    return buildFeedGapMap(feeds);
+  }, [isFiltering, allActivities, activities]);
+
+  // Group each time-of-day bucket into render items; multi-row breast sessions become one item
+  const renderGroups = useMemo(() => {
+    const emitted = new Set<string>();
+    return groupedActivities.map(group => {
+      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null }[] = [];
+      for (const activity of group.activities) {
+        if (emitted.has(activity.id)) continue;
+        const session = sessionByRowId.get(activity.id);
+        if (session) {
+          const rows = [...session.rows]
+            .sort((a, b) => new Date(getActivityTime(b as unknown as ActivityType)).getTime() - new Date(getActivityTime(a as unknown as ActivityType)).getTime())
+            .map(r => r as unknown as ActivityType);
+          rows.forEach(r => emitted.add(r.id));
+          items.push({ key: `session-${session.sessionId ?? session.rows[0].id}`, sessionRows: rows, activity: null });
+        } else {
+          emitted.add(activity.id);
+          items.push({ key: activity.id, sessionRows: null, activity });
+        }
+      }
+      return { ...group, items };
+    });
+  }, [groupedActivities, sessionByRowId]);
+
+  // Render one timeline event row (also used for each row of a grouped L+R session)
+  const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {
                           const style = getActivityStyle(activity);
                           const description = getActivityDescription(activity, settings, t);
                           const activityTime = new Date(getActivityTime(activity));
@@ -244,6 +260,26 @@ const TimelineV2ActivityList = ({
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
+                          }
+                          
+                          // Filtered view: show "+x:yy" (since previous feeding) and duration next to the recording time
+                          let gapSuffix = '';
+                          if (isFiltering && 'amount' in activity && 'type' in activity && !('foodId' in activity) && activity.type !== 'SOLIDS') {
+                            const gapInfo = feedGapById.get(activity.id);
+                            if (gapInfo) {
+                              const session = sessionByRowId.get(activity.id);
+                              const isSessionAnchor = !session || session.rows.every(r =>
+                                new Date(getActivityTime(r as unknown as ActivityType)).getTime() >= activityTime.getTime()
+                              );
+                              if (isSessionAnchor) {
+                                if (gapInfo.gapSeconds != null) {
+                                  // gap since the previous feeding plus this feeding's duration as one +/- x:yy
+                                  gapSuffix = ` (${formatSignedElapsedHM(gapInfo.gapSeconds + gapInfo.durationSeconds)})`;
+                                } else if (gapInfo.durationSeconds > 0) {
+                                  gapSuffix = ` (${formatDurationHM(gapInfo.durationSeconds)})`;
+                                }
+                              }
+                            }
                           }
                           
                           const getActivityColor = (bgClass: string) => {
@@ -551,7 +587,55 @@ const TimelineV2ActivityList = ({
                               </div>
                             </motion.div>
                           );
-                        })}
+  };
+
+  return (
+    <>
+      {/* Scrollable Content */}
+      <div 
+        className="h-full overflow-y-auto relative bg-white timeline-activity-scroll-container" 
+        ref={contentRef}
+      >
+        {/* Timeline View */}
+        <div className="min-h-full bg-white relative timeline-activity-list px-5 pb-5">
+          {/* Fade gradient at top - from white to transparent */}
+          <div className="absolute position: sticky top-0 left-0 right-0 h-2 bg-gradient-to-b from-white to-transparent pointer-events-none z-20 timeline-top-gradient"></div>
+          {activities.length > 0 ? (
+            <div className="relative">
+              {/* Timeline vertical line */}
+              <div className="border-l-2 border-gray-200 pl-5 ml-2.5 timeline-container">
+                <AnimatePresence>
+                  {renderGroups.map((group, groupIndex) => (
+                    <motion.div
+                      key={group.timeOfDay}
+                      className="relative timeline-hour-group mb-6"
+                      initial={isAnimated ? { opacity: 0, y: -10 } : false}
+                      animate={isAnimated ? { opacity: 1, y: 0 } : false}
+                      transition={isAnimated ? {
+                        delay: groupIndex * 0.05,
+                        duration: 0.2,
+                        ease: "easeOut"
+                      } : { duration: 0 }}
+                    >
+                      {/* Time of Day Header */}
+                      <div className="flex items-center mb-3 ml-2">
+                        <div className="text-sm font-semibold text-gray-500">
+                          {getTimeOfDayLabel(group.timeOfDay)}
+                        </div>
+                      </div>
+                      
+                      {/* Activities in this time period */}
+                      <div className="space-y-0 pb-4">
+                        {group.items.map((item, itemIndex) =>
+                          item.sessionRows ? (
+                            <div key={item.key} className="relative timeline-feed-session">
+                              <span className="timeline-feed-session-bracket" aria-hidden="true" />
+                              {item.sessionRows.map((row, rowIndex) => renderActivity(row, groupIndex, itemIndex + rowIndex))}
+                            </div>
+                          ) : (
+                            renderActivity(item.activity as ActivityType, groupIndex, itemIndex)
+                          )
+                        )}
                       </div>
                     </motion.div>
                   ))}

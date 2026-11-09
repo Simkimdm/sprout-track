@@ -3,6 +3,9 @@ import {
   groupBreastFeedSessions,
   countBreastFeedSessions,
   breastFeedDisplayTime,
+  buildFeedGapMap,
+  formatSignedElapsedHM,
+  formatDurationHM,
 } from '@/src/utils/feedSessionUtils';
 
 // Issue #198: a nursing session using both sides is stored as two FeedLog rows
@@ -221,5 +224,64 @@ describe('breastFeedDisplayTime', () => {
         startTime: new Date('2026-07-22T13:00:00.000Z'),
       })
     ).toBe('2026-07-22T13:00:00.000Z');
+  });
+});
+
+describe('formatSignedElapsedHM', () => {
+  it('formats positive gaps with a plus sign in x:yy', () => {
+    expect(formatSignedElapsedHM(8100)).toBe('+2:15');
+    expect(formatSignedElapsedHM(270)).toBe('+0:04');
+    expect(formatSignedElapsedHM(0)).toBe('+0:00');
+  });
+
+  it('formats negative gaps with a minus sign', () => {
+    expect(formatSignedElapsedHM(-270)).toBe('-0:04');
+    expect(formatSignedElapsedHM(-3600)).toBe('-1:00');
+  });
+});
+
+describe('formatDurationHM', () => {
+  it('formats durations as x:yy', () => {
+    expect(formatDurationHM(840)).toBe('0:14');
+    expect(formatDurationHM(8100)).toBe('2:15');
+    expect(formatDurationHM(0)).toBe('0:00');
+  });
+});
+
+describe('buildFeedGapMap', () => {
+  it('gives the first feeding a null gap and later feeds the gap to the previous one', () => {
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T10:00:00Z'), amount: 120 },
+      { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T12:30:00Z'), amount: 100 },
+    ];
+    const gaps = buildFeedGapMap(feeds);
+    expect(gaps.get('f1')).toEqual({ gapSeconds: null, durationSeconds: 0 });
+    expect(gaps.get('f2')).toEqual({ gapSeconds: 9000, durationSeconds: 0 });
+  });
+
+  it('treats a linked L+R breast session as one feeding with summed duration', () => {
+    const feeds = [
+      { id: 'b1', type: 'BOTTLE', time: at('2026-07-22T08:00:00Z'), amount: 90 },
+      { id: 'l', type: 'BREAST', time: at('2026-07-22T10:00:00Z'), side: 'LEFT', feedDuration: 480, sessionId: 's1' },
+      { id: 'r', type: 'BREAST', time: at('2026-07-22T10:08:00Z'), side: 'RIGHT', feedDuration: 360, sessionId: 's1' },
+      { id: 'b2', type: 'BOTTLE', time: at('2026-07-22T13:15:00Z'), amount: 110 },
+    ];
+    const gaps = buildFeedGapMap(feeds);
+    // Both session rows share the session's gap (10:00 - 08:00 = 2h) and summed duration (840s)
+    expect(gaps.get('l')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
+    expect(gaps.get('r')).toEqual({ gapSeconds: 7200, durationSeconds: 840 });
+    // The next feeding measures its gap from the session start, not the last side
+    expect(gaps.get('b2')).toEqual({ gapSeconds: 11700, durationSeconds: 0 });
+  });
+
+  it('ignores SOLIDS rows (food logs are not feedings here)', () => {
+    const feeds = [
+      { id: 'f1', type: 'BOTTLE', time: at('2026-07-22T10:00:00Z'), amount: 120 },
+      { id: 's1', type: 'SOLIDS', time: at('2026-07-22T11:00:00Z'), amount: 30 },
+      { id: 'f2', type: 'BOTTLE', time: at('2026-07-22T12:00:00Z'), amount: 100 },
+    ];
+    const gaps = buildFeedGapMap(feeds);
+    expect(gaps.has('s1')).toBe(false);
+    expect(gaps.get('f2')!.gapSeconds).toBe(7200);
   });
 });
