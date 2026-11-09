@@ -30,6 +30,11 @@ import { useTimezone } from '@/app/context/timezone';
 import { formatDateLong } from '@/src/utils/dateFormat';
 import FeedTimerTypesField from '@/src/components/forms/FeedTimerTypesField';
 import { FEED_TIMER_CATEGORIES, FeedTimerCategory, parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import {
+  isValidTimeString,
+  parseNightSleepWindow,
+  serializeNightSleepWindow,
+} from '@/src/utils/nightSleepWindow';
 
 interface BabyFormProps {
   isOpen: boolean;
@@ -53,6 +58,9 @@ const defaultFormData = {
   bathWarningTime: '24:00',
   feedTimerFrom: 'start',
   feedTimerTypes: [...FEED_TIMER_CATEGORIES] as FeedTimerCategory[],
+  nightSleepWindowEnabled: false,
+  nightSleepWindowStart: '22:00',
+  nightSleepWindowEnd: '07:00',
 };
 
 export default function BabyForm({
@@ -89,6 +97,14 @@ export default function BabyForm({
         bathWarningTime: baby.bathWarningTime || '24:00',
         feedTimerFrom: (baby as any).feedTimerFrom || 'start',
         feedTimerTypes: parseFeedTimerTypes((baby as any).feedTimerTypes) ?? [...FEED_TIMER_CATEGORIES],
+        ...(() => {
+          const nw = parseNightSleepWindow(baby.nightSleepWindow ?? null);
+          return {
+            nightSleepWindowEnabled: !!nw,
+            nightSleepWindowStart: nw?.start ?? '22:00',
+            nightSleepWindowEnd: nw?.end ?? '07:00',
+          };
+        })(),
       });
     } else if (!isOpen && !isSubmitting) {
       setFormData(defaultFormData);
@@ -124,6 +140,17 @@ export default function BabyForm({
           feedTimerTypes: formData.feedTimerTypes.length === FEED_TIMER_CATEGORIES.length
             ? null
             : JSON.stringify(formData.feedTimerTypes),
+          // null = window disabled (previous behavior)
+          nightSleepWindow:
+            formData.nightSleepWindowEnabled &&
+            isValidTimeString(formData.nightSleepWindowStart) &&
+            isValidTimeString(formData.nightSleepWindowEnd) &&
+            formData.nightSleepWindowStart !== formData.nightSleepWindowEnd
+              ? serializeNightSleepWindow({
+                  start: formData.nightSleepWindowStart,
+                  end: formData.nightSleepWindowEnd,
+                })
+              : null,
         }),
       });
 
@@ -267,6 +294,32 @@ export default function BabyForm({
                 <option value="start">{t('Start of feeding')}</option>
                 <option value="end">{t('End of feeding')}</option>
               </select>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <label className="sb-fl" htmlFor="sbBabyNightWindow">{t('Night Sleep Window')}</label>
+              <select id="sbBabyNightWindow" className="sb-fi"
+                value={formData.nightSleepWindowEnabled ? 'enabled' : 'disabled'}
+                onChange={(e) => setFormData({ ...formData, nightSleepWindowEnabled: e.target.value === 'enabled' })}>
+                <option value="disabled">{t('Disabled')}</option>
+                <option value="enabled">{t('Enabled')}</option>
+              </select>
+              <p className="sb-fh">{t('Naps starting within this daily time window are automatically tracked as night sleep.')}</p>
+              {formData.nightSleepWindowEnabled && (
+                <div className="sb-f2">
+                  <div>
+                    <label className="sb-fl" htmlFor="sbBabyNightStart">{t('Start Time')}</label>
+                    <input id="sbBabyNightStart" className="sb-fi" type="time"
+                      value={formData.nightSleepWindowStart}
+                      onChange={(e) => setFormData({ ...formData, nightSleepWindowStart: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="sb-fl" htmlFor="sbBabyNightEnd">{t('End Time')}</label>
+                    <input id="sbBabyNightEnd" className="sb-fi" type="time"
+                      value={formData.nightSleepWindowEnd}
+                      onChange={(e) => setFormData({ ...formData, nightSleepWindowEnd: e.target.value })} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           {isEditing && (
@@ -443,6 +496,52 @@ export default function BabyForm({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <label htmlFor={`${formId}-night-sleep-window`} className="form-label">{t('Night Sleep Window')}</label>
+            <Select
+              value={formData.nightSleepWindowEnabled ? 'enabled' : 'disabled'}
+              onValueChange={(value) =>
+                setFormData({ ...formData, nightSleepWindowEnabled: value === 'enabled' })
+              }
+            >
+              <SelectTrigger id={`${formId}-night-sleep-window`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="disabled">{t('Disabled')}</SelectItem>
+                <SelectItem value="enabled">{t('Enabled')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-500 mt-1">{t('Naps starting within this daily time window are automatically tracked as night sleep.')}</p>
+          </div>
+          {formData.nightSleepWindowEnabled && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor={`${formId}-night-sleep-window-start`} className="form-label">{t('Start Time')}</label>
+                <Input
+                  id={`${formId}-night-sleep-window-start`}
+                  type="time"
+                  value={formData.nightSleepWindowStart}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nightSleepWindowStart: e.target.value })
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label htmlFor={`${formId}-night-sleep-window-end`} className="form-label">{t('End Time')}</label>
+                <Input
+                  id={`${formId}-night-sleep-window-end`}
+                  type="time"
+                  value={formData.nightSleepWindowEnd}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nightSleepWindowEnd: e.target.value })
+                  }
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
           <FeedTimerTypesField
             value={formData.feedTimerTypes}
             onChange={(feedTimerTypes) => setFormData({ ...formData, feedTimerTypes })}

@@ -6,7 +6,26 @@ import { toUTC, formatForResponse } from '../utils/timezone';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { checkWritePermission } from '../utils/writeProtection';
 import { isValidFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { parseNightSleepWindow } from '@/src/utils/nightSleepWindow';
 import { resolveFamilyScope } from '../utils/family-scope';
+
+// Validates an optional nightSleepWindow field in place; '' normalizes to null (disabled).
+function validateNightSleepWindow(data: Record<string, any>): NextResponse | null {
+  if (!('nightSleepWindow' in data)) return null;
+  const value = data.nightSleepWindow;
+  if (value === '') {
+    data.nightSleepWindow = null;
+    return null;
+  }
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string' || !parseNightSleepWindow(value)) {
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: 'nightSleepWindow must be null or a JSON string {"start":"HH:mm","end":"HH:mm"} with start != end' },
+      { status: 400 }
+    );
+  }
+  return null;
+}
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
   // Check write permissions for expired accounts
@@ -26,6 +45,9 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
         { status: 400 }
       );
     }
+
+    const nightWindowError = validateNightSleepWindow(babyData);
+    if (nightWindowError) return nightWindowError;
 
     const { searchParams } = new URL(req.url);
     const queryFamilyId = searchParams.get('familyId');
@@ -96,6 +118,9 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
         { status: 400 }
       );
     }
+
+    const nightWindowError = validateNightSleepWindow(updateData);
+    if (nightWindowError) return nightWindowError;
 
     const { searchParams } = new URL(req.url);
     const queryFamilyId = searchParams.get('familyId');
