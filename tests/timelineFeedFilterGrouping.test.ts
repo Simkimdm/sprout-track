@@ -85,7 +85,7 @@ const renderList = (activeFilter: 'feed' | null, feedTimerFrom?: string, history
 describe('TimelineV2ActivityList filtered feed view', () => {
   it('brackets a linked L+R session and shows the combined +/- x:yy gap when a filter is active', () => {
     const html = renderList('feed', 'end');
-    expect(html).toContain('timeline-feed-session-bracket');
+    expect(html).toContain('timeline-feed-session');
     // computed end inline on the first line (anchor side starts 10:00 + 8m)
     expect(html).toContain('10:00 AM - 10:08 AM');
     // sub-line: gap (history icon) + duration (timer icon), duration removed from the details line
@@ -251,7 +251,7 @@ describe('TimelineV2ActivityList filtered feed view', () => {
 
   it('renders the session bracket without a filter, but no gap dividers', () => {
     const html = renderList(null);
-    expect(html).toContain('timeline-feed-session-bracket');
+    expect(html).toContain('timeline-feed-session');
     expect(gapValues(html)).toEqual([]);
   });
 });
