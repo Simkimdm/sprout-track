@@ -53,11 +53,12 @@ describe('maybeEndActiveSleepOnFeed', () => {
     expect(updateSleepLog).not.toHaveBeenCalled();
   });
 
-  it('ends the active sleep at the feed start time and computes duration', async () => {
+  it('ends the active sleep one minute before the feed start and computes duration', async () => {
     const at = new Date('2026-11-20T12:30:00Z');
+    const expectedEnd = new Date('2026-11-20T12:29:00Z');
     findFirstSettings.mockResolvedValue({ autoEndSleepOnFeed: true });
     findFirstSleepLog.mockResolvedValue({ id: 'sleep1', babyId: 'baby1', startTime: new Date('2026-11-20T11:00:00Z') });
-    updateSleepLog.mockResolvedValue({ id: 'sleep1', endTime: at, duration: 90 });
+    updateSleepLog.mockResolvedValue({ id: 'sleep1', endTime: expectedEnd, duration: 89 });
 
     const result = await maybeEndActiveSleepOnFeed({
       babyId: 'baby1',
@@ -72,10 +73,25 @@ describe('maybeEndActiveSleepOnFeed', () => {
     });
     expect(updateSleepLog).toHaveBeenCalledWith({
       where: { id: 'sleep1' },
-      data: { endTime: at, duration: 90 },
+      data: { endTime: expectedEnd, duration: 89 },
     });
-    expect(result).toEqual({ id: 'sleep1', endTime: at, duration: 90 });
-    expect(notifyActivityCreated).toHaveBeenCalledWith('baby1', 'wake', { accountId: undefined, caretakerId: 'care1' }, { duration: 90 });
+    expect(result).toEqual({ id: 'sleep1', endTime: expectedEnd, duration: 89 });
+    expect(notifyActivityCreated).toHaveBeenCalledWith('baby1', 'wake', { accountId: undefined, caretakerId: 'care1' }, { duration: 89 });
+  });
+
+  it('never ends the sleep before its own start time', async () => {
+    const at = new Date('2026-11-20T12:30:00Z');
+    const start = new Date('2026-11-20T12:29:30Z');
+    findFirstSettings.mockResolvedValue({ autoEndSleepOnFeed: true });
+    findFirstSleepLog.mockResolvedValue({ id: 'sleep1', babyId: 'baby1', startTime: start });
+    updateSleepLog.mockResolvedValue({ id: 'sleep1', endTime: start, duration: 0 });
+
+    await maybeEndActiveSleepOnFeed({ babyId: 'baby1', familyId: 'fam1', at });
+
+    expect(updateSleepLog).toHaveBeenCalledWith({
+      where: { id: 'sleep1' },
+      data: { endTime: start, duration: 0 },
+    });
   });
 
   it('never throws when the database lookup fails', async () => {
