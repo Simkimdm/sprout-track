@@ -9,7 +9,7 @@ import { cn } from "@/src/lib/utils";
 
 // Container styles
 export const dateTimePickerContainerStyles = cn(
-  "flex gap-2"
+  "flex flex-wrap gap-2"
 );
 
 // Button styles
@@ -20,7 +20,7 @@ export const dateTimePickerButtonStyles = cn(
 
 // Popover content styles
 export const dateTimePickerPopoverContentStyles = cn(
-  "p-0 z-[100] border-gray-200 shadow-lg",
+  "p-0 z-[300] border-gray-200 shadow-lg",
   "rounded-md overflow-hidden"
 );
 

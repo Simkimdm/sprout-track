@@ -316,13 +316,13 @@ export default function BabyForm({
                 <div className="sb-f2">
                   <div>
                     <label className="sb-fl" htmlFor="sbBabyNightStart">{t('Start Time')}</label>
-                    <input id="sbBabyNightStart" className="sb-fi" type="time"
+                    <input id="sbBabyNightStart" className="sb-fi" type="text" pattern="[0-9]{2}:[0-9]{2}" placeholder="HH:MM" required
                       value={formData.nightSleepWindowStart}
                       onChange={(e) => setFormData({ ...formData, nightSleepWindowStart: e.target.value })} />
                   </div>
                   <div>
                     <label className="sb-fl" htmlFor="sbBabyNightEnd">{t('End Time')}</label>
-                    <input id="sbBabyNightEnd" className="sb-fi" type="time"
+                    <input id="sbBabyNightEnd" className="sb-fi" type="text" pattern="[0-9]{2}:[0-9]{2}" placeholder="HH:MM" required
                       value={formData.nightSleepWindowEnd}
                       onChange={(e) => setFormData({ ...formData, nightSleepWindowEnd: e.target.value })} />
                   </div>
@@ -528,7 +528,9 @@ export default function BabyForm({
                 <label htmlFor={`${formId}-night-sleep-window-start`} className="form-label">{t('Start Time')}</label>
                 <Input
                   id={`${formId}-night-sleep-window-start`}
-                  type="time"
+                  type="text"
+                  pattern="[0-9]{2}:[0-9]{2}"
+                  placeholder="HH:MM"
                   value={formData.nightSleepWindowStart}
                   onChange={(e) =>
                     setFormData({ ...formData, nightSleepWindowStart: e.target.value })
@@ -540,7 +542,9 @@ export default function BabyForm({
                 <label htmlFor={`${formId}-night-sleep-window-end`} className="form-label">{t('End Time')}</label>
                 <Input
                   id={`${formId}-night-sleep-window-end`}
-                  type="time"
+                  type="text"
+                  pattern="[0-9]{2}:[0-9]{2}"
+                  placeholder="HH:MM"
                   value={formData.nightSleepWindowEnd}
                   onChange={(e) =>
                     setFormData({ ...formData, nightSleepWindowEnd: e.target.value })
