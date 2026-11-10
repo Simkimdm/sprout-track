@@ -40,11 +40,11 @@ RUN npm run build && rm -rf .next/cache
 
 # Shrink node_modules BEFORE the runner copies it: pruning in the runner would
 # only delete files in a later layer, the copied layer itself would still count
-# towards the image size. Also remove the glibc variant of native binaries -
-# this image is Alpine (musl), only the musl variant is ever loaded.
+# towards the image size. The script keeps only the runtime dependency closure
+# (next, Prisma stack, tsx, ...) and drops dead weight like the glibc variants
+# of swc/libvips (never loaded on Alpine/musl).
 RUN npm prune --omit=dev --no-audit --no-fund && \
-    rm -rf node_modules/@next/swc-linux-x64-gnu \
-           node_modules/@img/sharp-libvips-linux-x64
+    node scripts/docker-prune-runner-modules.js
 
 # Stage 3: production runner without devDependencies and build cache
 FROM node:22-alpine AS runner
