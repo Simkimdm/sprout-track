@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
-import { FeedType, BreastSide } from '@prisma/client';
+import { FeedType, FeedQuality, BreastSide } from '@prisma/client';
 import { FeedLogResponse, ActiveBreastFeedResponse } from '@/app/api/types';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -14,6 +14,13 @@ import {
 import { Check, ArrowLeftRight, Pause, Play, TriangleAlert } from 'lucide-react';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Switch } from '@/src/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/src/components/ui/select';
 import { useTimezone } from '@/app/context/timezone';
 import { resolveClientStartTime } from '@/src/utils/breastfeedStart';
 import { useTheme } from '@/src/context/theme';
@@ -99,6 +106,7 @@ export default function FeedForm({
     leftDuration: 0, // Duration in seconds for left breast
     rightDuration: 0, // Duration in seconds for right breast
     activeBreast: '' as 'LEFT' | 'RIGHT' | '', // Currently active breast for timer
+    quality: '' as FeedQuality | '', // How well the baby drank (EXCELLENT..POOR)
   });
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -113,6 +121,7 @@ export default function FeedForm({
   });
 
   // Editing state for session duration inputs (null = not editing, use formatted value)
+  const qualityId = useId();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [manualEntry, setManualEntry] = useState(false);
@@ -143,6 +152,11 @@ export default function FeedForm({
   const showPhotosSection = photosEnabled && endsInSubmit;
   // Reaction toggle applies to all feed types once one is selected
   const showReactionSection = !!formData.type && endsInSubmit;
+  // Drinking quality applies to breast and bottle feeds; hidden in "Start Feed"
+  // mode (no save happens there) and shown in End Feed / manual / edit modes
+  const showQualitySection = !!formData.type &&
+    (formData.type === 'BREAST' || formData.type === 'BOTTLE') &&
+    !(formData.type === 'BREAST' && !isFeeding && !activity && !manualEntry);
 
   // Live timer for active breastfeed session
   const [liveElapsed, setLiveElapsed] = useState(0);
@@ -411,7 +425,8 @@ export default function FeedForm({
         feedDuration: feedDuration,
         leftDuration: activity.side === 'LEFT' ? feedDuration : 0,
         rightDuration: activity.side === 'RIGHT' ? feedDuration : 0,
-        activeBreast: ''
+        activeBreast: '',
+        quality: (activity as any).quality || ''
       });
       } else if (isFeeding && activeFeedData) {
         // End Feed mode - populate with active breastfeed data
@@ -686,7 +701,8 @@ export default function FeedForm({
         feedDuration: 0,
         leftDuration: 0,
         rightDuration: 0,
-        activeBreast: ''
+        activeBreast: '',
+        quality: ''
       });
       setPendingPhotoFiles([]);
       setAttachedPhotos([]);
@@ -781,6 +797,7 @@ export default function FeedForm({
         breastMilkAmount: parseFloat(formData.breastMilkAmount || '0'),
       }),
       ...(formData.type === 'BOTTLE' && formData.bottleType && { bottleType: formData.bottleType }),
+      ...(formData.quality && { quality: formData.quality }),
       ...(formData.notes && { notes: formData.notes }),
       // Always sent so editing can clear a previously flagged reaction
       hadReaction: formData.hadReaction,
@@ -940,7 +957,8 @@ export default function FeedForm({
       feedDuration: 0,
       leftDuration: 0,
       rightDuration: 0,
-      activeBreast: ''
+      activeBreast: '',
+      quality: ''
     });
 
     // Reset initialization flag
@@ -1004,6 +1022,7 @@ export default function FeedForm({
         body: JSON.stringify({
           leftDuration: formData.leftDuration,
           rightDuration: formData.rightDuration,
+          ...(formData.quality && { quality: formData.quality }),
         }),
       });
 
@@ -1512,6 +1531,29 @@ export default function FeedForm({
               />
             )}
             
+            {showQualitySection && (
+              <div>
+                <label htmlFor={qualityId} className="form-label">{t('Drinking Quality')}</label>
+                <Select
+                  value={formData.quality}
+                  onValueChange={(value: FeedQuality) =>
+                    setFormData(prev => ({ ...prev, quality: value }))
+                  }
+                  disabled={loading}
+                >
+                  <SelectTrigger id={qualityId} className="w-full">
+                    <SelectValue placeholder={t('How well did they drink?')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXCELLENT">{t('Drank very well')}</SelectItem>
+                    <SelectItem value="GOOD">{t('Drank well')}</SelectItem>
+                    <SelectItem value="FAIR">{t('Drank okay')}</SelectItem>
+                    <SelectItem value="POOR">{t('Only suckled')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {showReactionSection && (
               <div>
                 <div className="flex items-center justify-between">

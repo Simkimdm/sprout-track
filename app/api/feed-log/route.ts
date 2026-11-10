@@ -61,6 +61,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
       hadReaction: body.hadReaction === true,
       reactionDescription: body.reactionDescription && body.reactionDescription.trim() ? body.reactionDescription : null,
       reactionCause: body.reactionCause && body.reactionCause.trim() ? body.reactionCause : null,
+      ...(body.quality && { quality: body.quality }),
       familyId,
     };
     
@@ -173,6 +174,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       ...(body.reactionCause !== undefined
         ? { reactionCause: body.reactionCause && body.reactionCause.trim() ? body.reactionCause : null }
         : {}),
+      ...(body.quality !== undefined ? { quality: body.quality || null } : {}),
       ...pickFields(body, ['babyId', 'type', 'amount', 'unitAbbr', 'side', 'food', 'sessionId']),
     };
 

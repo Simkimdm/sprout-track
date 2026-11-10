@@ -2775,5 +2775,11 @@
   "Show calendar events in timeline": "Show calendar events in timeline",
   "When enabled, calendar events for the selected day are also shown in the timeline": "When enabled, calendar events for the selected day are also shown in the timeline",
   "Calendar event": "Calendar event",
-  "All day": "All day"
+  "All day": "All day",
+  "Drinking Quality": "Qualità della poppata",
+  "How well did they drink?": "Quanto bene ha bevuto il bebè?",
+  "Drank very well": "Ha bevuto molto bene",
+  "Drank well": "Ha bevuto bene",
+  "Drank okay": "Ha bevuto così così",
+  "Only suckled": "Ha solo succhiato"
 }

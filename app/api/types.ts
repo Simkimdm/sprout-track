@@ -1,4 +1,4 @@
-import { Baby, SleepLog, FeedLog, DiaperLog, MoodLog, Note, Caretaker, Settings as PrismaSettings, Gender, SleepType, SleepQuality, FeedType, BreastSide, DiaperType, Mood, PumpLog, PlayLog, Milestone, MilestoneCategory, Measurement, MeasurementType, Medicine, MedicineLog, EmailConfig as PrismaEmailConfig, EmailProviderType, BreastMilkAdjustment, ActiveBreastFeed, ActiveActivity, VaccineLog, VaccineDocument, Food, FoodLog, FoodEnjoyment, BabyAllergen, AllergenType } from '@prisma/client';
+import { Baby, SleepLog, FeedLog, DiaperLog, MoodLog, Note, Caretaker, Settings as PrismaSettings, Gender, SleepType, SleepQuality, FeedType, FeedQuality, BreastSide, DiaperType, Mood, PumpLog, PlayLog, Milestone, MilestoneCategory, Measurement, MeasurementType, Medicine, MedicineLog, EmailConfig as PrismaEmailConfig, EmailProviderType, BreastMilkAdjustment, ActiveBreastFeed, ActiveActivity, VaccineLog, VaccineDocument, Food, FoodLog, FoodEnjoyment, BabyAllergen, AllergenType } from '@prisma/client';
 import type { MergedAllergen, NewFoodEntry } from '@/src/utils/foodLogUtils';
 
 // Family types
@@ -154,6 +154,7 @@ export interface FeedLogCreate {
   bottleType?: string;
   breastMilkAmount?: number;
   sessionId?: string; // Links breast feeds belonging to the same nursing session
+  quality?: FeedQuality; // How well the baby drank (EXCELLENT..POOR, POOR = only suckled)
 }
 
 // Active breastfeed session types

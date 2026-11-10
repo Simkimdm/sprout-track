@@ -1,7 +1,7 @@
 import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
-import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay } from '../utils';
+import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel } from '../utils';
 import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
@@ -515,7 +515,8 @@ const TimelineV2ActivityList = ({
                                         } else if (activity.amount) {
                                           duration = `${activity.amount} ${t('min')}`;
                                         }
-                                        const parts = [side].filter(Boolean);
+                                        const quality = (activity as any).quality ? feedQualityLabel((activity as any).quality, t) : '';
+                                        const parts = [side, quality].filter(Boolean);
                                         if ((activity as any).hadReaction) parts.push(t('Reaction'));
                                         if ((activity as any).notes) {
                                           const notes = translateNotes((activity as any).notes);
@@ -530,6 +531,7 @@ const TimelineV2ActivityList = ({
                                           parts.push(t((activity as any).bottleType));
                                         }
                                         parts.push(`${activity.amount} ${unit}`);
+                                        if ((activity as any).quality) parts.push(feedQualityLabel((activity as any).quality, t));
                                         if ((activity as any).hadReaction) parts.push(t('Reaction'));
                                         if ((activity as any).notes) {
                                           const notes = translateNotes((activity as any).notes);

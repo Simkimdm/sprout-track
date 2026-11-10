@@ -885,7 +885,7 @@ export function ActivityTileGroup({
                 onMedicineClick();
               }}
             />
-            {selectedBaby?.id && nextMedicineDue?.[selectedBaby.id] && !exceeds24Hours(nextMedicineDue[selectedBaby.id].lastDoseTime) && (
+            {selectedBaby?.id && nextMedicineDue?.[selectedBaby.id] && !exceeds24Hours(nextMedicineDue[selectedBaby.id].dueAt) && (
               <StatusBubble
                 status="medicine"
                 durationInMinutes={0}

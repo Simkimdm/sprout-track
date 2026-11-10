@@ -59,6 +59,17 @@ const pngIcon = (src: string) => (
   <img src={src} alt="" aria-hidden="true" className="timeline-png-icon block h-9 w-9 object-contain" />
 );
 
+/** Localized label for a feed's drinking quality (EXCELLENT..POOR). */
+export const feedQualityLabel = (quality: string, t: (key: string) => string): string => {
+  switch (quality) {
+    case 'EXCELLENT': return t('Drank very well');
+    case 'GOOD': return t('Drank well');
+    case 'FAIR': return t('Drank okay');
+    case 'POOR': return t('Only suckled');
+    default: return quality;
+  }
+};
+
 export const getActivityIcon = (activity: ActivityType) => {
   // Calendar event merged into the timeline - check first (has title/startTime like other types)
   if ('calendarEventId' in activity) {
@@ -201,6 +212,8 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
   const caretakerDetail = activity.caretakerName ? [
     { label: t('Caretaker'), value: activity.caretakerName }
   ] : [];
+
+  const formatFeedQuality = (quality: string) => feedQualityLabel(quality, t);
 
   // Food log (issue #203 / #247)
   if (isFoodLogActivity(activity)) {
@@ -426,6 +439,11 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           label: t('Bottle Type'),
           value: t(bottleType)
         });
+      }
+
+      // Show drinking quality for breast and bottle feeds
+      if ((activity as any).quality && (activity.type === 'BREAST' || activity.type === 'BOTTLE')) {
+        details.push({ label: t('Drinking Quality'), value: formatFeedQuality((activity as any).quality) });
       }
 
       // Show reaction for all feed types if flagged
@@ -926,11 +944,17 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       if (notes.length > 30) {
         notes = notes.slice(0, 30) + '...';
       }
-      
+
+      // Add drinking quality for breast and bottle feeds
+      let qualityText = '';
+      if ((activity as any).quality && (activity.type === 'BREAST' || activity.type === 'BOTTLE')) {
+        qualityText = feedQualityLabel((activity as any).quality, t);
+      }
+
       const time = formatTime(activity.time, settings, true, t);
       return {
         type: formatFeedType(activity.type),
-        details: [time, details, notes].filter(Boolean).join(' • ')
+        details: [time, details, qualityText, notes].filter(Boolean).join(' • ')
       };
     }
     if ('condition' in activity) {
