@@ -31,10 +31,10 @@ export async function maybeEndActiveSleepOnFeed({ babyId, familyId, at, accountI
     });
     if (!activeSleep) return null;
 
-    // End the sleep one minute before the feeding starts so the sleep
+    // End the sleep one second before the feeding starts so the sleep
     // always sorts before the feed in the log. Never earlier than the
     // sleep start itself.
-    const endAt = new Date(at.getTime() - 60_000);
+    const endAt = new Date(at.getTime() - 1_000);
     const effectiveEnd = endAt > activeSleep.startTime ? endAt : activeSleep.startTime;
     const duration = calculateDurationMinutes(activeSleep.startTime, effectiveEnd);
     const sleepLog = await prisma.sleepLog.update({
