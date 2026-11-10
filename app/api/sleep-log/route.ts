@@ -5,6 +5,7 @@ import { ApiResponse, SleepLogCreate, SleepLogResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse, calculateDurationMinutes } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 import { DEFAULT_SLEEP_LOCATIONS } from '@/src/constants/sleepLocations';
 import { parseNightSleepWindow, resolveSleepType } from '@/src/utils/nightSleepWindow';
@@ -50,7 +51,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
 
     const sleepLog = await prisma.sleepLog.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'location', 'quality', 'notes']),
         type: sleepType,
         startTime: startTimeUTC,
         ...(endTimeUTC && { endTime: endTimeUTC }),
@@ -148,7 +149,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     const sleepLog = await prisma.sleepLog.update({
       where: { id },
       data: {
-        ...body,
+        ...pickFields(body, ['location', 'quality', 'notes']),
         type: sleepType,
         ...(startTimeUTC && { startTime: startTimeUTC }),
         ...(endTimeUTC && { endTime: endTimeUTC }),

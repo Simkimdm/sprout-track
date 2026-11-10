@@ -4,6 +4,7 @@ import { ApiResponse, MedicineCreate, MedicineResponse, MedicineUpdate } from '.
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 
 /**
  * Handle POST request to create a new medicine
@@ -41,7 +42,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     // Create the medicine
     const medicine = await prisma.medicine.create({
       data: {
-        ...medicineData,
+        ...pickFields(medicineData, ['name', 'typicalDoseSize', 'unitAbbr', 'doseMinTime', 'warningTime', 'notes', 'active', 'isSupplement']),
         familyId: userFamilyId,
       },
     });
@@ -160,13 +161,9 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
-    // Prevent changing the family or creator
-    delete (updateData as any).familyId;
-    delete (updateData as any).createdById;
-
     const medicine = await prisma.medicine.update({
       where: { id },
-      data: updateData,
+      data: pickFields(updateData, ['name', 'typicalDoseSize', 'unitAbbr', 'doseMinTime', 'warningTime', 'notes', 'active', 'isSupplement']),
     });
 
     // Update contact associations

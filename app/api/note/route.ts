@@ -4,6 +4,7 @@ import { ApiResponse, NoteCreate, NoteResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { notifyActivityCreated } from '@/src/lib/notifications/activityHook';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
@@ -34,7 +35,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const note = await prisma.note.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'content', 'category']),
         time: timeUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -114,9 +115,10 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     }
 
     // Convert time to UTC if provided
-    const data = body.time
-      ? { ...body, time: toUTC(body.time) }
-      : body;
+    const data = {
+      ...pickFields(body, ['babyId', 'content', 'category']),
+      ...(body.time ? { time: toUTC(body.time) } : {}),
+    };
 
     const note = await prisma.note.update({
       where: {

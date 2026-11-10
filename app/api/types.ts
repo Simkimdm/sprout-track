@@ -236,6 +236,7 @@ export interface CaretakerCreate {
   loginId: string;
   name: string;
   type?: string;
+  role?: import('@prisma/client').UserRole;
   inactive?: boolean;
   securityPin: string;
   badgeColor?: string | null;

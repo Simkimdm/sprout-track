@@ -17,7 +17,7 @@ import { GITHUB_URL } from '@/src/components/landing/landing-data';
 import { literata, alegreyaSans } from '@/src/components/landing/fonts';
 import '@/src/components/landing/landing.css';
 
-const home = () => {
+const Home = () => {
   const { t } = useLocalization();
 
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -224,4 +224,4 @@ const home = () => {
   );
 };
 
-export default home;
+export default Home;

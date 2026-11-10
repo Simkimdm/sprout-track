@@ -4,6 +4,7 @@ import { ApiResponse, MeasurementCreate, MeasurementResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
   // Check write permissions for expired accounts
@@ -33,7 +34,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const measurement = await prisma.measurement.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'type', 'value', 'unit', 'notes']),
         date: dateUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId, // Use trusted familyId from token
@@ -108,12 +109,10 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     }
 
     // Prepare update data, converting date to UTC if present
-    const updateData: any = { ...body };
-    if (body.date) {
-      updateData.date = toUTC(body.date);
-    }
-    // Ensure familyId cannot be changed
-    delete updateData.familyId;
+    const updateData = {
+      ...pickFields(body, ['type', 'value', 'unit', 'notes']),
+      ...(body.date ? { date: toUTC(body.date) } : {}),
+    };
 
     const measurement = await prisma.measurement.update({
       where: { id },

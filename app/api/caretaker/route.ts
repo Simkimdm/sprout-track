@@ -3,6 +3,7 @@ import prisma from '../db';
 import { ApiResponse, CaretakerCreate, CaretakerUpdate, CaretakerResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 import { toCaretakerResponse } from '../utils/caretaker';
 import { resolveFamilyScope } from '../utils/family-scope';
 import { isValidBadgeColorId } from '@/src/constants/caretakerBadge';
@@ -75,7 +76,7 @@ async function postHandler(req: NextRequest, authContext: AuthResult) {
 
     const caretaker = await prisma.caretaker.create({
       data: {
-        ...body,
+        ...pickFields(body, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']),
         familyId: targetFamilyId,
       },
     });
@@ -189,7 +190,7 @@ async function putHandler(req: NextRequest, authContext: AuthResult) {
     const caretaker = await prisma.caretaker.update({
       where: { id },
       data: {
-        ...updateData,
+        ...pickFields(updateData, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']),
         familyId: targetFamilyId,
       },
     });

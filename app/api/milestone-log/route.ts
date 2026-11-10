@@ -4,6 +4,7 @@ import { ApiResponse, MilestoneCreate, MilestoneResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { toUTC, formatForResponse } from '../utils/timezone';
 import { checkWritePermission } from '../utils/writeProtection';
+import { pickFields } from '../utils/pick-fields';
 
 async function handlePost(req: NextRequest, authContext: AuthResult) {
   // Check write permissions for expired accounts
@@ -33,7 +34,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const milestone = await prisma.milestone.create({
       data: {
-        ...body,
+        ...pickFields(body, ['babyId', 'title', 'description', 'category', 'ageInDays', 'photo']),
         date: dateUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -109,10 +110,11 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
-    // Convert date to UTC if provided
-    const data = body.date
-      ? { ...body, date: toUTC(body.date) }
-      : body;
+    // Convert date to UTC if provided; only whitelisted columns are updated
+    const data = {
+      ...pickFields(body, ['title', 'description', 'category', 'ageInDays', 'photo']),
+      ...(body.date ? { date: toUTC(body.date) } : {}),
+    };
 
     const milestone = await prisma.milestone.update({
       where: { 

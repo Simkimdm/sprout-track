@@ -7,6 +7,7 @@ import { withAuthContext, AuthResult } from '../utils/auth';
 import { checkWritePermission } from '../utils/writeProtection';
 import { isValidFeedTimerTypes } from '@/src/utils/feedTimerConfig';
 import { parseNightSleepWindow } from '@/src/utils/nightSleepWindow';
+import { pickFields } from '../utils/pick-fields';
 import { resolveFamilyScope } from '../utils/family-scope';
 
 // Validates an optional nightSleepWindow field in place; '' normalizes to null (disabled).
@@ -60,7 +61,11 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
 
     const baby = await prisma.baby.create({
       data: {
-        ...body,
+        ...pickFields(body, [
+          'firstName', 'lastName', 'gender', 'inactive',
+          'feedWarningTime', 'diaperWarningTime', 'pumpWarningTime', 'bathWarningTime',
+          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow',
+        ]),
         birthDate: toUTC(body.birthDate),
         familyId: targetFamilyId, // Set family ID from trusted context or setup auth
       },
@@ -148,7 +153,11 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
     const baby = await prisma.baby.update({
       where: { id },
       data: {
-        ...updateData,
+        ...pickFields(updateData, [
+          'firstName', 'lastName', 'gender', 'inactive',
+          'feedWarningTime', 'diaperWarningTime', 'pumpWarningTime', 'bathWarningTime',
+          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow',
+        ]),
         birthDate: updateData.birthDate ? toUTC(updateData.birthDate) : existingBaby.birthDate,
       },
     });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../db';
 import { ApiResponse, FamilyResponse, FamilyCreate, FamilyUpdate } from '../../types';
 import { withSysAdminAuth } from '../../utils/auth';
+import { pickFields } from '../../utils/pick-fields';
 
 // GET - Get all families (including inactive ones) for management
 async function getHandler(req: NextRequest): Promise<NextResponse<ApiResponse<FamilyResponse[]>>> {
@@ -180,10 +181,10 @@ async function putHandler(req: NextRequest): Promise<NextResponse<ApiResponse<Fa
       }
     }
 
-    const { id, ...updateData } = body;
+    const { id } = body;
     const family = await prisma.family.update({
       where: { id },
-      data: updateData
+      data: pickFields(body, ['name', 'slug', 'isActive'])
     });
 
     const response: FamilyResponse = {
