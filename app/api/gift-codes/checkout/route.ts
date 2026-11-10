@@ -9,7 +9,7 @@ import { isValidGiftEmail, resolveGiftPriceId } from '@/src/utils/giftCodeUtils'
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeKey
   ? new Stripe(stripeKey, {
-      apiVersion: '2026-07-29.dahlia',
+      apiVersion: '2026-08-26.dahlia',
     })
   : ({} as unknown as Stripe);
 
