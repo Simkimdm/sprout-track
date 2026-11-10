@@ -114,7 +114,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<LinkC
       });
     });
     
-    console.log(`Linked account ${authResult.accountId} to caretaker ${caretakerId} (bidirectional)`);
+    console.log(`Linked account ${JSON.stringify(authResult.accountId)} to caretaker ${JSON.stringify(caretakerId)} (bidirectional)`);
     
     return NextResponse.json<ApiResponse<LinkCaretakerResponse>>({
       success: true,

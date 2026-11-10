@@ -15,7 +15,7 @@ export type NativeToWebMessage =
 
 type AnyMessage = WebToNativeMessage | NativeToWebMessage
 
-const VALIDATORS: Record<string, (m: Record<string, unknown>) => boolean> = {
+const VALIDATORS = new Map<string, (m: Record<string, unknown>) => boolean>(Object.entries({
   keepAwake: m => typeof m.on === 'boolean',
   capturePhoto: () => true,
   sessionExpired: () => true,
@@ -25,7 +25,7 @@ const VALIDATORS: Record<string, (m: Record<string, unknown>) => boolean> = {
     typeof m.slug === 'string' && typeof m.token === 'string' &&
     (m.caretakerId === undefined || typeof m.caretakerId === 'string'),
   appResumed: () => true,
-}
+}))
 
 export function encodeMessage(msg: AnyMessage): string {
   return JSON.stringify({ v: BRIDGE_CONTRACT_VERSION, msg })
@@ -43,7 +43,9 @@ export function decodeMessage(raw: string): { v: number; msg: AnyMessage } | nul
   if (typeof v !== 'number' || v > BRIDGE_CONTRACT_VERSION) return null
   if (typeof msg !== 'object' || msg === null) return null
   const type = (msg as { type?: unknown }).type
-  if (typeof type !== 'string' || !VALIDATORS[type]) return null
-  if (VALIDATORS[type]?.(msg as Record<string, unknown>) !== true) return null
+  if (typeof type !== 'string' || !VALIDATORS.has(type)) return null
+  const validator = VALIDATORS.get(type)
+  if (typeof validator !== 'function') return null
+  if (validator(msg as Record<string, unknown>) !== true) return null
   return { v, msg: msg as AnyMessage }
 }

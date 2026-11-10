@@ -156,7 +156,10 @@ export function newFeedSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return `fs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  const rand = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `fs-${Date.now().toString(36)}-${rand}`;
 }
 
 /**

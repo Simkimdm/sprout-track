@@ -30,8 +30,12 @@ interface AccountLoginResponse {
 }
 
 function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
   return emailRegex.test(email);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<AccountLoginResponse>>> {
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     const { email, password }: AccountLoginRequest = requestBody;
 
     // Validate input
-    if (!email || !password) {
+    if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
       recordFailedAttempt(ip);
       const errorMsg = 'Email and password are required';
 
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
       );
     }
 
-    if (!isValidEmail(email)) {
+    if (!/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(email)) {
       recordFailedAttempt(ip);
       const errorMsg = 'Please enter a valid email address';
 

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     // Get the raw body first (before any parsing) - critical for signature verification
     const body = await req.text();
-    console.log('[WEBHOOK DEBUG] Body length:', body.length);
+    console.log('[WEBHOOK DEBUG] Body length:', JSON.stringify(body.length));
 
     // Log all headers for debugging
     const allHeaders: Record<string, string> = {};
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log(`[WEBHOOK] Signature verified successfully for event: ${event.type}`);
+      console.log(`[WEBHOOK] Signature verified successfully for event: ${JSON.stringify(event.type)}`);
     } catch (err: any) {
       console.error('[WEBHOOK ERROR] Webhook signature verification failed:', {
         error: err.message,
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[WEBHOOK] Processing webhook event: ${event.type} (ID: ${event.id})`);
+    console.log(`[WEBHOOK] Processing webhook event: ${JSON.stringify(event.type)} (ID: ${JSON.stringify(event.id)})`);
 
     // Handle different event types
     switch (event.type) {
@@ -149,11 +149,11 @@ export async function POST(req: NextRequest) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`Unhandled event type: ${JSON.stringify(event.type)}`);
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`[WEBHOOK SUCCESS] Processed event ${event.type} in ${processingTime}ms`);
+    console.log(`[WEBHOOK SUCCESS] Processed event ${JSON.stringify(event.type)} in ${JSON.stringify(processingTime)}ms`);
     
     return NextResponse.json({ received: true }, { status: 200 });
 
@@ -311,7 +311,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         data: updateData
       });
 
-      console.log(`[WEBHOOK SUCCESS] Updated account ${accountId} with subscription ${subscriptionId}`);
+      console.log(`[WEBHOOK SUCCESS] Updated account ${JSON.stringify(accountId)} with subscription ${JSON.stringify(subscriptionId)}`);
     }
     // For one-time payments (lifetime license)
     else if (session.mode === 'payment' && planType === 'full') {
@@ -386,7 +386,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         data: updateData
       });
 
-      console.log(`[WEBHOOK SUCCESS] Updated account ${accountId} with lifetime license`);
+      console.log(`[WEBHOOK SUCCESS] Updated account ${JSON.stringify(accountId)} with lifetime license`);
     } else {
       console.log('[WEBHOOK WARNING] Unhandled checkout session mode/type:', {
         mode: session.mode,
@@ -425,7 +425,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     });
 
     if (!account || !shouldApplySubscriptionUpdate(account)) {
-      console.log(`[WEBHOOK] Skipping subscription update for account ${accountId}: planType is '${account?.planType}' (lifetime grant preserved)`);
+      console.log(`[WEBHOOK] Skipping subscription update for account ${JSON.stringify(accountId)}: planType is '${JSON.stringify(account?.planType)}' (lifetime grant preserved)`);
       return;
     }
 
@@ -453,7 +453,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       data: updateData
     });
 
-    console.log(`[WEBHOOK SUCCESS] Updated subscription for account ${accountId}`);
+    console.log(`[WEBHOOK SUCCESS] Updated subscription for account ${JSON.stringify(accountId)}`);
   } catch (error) {
     console.error('[WEBHOOK ERROR] Error handling subscription update:', error);
   }
@@ -496,7 +496,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       }
     });
 
-    console.log(`[WEBHOOK SUCCESS] Cleared subscription ID for account ${accountId} (access until planExpires: ${account?.planExpires?.toISOString()})`);
+    console.log(`[WEBHOOK SUCCESS] Cleared subscription ID for account ${JSON.stringify(accountId)} (access until planExpires: ${JSON.stringify(account?.planExpires?.toISOString())})`);
   } catch (error) {
     console.error('[WEBHOOK ERROR] Error handling subscription deletion:', error);
   }
@@ -554,7 +554,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       }
     });
 
-    console.log(`[WEBHOOK SUCCESS] Updated planExpires for account ${accountId} after successful payment to ${periodEnd ? new Date(periodEnd * 1000).toISOString() : null}`);
+    console.log(`[WEBHOOK SUCCESS] Updated planExpires for account ${JSON.stringify(accountId)} after successful payment to ${JSON.stringify(periodEnd ? new Date(periodEnd * 1000).toISOString() : null)}`);
   } catch (error) {
     console.error('[WEBHOOK ERROR] Error handling invoice payment succeeded:', error);
   }
@@ -602,7 +602,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
     // Note: Stripe will automatically retry failed payments
     // We don't immediately disable the account, but could send a notification
-    console.log(`[WEBHOOK WARNING] Payment failed for account ${accountId} subscription ${subscriptionId}`);
+    console.log(`[WEBHOOK WARNING] Payment failed for account ${JSON.stringify(accountId)} subscription ${JSON.stringify(subscriptionId)}`);
 
     // Optionally: Send email notification to user about failed payment
     // TODO: Implement email notification for failed payments

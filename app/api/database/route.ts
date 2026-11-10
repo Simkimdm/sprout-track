@@ -156,9 +156,13 @@ async function postHandler(req: NextRequest): Promise<NextResponse<ApiResponse<a
             // invalidate the active session before the post-restore migrate call.
             const preserveKeys = ['DATABASE_PROVIDER', 'DATABASE_URL', 'LOG_DATABASE_URL', 'JWT_SECRET'];
             const preserved: Record<string, string> = {};
-            const currentEnvExists = await fs.promises.access(envPath).then(() => true).catch(() => false);
-            if (currentEnvExists) {
-              const currentEnvContent = await fs.promises.readFile(envPath, 'utf-8');
+            let currentEnvContent: string | null = null;
+            try {
+              currentEnvContent = await fs.promises.readFile(envPath, 'utf-8');
+            } catch {
+              currentEnvContent = null;
+            }
+            if (currentEnvContent !== null) {
               const currentVars = parseEnvFile(currentEnvContent);
               for (const key of preserveKeys) {
                 if (currentVars[key]) preserved[key] = currentVars[key];

@@ -26,12 +26,13 @@ const filesToFix = [
 function addHook(filePath) {
   const fullPath = path.join(__dirname, '..', filePath);
   
-  if (!fs.existsSync(fullPath)) {
+  let content;
+  try {
+    content = fs.readFileSync(fullPath, 'utf8');
+  } catch {
     console.log(`File not found: ${filePath}`);
     return false;
   }
-
-  let content = fs.readFileSync(fullPath, 'utf8');
   
   // Check if hook is already called
   if (content.includes('const { t } = useLocalization()')) {

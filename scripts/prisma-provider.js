@@ -30,12 +30,13 @@ console.log(`Configuring Prisma schemas for provider: ${provider}`);
  * Update a Prisma schema file's datasource block to use the specified provider.
  */
 function updateSchema(schemaPath) {
-  if (!fs.existsSync(schemaPath)) {
+  let content;
+  try {
+    content = fs.readFileSync(schemaPath, 'utf-8');
+  } catch {
     console.warn(`Warning: Schema file not found: ${schemaPath}`);
     return;
   }
-
-  let content = fs.readFileSync(schemaPath, 'utf-8');
 
   if (provider === 'postgresql') {
     content = content.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');

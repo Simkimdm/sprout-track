@@ -90,7 +90,7 @@ export default function AccountModal({
 
   // Email validation
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 

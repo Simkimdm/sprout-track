@@ -75,10 +75,12 @@ async function handler(request: NextRequest, authContext: AuthResult): Promise<N
             const dbPath = path.resolve('./db/baby-tracker.db');
 
             // Create backup of existing database if it exists
-            if (fs.existsSync(dbPath)) {
-              const backupPath = `${dbPath}.backup-${dateStr}`;
+            const backupPath = `${dbPath}.backup-${dateStr}`;
+            try {
               await fs.promises.copyFile(dbPath, backupPath);
               console.log('✓ Existing database backed up');
+            } catch {
+              // No existing database to back up
             }
 
             // Write new database file
@@ -112,8 +114,13 @@ async function handler(request: NextRequest, authContext: AuthResult): Promise<N
             // invalidate the setup session before the post-restore migrate call.
             const preserveKeys = ['DATABASE_PROVIDER', 'DATABASE_URL', 'LOG_DATABASE_URL', 'JWT_SECRET'];
             const preserved: Record<string, string> = {};
-            if (fs.existsSync(envPath)) {
-              const currentEnvContent = fs.readFileSync(envPath, 'utf-8');
+            let currentEnvContent: string | null = null;
+            try {
+              currentEnvContent = fs.readFileSync(envPath, 'utf-8');
+            } catch {
+              currentEnvContent = null;
+            }
+            if (currentEnvContent !== null) {
               const currentVars = parseEnvFile(currentEnvContent);
               for (const key of preserveKeys) {
                 if (currentVars[key]) preserved[key] = currentVars[key];
@@ -169,10 +176,12 @@ async function handler(request: NextRequest, authContext: AuthResult): Promise<N
 
           const dbPath = path.resolve('./db/baby-tracker.db');
 
-          if (fs.existsSync(dbPath)) {
-            const backupPath = `${dbPath}.backup-${dateStr}`;
+          const backupPath = `${dbPath}.backup-${dateStr}`;
+          try {
             await fs.promises.copyFile(dbPath, backupPath);
             console.log('✓ Existing database backed up');
+          } catch {
+            // No existing database to back up
           }
 
           await fs.promises.writeFile(dbPath, buffer);
