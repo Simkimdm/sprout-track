@@ -47,7 +47,7 @@ const DROP = new Set([
 const lock = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package-lock.json'), 'utf8'));
 const lockPackages = lock.packages || {};
 
-const keep = new Set(['.bin', '.prisma', '.package-lock.json']);
+const keep = new Set(['node_modules/.bin', 'node_modules/.prisma', 'node_modules/.package-lock.json']);
 const queue = ROOTS.map((r) => `node_modules/${r}`);
 
 function resolveDep(fromKey, dep) {
