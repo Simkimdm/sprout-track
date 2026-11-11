@@ -113,7 +113,7 @@ const ContactForm: React.FC<ContactFormProps> = ({
     }
     
     // Email validation
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (formData.email && !/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = t('Please enter a valid email address');
     }
     

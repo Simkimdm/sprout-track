@@ -85,7 +85,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
     // Check rate limiting
     const rateLimitCheck = checkResendRateLimit(ip);
     if (!rateLimitCheck.allowed) {
-      console.log(`Resend verification rate limit exceeded for IP: ${ip}, remaining time: ${rateLimitCheck.remainingTime} minutes`);
+      console.log(`Resend verification rate limit exceeded for IP: ${JSON.stringify(ip)}, remaining time: ${JSON.stringify(rateLimitCheck.remainingTime)} minutes`);
       return NextResponse.json<ApiResponse<ResendVerificationResponse>>(
         {
           success: false,
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
     
     // For security, always return success even if account doesn't exist
     if (!account) {
-      console.log(`Resend verification request for non-existent email: ${email}`);
+      console.log(`Resend verification request for non-existent email: ${JSON.stringify(email)}`);
       return NextResponse.json<ApiResponse<ResendVerificationResponse>>({
         success: true,
         data: {
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
     
     // If already verified, return success but don't send email
     if (account.verified) {
-      console.log(`Resend verification request for already verified account: ${email}`);
+      console.log(`Resend verification request for already verified account: ${JSON.stringify(email)}`);
       return NextResponse.json<ApiResponse<ResendVerificationResponse>>({
         success: true,
         data: {
@@ -151,12 +151,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
       }
     });
     
-    console.log(`Updated verification token for account: ${email}, accountId: ${account.id}`);
+    console.log(`Updated verification token for account: ${JSON.stringify(email)}, accountId: ${JSON.stringify(account.id)}`);
     
     // Send verification email
     try {
       await sendVerificationEmail(account.email, verificationToken, account.firstName || 'User');
-      console.log(`Verification email resent to: ${email}`);
+      console.log(`Verification email resent to: ${JSON.stringify(email)}`);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
       // Continue with success response - user can try again later

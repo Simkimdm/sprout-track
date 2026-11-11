@@ -15,10 +15,15 @@ function formatGiftCode(raw: string): string {
 }
 
 export function generateGiftCode(): string {
-  const bytes = randomBytes(CODE_LENGTH);
+  // Rejection sampling: 256 % 32 === 0, so every byte value is accepted and the
+  // modulo below stays unbiased.
+  const limit = 256 - (256 % GIFT_CODE_ALPHABET.length);
+  const bytes = randomBytes(CODE_LENGTH * 2);
   let raw = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    raw += GIFT_CODE_ALPHABET[bytes[i] % GIFT_CODE_ALPHABET.length];
+  for (let i = 0; raw.length < CODE_LENGTH && i < bytes.length; i++) {
+    if (bytes[i] < limit) {
+      raw += GIFT_CODE_ALPHABET[bytes[i] % GIFT_CODE_ALPHABET.length];
+    }
   }
   return formatGiftCode(raw);
 }
@@ -106,7 +111,7 @@ export function describeEmailFailure(error: unknown): string {
 
 // Same shape used by the account routes' isValidEmail. A bare `includes('@')`
 // accepted "@" and "a@b", which would then be handed to sendGiftCodeEmail.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
 
 export function isValidGiftEmail(email: unknown): email is string {
   return typeof email === 'string' && EMAIL_RE.test(email);

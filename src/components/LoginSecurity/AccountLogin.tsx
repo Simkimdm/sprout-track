@@ -27,7 +27,7 @@ export default function AccountLogin({
   const [showSuccess, setShowSuccess] = useState(false);
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 

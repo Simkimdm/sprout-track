@@ -3,6 +3,7 @@
  * These functions handle conversion between UTC and local time for database operations
  */
 
+import fs from 'fs';
 import prisma from '../db';
 
 /**
@@ -31,7 +32,7 @@ export function getSystemTimezone(): string {
     } else if (process.platform === 'linux') {
       try {
         // Try /etc/timezone first (Debian, Ubuntu)
-        return execSync('cat /etc/timezone').toString().trim();
+        return fs.readFileSync('/etc/timezone', 'utf8').trim();
       } catch (error) {
         try {
           // Try /etc/localtime as a symlink (RHEL, CentOS, Alpine)
@@ -43,7 +44,7 @@ export function getSystemTimezone(): string {
         } catch (innerError) {
           // Try TZ file (Alpine Linux)
           try {
-            return execSync('cat /etc/TZ').toString().trim();
+            return fs.readFileSync('/etc/TZ', 'utf8').trim();
           } catch (tzError) {
             // Fallback to TZ environment variable or Intl API
             if (process.env.TZ) {

@@ -79,7 +79,7 @@ function recordRegistrationAttempt(ip: string): void {
 }
 
 function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     // Check rate limiting
     const rateLimitCheck = checkRegistrationRateLimit(ip);
     if (!rateLimitCheck.allowed) {
-      console.log(`Registration rate limit exceeded for IP: ${ip}, remaining time: ${rateLimitCheck.remainingTime} minutes`);
+      console.log(`Registration rate limit exceeded for IP: ${JSON.stringify(ip)}, remaining time: ${JSON.stringify(rateLimitCheck.remainingTime)} minutes`);
       return NextResponse.json<ApiResponse<AccountRegistrationResponse>>(
         {
           success: false,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     });
     
     if (existingAccount) {
-      console.log(`Registration attempt with existing email: ${email}`);
+      console.log(`Registration attempt with existing email: ${JSON.stringify(email)}`);
       // For security, don't reveal that email exists
       return NextResponse.json<ApiResponse<AccountRegistrationResponse>>({
         success: true,
@@ -206,12 +206,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
       }
     });
     
-    console.log(`Created unverified account for email: ${email}, accountId: ${account.id}`);
+    console.log(`Created unverified account for email: ${JSON.stringify(email)}, accountId: ${JSON.stringify(account.id)}`);
     
     // Send verification email
     try {
       await sendVerificationEmail(account.email, verificationToken, account.firstName || 'User');
-      console.log(`Verification email sent to: ${email}`);
+      console.log(`Verification email sent to: ${JSON.stringify(email)}`);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
       // Continue with success response - user can request resend later

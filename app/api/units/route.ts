@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const activityType = searchParams.get('activityType');
     
-    console.log(`Received request for units with activityType: ${activityType}`);
+    console.log(`Received request for units with activityType: ${JSON.stringify(activityType)}`);
     
     // Fetch all units with explicit selection of all fields
     const allUnits = await prisma.unit.findMany({
@@ -25,17 +25,17 @@ export async function GET(request: Request) {
       },
     });
 
-    console.log(`Found ${allUnits.length} total units`);
+    console.log(`Found ${JSON.stringify(allUnits.length)} total units`);
     
     // Debug: Log all units and their activityTypes
     allUnits.forEach(unit => {
-      console.log(`Unit: ${unit.unitAbbr}, ActivityTypes: ${unit.activityTypes || 'null'}`);
+      console.log(`Unit: ${JSON.stringify(unit.unitAbbr)}, ActivityTypes: ${JSON.stringify(unit.activityTypes || 'null')}`);
     });
 
     // If activityType is specified, filter units on the server side
     let filteredUnits = allUnits;
     if (activityType) {
-      console.log(`Filtering units for activityType: ${activityType}`);
+      console.log(`Filtering units for activityType: ${JSON.stringify(activityType)}`);
       
       // Simpler approach: just check if the activityType string is contained within the activityTypes field
       filteredUnits = allUnits.filter(unit => {
@@ -49,16 +49,16 @@ export async function GET(request: Request) {
         // Check if the activityType is contained in the activityTypes string
         const included = unitTypesLower.includes(activityTypeLower);
         
-        console.log(`Unit ${unit.unitAbbr} has types "${unit.activityTypes}", includes "${activityType}": ${included}`);
+        console.log(`Unit ${JSON.stringify(unit.unitAbbr)} has types "${JSON.stringify(unit.activityTypes)}", includes "${JSON.stringify(activityType)}": ${JSON.stringify(included)}`);
         
         return included;
       });
       
-      console.log(`Filtered to ${filteredUnits.length} units for activityType: ${activityType}`);
+      console.log(`Filtered to ${JSON.stringify(filteredUnits.length)} units for activityType: ${JSON.stringify(activityType)}`);
       
       // If no units match the filter, return all units as a fallback
       if (filteredUnits.length === 0) {
-        console.log(`No units found for "${activityType}", returning all units as fallback`);
+        console.log(`No units found for "${JSON.stringify(activityType)}", returning all units as fallback`);
         filteredUnits = allUnits;
       }
     }

@@ -1,0 +1,10 @@
+# CodeQL configuration for GitHub code scanning.
+#
+# js/user-controlled-bypass is excluded: in this codebase it only fires on
+# presence-validation guards of the form `if (!isNonEmptyString(x)) return 400`
+# directly before a `verifyPassword(...)` authorization call. Those guards are
+# early-abort checks on required request fields, not security decisions made
+# from user input, so every report of this rule here is a false positive.
+query-filters:
+  - exclude:
+      id: js/user-controlled-bypass

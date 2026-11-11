@@ -17,7 +17,7 @@ export const useEmailValidation = (): UseEmailValidationReturn => {
   const [email, setEmailState] = useState('')
   const [error, setError] = useState('')
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/
 
   const setEmail = useCallback((newEmail: string) => {
     setEmailState(newEmail)

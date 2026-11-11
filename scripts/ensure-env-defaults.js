@@ -183,11 +183,11 @@ function main() {
   // Read existing .env or start with empty
   let content = '';
   let existingVars = {};
-  if (fs.existsSync(envFilePath)) {
+  try {
     content = fs.readFileSync(envFilePath, 'utf-8');
     existingVars = parseEnvFile(content);
     console.log(`  Found existing .env with ${Object.keys(existingVars).length} variables`);
-  } else {
+  } catch {
     console.log('  No existing .env found, creating new file');
     content = '# Environment variables for Sprout Track\n';
   }

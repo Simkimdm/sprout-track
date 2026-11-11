@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 /**
  * Parses a .env file content and returns key-value pairs
@@ -75,7 +75,7 @@ export function ensureEnvDefaults(envFilePath?: string): boolean {
     const envPath = envFilePath || path.resolve('./.env');
     const mode = process.env.NODE_ENV === 'production' ? 'docker' : 'local';
     const scriptPath = path.resolve('./scripts/ensure-env-defaults.js');
-    execSync(`node ${scriptPath} ${mode} ${envPath}`, { stdio: 'inherit' });
+    execFileSync('node', [scriptPath, mode, envPath], { stdio: 'inherit' });
     return true;
   } catch (error) {
     console.error('Error ensuring env defaults:', error);

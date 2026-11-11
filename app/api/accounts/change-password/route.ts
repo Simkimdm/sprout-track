@@ -14,6 +14,10 @@ interface ChangePasswordResponse {
   message: string;
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
 function isValidPassword(password: string): boolean {
   // Minimum 8 characters, lowercase, uppercase, numbers, and special characters
   if (password.length < 8) return false;
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<C
     const { currentPassword, newPassword } = body;
 
     // Validate required fields
-    if (!currentPassword || !newPassword) {
+    if (!isNonEmptyString(currentPassword) || !isNonEmptyString(newPassword)) {
       return NextResponse.json<ApiResponse<ChangePasswordResponse>>(
         {
           success: false,

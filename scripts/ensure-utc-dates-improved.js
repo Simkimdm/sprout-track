@@ -49,7 +49,7 @@ function getSystemTimezone() {
         return match[1];
       }
     } else if (process.platform === 'linux') {
-      return execSync('cat /etc/timezone').toString().trim();
+      return require('fs').readFileSync('/etc/timezone', 'utf8').trim();
     }
     
     // Fallback to Intl API for Windows or other platforms

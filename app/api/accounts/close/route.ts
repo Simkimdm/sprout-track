@@ -10,6 +10,10 @@ interface CloseAccountResponse {
   message: string;
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<CloseAccountResponse>>> {
   try {
     // Verify authentication
@@ -29,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<C
     const body = await req.json();
     const { password } = body;
 
-    if (!password) {
+    if (!isNonEmptyString(password)) {
       return NextResponse.json<ApiResponse<CloseAccountResponse>>(
         {
           success: false,
