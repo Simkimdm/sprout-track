@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import {
   DateFormatSetting,
   TimeFormatSetting,
+  detectDefaultTimeFormat,
   formatTimeDisplay,
   formatDateLong,
   formatDateTimeDisplay as formatDateTimeUtil,
@@ -131,7 +132,9 @@ export function TimezoneProvider({ children }: { children: ReactNode }) {
   const [userTimezone, setUserTimezone] = useState<string>('UTC');
   const [isDST, setIsDST] = useState<boolean>(false);
   const [dateFormat, setDateFormat] = useState<DateFormatSetting>('MM/DD/YYYY');
-  const [timeFormat, setTimeFormat] = useState<TimeFormatSetting>('12h');
+  // Default to the device locale's clock format so 24h-locale devices don't
+  // flash 12h while the saved family preference loads; the saved value wins.
+  const [timeFormat, setTimeFormat] = useState<TimeFormatSetting>(() => detectDefaultTimeFormat());
 
   /**
    * Detect and set the user's timezone and DST status
