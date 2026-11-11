@@ -8,6 +8,26 @@ export type TimeFormatSetting = '12h' | '24h';
 export type WeekStartSetting = 'Sunday' | 'Monday';
 
 /**
+ * Derive the device's default time format from its locale, so 24h-locale
+ * devices (e.g. de-DE) don't briefly render 12h while the saved family
+ * preference is still being fetched. The saved setting always wins once loaded.
+ */
+export function detectDefaultTimeFormat(): TimeFormatSetting {
+  try {
+    const opts = Intl.DateTimeFormat().resolvedOptions();
+    if (typeof opts.hour12 === 'boolean') return opts.hour12 ? '12h' : '24h';
+    if (opts.hourCycle === 'h11' || opts.hourCycle === 'h12') return '12h';
+    if (opts.hourCycle === 'h23' || opts.hourCycle === 'h24') return '24h';
+    // Fallback for engines that expose neither option: 15:00 shows a
+    // day-period marker only in 12h locales.
+    const formatted = new Intl.DateTimeFormat().format(new Date(2026, 0, 1, 15, 0));
+    return /am|pm/i.test(formatted) ? '12h' : '24h';
+  } catch {
+    return '12h';
+  }
+}
+
+/**
  * Format a Date object as a time string according to the time format setting.
  * Returns e.g. "1:30 PM" (12h) or "13:30" (24h).
  */
