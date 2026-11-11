@@ -5,6 +5,7 @@ import { FullLogActivityListProps } from './full-log-timeline.types';
 import { cn } from '@/src/lib/utils';
 import styles from './full-log-timeline.styles';
 import { getActivityIcon, getActivityStyle, getActivityDescription } from '@/src/components/Timeline/utils';
+import { formatDurationLabel } from '@/src/utils/latestStatus';
 import { useLocalization } from '@/src/context/localization';
 
 /**
@@ -14,6 +15,7 @@ import { useLocalization } from '@/src/context/localization';
  */
 const FullLogActivityList: React.FC<FullLogActivityListProps> = ({
   activities,
+  firstEntryGapMinutes,
   settings,
   isLoading,
   itemsPerPage,
@@ -30,6 +32,15 @@ const FullLogActivityList: React.FC<FullLogActivityListProps> = ({
       {/* Scrollable Content */}
       <div className={cn(styles.content, "full-log-timeline-content")}>
         <div className={cn(styles.activityList, "full-log-timeline-activity-list")}>
+          {firstEntryGapMinutes != null && activities.length > 0 && (
+            <div className={cn(styles.gapDivider, "full-log-timeline-gap-divider")}>
+              <span className={cn(styles.gapDividerLine, "full-log-timeline-gap-divider-line")} aria-hidden="true" />
+              <span className={cn(styles.gapDividerText, "full-log-timeline-gap-divider-text")}>
+                {formatDurationLabel(firstEntryGapMinutes, t)} {t('since previous entry')}
+              </span>
+              <span className={cn(styles.gapDividerLine, "full-log-timeline-gap-divider-line")} aria-hidden="true" />
+            </div>
+          )}
           {activities.length > 0 ? (
             activities.map((activity) => {
               const style = getActivityStyle(activity);

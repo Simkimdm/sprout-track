@@ -6,6 +6,7 @@ A comprehensive timeline component that displays activities over a date range wi
 
 - Date range selection using the Calendar component
 - Activity filtering by type (sleep, feed, diaper, note, bath, pump, milestone, measurement)
+- Time-gap divider above the first entry when a filter or search is active, showing the elapsed time since the previous entry
 - Quick date range filters (2 days, 7 days, 30 days)
 - Pagination controls for viewing large sets of activities
 - Activity details view with edit and delete functionality
