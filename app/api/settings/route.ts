@@ -113,6 +113,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'enableBreastMilkTracking',
       'autoEndSleepOnFeed',
       'showCalendarEventsInTimeline',
+      'showPreviousEntryInFilteredTimeline',
       'photoQuotaMB',
     ];
 

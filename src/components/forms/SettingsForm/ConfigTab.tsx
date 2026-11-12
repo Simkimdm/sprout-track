@@ -349,6 +349,17 @@ export default function ConfigTab({
               onCheckedChange={(checked) => onSettingsChange({ showCalendarEventsInTimeline: checked } as any)}
             />
           </label>
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="form-label">{t('Show previous entry when filtering')}</span>
+              <p className="text-sm text-gray-500">{t('When enabled, the last entry before the selected day (usually from the previous day) is shown below the filtered timeline together with the gap divider')}</p>
+            </div>
+            <Checkbox
+              variant="primary"
+              checked={(settings as any)?.showPreviousEntryInFilteredTimeline ?? true}
+              onCheckedChange={(checked) => onSettingsChange({ showPreviousEntryInFilteredTimeline: checked } as any)}
+            />
+          </label>
         </div>
       </div>
 

@@ -552,6 +552,7 @@ model Settings {
   enableBreastMilkTracking Boolean @default(true) // Enable breast milk inventory tracking (stored/fed/discarded actions, adjustments, balance)
   autoEndSleepOnFeed  Boolean  @default(false) // Automatically end an active sleep session when a feeding starts
   showCalendarEventsInTimeline Boolean @default(false) // Also show calendar events in the timeline
+  showPreviousEntryInFilteredTimeline Boolean @default(true) // Show the last previous entry (usually of the previous day) below a filtered timeline, with the gap divider
   includeSolidsInFeedTimer Boolean @default(true) // DEPRECATED (orphaned): superseded by per-baby Baby.feedTimerTypes; no longer read or written. Kept to avoid a destructive column drop.
   photoQuotaMB        Int? // Per-family photo quota override in MB; null = use AppConfig default
   dateFormat          String   @default("MM/DD/YYYY") // "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD"

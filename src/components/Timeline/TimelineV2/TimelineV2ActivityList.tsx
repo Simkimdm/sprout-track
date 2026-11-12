@@ -3,7 +3,6 @@ import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel, matchesFilterType } from '../utils';
 import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
-import { getPreviousEntryGapMs } from '@/src/utils/activityGap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -74,6 +73,7 @@ const TimelineV2ActivityList = ({
   allActivities,
   historyActivities,
   filterHistory,
+  showPreviousEntry,
   feedTimerFrom,
   gapById,
   dividerGapById,
@@ -222,22 +222,26 @@ const TimelineV2ActivityList = ({
   // Gap between the first entry of the day (the oldest displayed entry) and the previous
   // entry — of the SAME type as the active filter when one is active, of any type otherwise.
   // Usually anchored at a previous day, so the deep history (filterHistory) is included.
-  // Rendered as a divider on the oldest entry.
-  const firstOfDayGapSeconds = useMemo(() => {
-    if (activities.length === 0) return null;
+  // When a filter is active and showPreviousEntry is enabled, that anchor entry is also
+  // rendered below the day's entries, with the gap divider between the two.
+  const firstOfDayGap = useMemo(() => {
+    if (activities.length === 0) return { gapSeconds: null as number | null, previousEntry: null as ActivityType | null };
     const displayedIds = new Set(activities.map((a) => a.id));
     const oldest = activities[activities.length - 1];
     // sleep rows anchor at their start (matching the end-anchored gap dividers: start minus previous end)
     const oldestTimeMs = 'duration' in oldest && 'startTime' in oldest && !('activities' in oldest) && oldest.startTime
       ? new Date(String(oldest.startTime)).getTime()
       : new Date(getActivityTime(oldest)).getTime();
-    const candidateTimesDescMs = [...(filterHistory ?? []), ...(historyActivities ?? []), ...(allActivities ?? [])]
+    const candidatesDesc = [...(filterHistory ?? []), ...(historyActivities ?? []), ...(allActivities ?? [])]
       .filter((a) => !displayedIds.has(a.id) && (!activeFilter || matchesFilterType(a, activeFilter)))
-      .map((a) => new Date(getActivityTime(a)).getTime())
-      .sort((a, b) => b - a);
-    const gapMs = getPreviousEntryGapMs(candidateTimesDescMs, oldestTimeMs);
-    return gapMs === null ? null : gapMs / 1000;
-  }, [activeFilter, activities, allActivities, historyActivities, filterHistory]);
+      .map((a) => ({ activity: a, timeMs: new Date(getActivityTime(a)).getTime() }))
+      .sort((a, b) => b.timeMs - a.timeMs);
+    const anchor = candidatesDesc.find((c) => c.timeMs < oldestTimeMs) ?? null;
+    return {
+      gapSeconds: anchor ? (oldestTimeMs - anchor.timeMs) / 1000 : null,
+      previousEntry: activeFilter && showPreviousEntry !== false ? anchor?.activity ?? null : null,
+    };
+  }, [activeFilter, activities, allActivities, historyActivities, filterHistory, showPreviousEntry]);
 
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
   // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the
@@ -245,11 +249,11 @@ const TimelineV2ActivityList = ({
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
     const groups = groupedActivities.map((group) => {
-      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string }[] = [];
+      const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string; isPreviousEntry?: boolean }[] = [];
       for (const activity of group.activities) {
         if (emitted.has(activity.id)) continue;
         const session = sessionByRowId.get(activity.id);
-        let item: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string };
+        let item: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string; isPreviousEntry?: boolean };
         if (session) {
           const rows = [...session.rows]
             .sort((a, b) => new Date(getActivityTime(b as unknown as ActivityType)).getTime() - new Date(getActivityTime(a as unknown as ActivityType)).getTime())
@@ -288,16 +292,30 @@ const TimelineV2ActivityList = ({
     });
     // The first entry of the day (oldest displayed, i.e. the last rendered item) carries
     // the divider with the gap to the previous same-type entry (usually of the previous day).
-    if (firstOfDayGapSeconds != null && groups.length > 0) {
+    // When the previous entry itself is shown, the divider sits between the two entries.
+    if (groups.length > 0) {
       const lastGroup = groups[groups.length - 1];
       const lastItem = lastGroup.items[lastGroup.items.length - 1];
-      if (lastItem) lastItem.dividerGap = formatDurationWords(firstOfDayGapSeconds);
+      if (firstOfDayGap.previousEntry && firstOfDayGap.gapSeconds != null) {
+        // the first-of-day gap moves to the divider between the oldest entry and the
+        // rendered previous entry; the oldest entry keeps no divider of its own
+        if (lastItem) lastItem.dividerGap = undefined;
+        lastGroup.items.push({
+          key: `previous-${firstOfDayGap.previousEntry.id}`,
+          sessionRows: null,
+          activity: firstOfDayGap.previousEntry,
+          dividerGap: formatDurationWords(firstOfDayGap.gapSeconds),
+          isPreviousEntry: true,
+        });
+      } else if (firstOfDayGap.gapSeconds != null) {
+        if (lastItem) lastItem.dividerGap = formatDurationWords(firstOfDayGap.gapSeconds);
+      }
     }
     return groups;
-  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter, firstOfDayGapSeconds]);
+  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter, firstOfDayGap]);
 
   // Render one timeline event row (also used for each row of a grouped L+R session)
-  const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {
+  const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number, isPreviousEntry = false) => {
                           const style = getActivityStyle(activity);
                           const description = getActivityDescription(activity, settings, t);
                           const activityTime = new Date(getActivityTime(activity));
@@ -329,11 +347,11 @@ const TimelineV2ActivityList = ({
                                 const endPart = endDateStr === todayStr ? endTimeStr : `${formatDateShort(endTime, dateFormat)} ${endTimeStr}`;
                                 timeStr = `${startPart} - ${endPart}`;
                               } else {
-                                timeStr = `${startTimeStr} - ${endTimeStr}`;
+                                timeStr = `${isPreviousEntry ? `${formatDateShort(startTime, dateFormat)} ` : ''}${startTimeStr} - ${endTimeStr}`;
                               }
                             } else {
                               // ongoing: live end time (ticks every 30s)
-                              timeStr = `${formatTimeDisplay(startTime, timeFormat)} - ${formatTimeDisplay(now, timeFormat)}`;
+                              timeStr = `${isPreviousEntry ? `${formatDateShort(startTime, dateFormat)} ` : ''}${formatTimeDisplay(startTime, timeFormat)} - ${formatTimeDisplay(now, timeFormat)}`;
                             }
                           } else {
                             timeStr = formatTimeDisplay(activityTime, timeFormat);
@@ -358,6 +376,11 @@ const TimelineV2ActivityList = ({
                             }
                           }
                           
+                          // Previous-day context entry: prefix the date (it is not the selected day)
+                          if (isPreviousEntry && !('duration' in activity && 'startTime' in activity)) {
+                            timeStr = `${formatDateShort(activityTime, dateFormat)} ${timeStr}`;
+                          }
+
                           // Sub-line next to the recording time: this entry's duration
                           // (the gap since the previous same-type entry is the divider between entries)
                           let durationSuffix = '';
@@ -754,6 +777,10 @@ const TimelineV2ActivityList = ({
                             {item.sessionRows ? (
                             <div key={item.key} className="timeline-feed-session">
                               {item.sessionRows.map((row, rowIndex) => renderActivity(row, groupIndex, itemIndex + rowIndex))}
+                            </div>
+                          ) : item.isPreviousEntry ? (
+                            <div className="timeline-previous-entry">
+                              {renderActivity(item.activity as ActivityType, groupIndex, itemIndex, true)}
                             </div>
                           ) : (
                             renderActivity(item.activity as ActivityType, groupIndex, itemIndex)

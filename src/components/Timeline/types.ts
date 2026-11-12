@@ -112,6 +112,8 @@ export interface TimelineActivityListProps {
   historyActivities?: ActivityType[];
   /** Entries of the active filter's type before the selected day (deep history) — anchor for the first-of-day gap divider */
   filterHistory?: ActivityType[];
+  /** Show the last previous entry (same type as the active filter, usually of the previous day) below the filtered list, with the gap divider between */
+  showPreviousEntry?: boolean;
   /** Per-entry gap since the previous same-type entry (feeds + sleep), keyed by activity id */
   gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
   /** End-anchored variant (pause since previous entry ENDED, durations included) for the between-entry dividers */

@@ -354,6 +354,11 @@ html.dark .timeline-caretaker-badge {
   background: #e5e7eb; /* gray-200 */
 }
 
+/* Last previous entry (usually of the previous day) shown below a filtered timeline */
+.timeline-previous-entry {
+  opacity: 0.55;
+}
+
 html.dark .timeline-gap-divider-line {
   background: #4b5563 !important; /* gray-600 */
 }

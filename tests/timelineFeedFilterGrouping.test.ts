@@ -232,10 +232,16 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     // the oldest diaper (10:00) shows the cross-midnight gap (22:00 -> 10:00 = 12h),
     // not the between-entry gap (10:00 -> 12:30 = 2h 30m)
     expect(gapValues(html)).toEqual(['12h 0m']);
+    // the previous day's diaper (22:00) is rendered below the divider, dimmed, with its date
+    expect(html).toContain('timeline-previous-entry');
     const iGap = html.indexOf('12h 0m');
     const iOld = html.indexOf('10:00 AM');
+    const iPrev = html.indexOf('Jul 21 10:00 PM');
+    expect(iOld).toBeGreaterThan(-1);
     expect(iGap).toBeGreaterThan(-1);
-    expect(iGap).toBeLessThan(iOld);
+    expect(iPrev).toBeGreaterThan(-1);
+    expect(iOld).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iPrev);
   });
 
   it('shows the first diaper of the day with a divider to the last diaper of the previous day', () => {
@@ -305,10 +311,16 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     );
     // oldest feed (08:00) anchors at the previous feed (yesterday 23:00 -> 9h), not at the later sleep
     expect(gapValues(html)).toEqual(['9h 0m']);
+    // the previous feed (23:00) is rendered below the divider, dimmed, with its date
+    expect(html).toContain('timeline-previous-entry');
     const iGap = html.indexOf('9h 0m');
     const iOldest = html.indexOf('8:00 AM');
+    const iPrev = html.indexOf('Jul 21 11:00 PM');
+    expect(iOldest).toBeGreaterThan(-1);
     expect(iGap).toBeGreaterThan(-1);
-    expect(iGap).toBeLessThan(iOldest);
+    expect(iPrev).toBeGreaterThan(-1);
+    expect(iOldest).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iPrev);
   });
 
   it('anchors the first-of-day divider at the previous same-type entry from deep history when the previous day has none of that type', () => {
@@ -335,10 +347,58 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     );
     // oldest diaper (today 10:00) anchors at the diaper from two days ago (20:00 -> 38h)
     expect(gapValues(html)).toEqual(['38h 0m']);
+    // the deep-history diaper (two days ago, 20:00) is rendered below the divider, with its date
+    expect(html).toContain('timeline-previous-entry');
     const iGap = html.indexOf('38h 0m');
+    const iOld = html.indexOf('10:00 AM');
+    const iPrev = html.indexOf('Jul 20 8:00 PM');
+    expect(iOld).toBeGreaterThan(-1);
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iPrev).toBeGreaterThan(-1);
+    expect(iOld).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iPrev);
+  });
+
+  it('does not render the previous entry when showPreviousEntry is disabled (divider stays above the oldest entry)', () => {
+    const diapers = [
+      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T22:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: diapers, historyActivities: history,
+        showPreviousEntry: false,
+      })
+    );
+    expect(gapValues(html)).toEqual(['12h 0m']);
+    expect(html).not.toContain('timeline-previous-entry');
+    expect(html).not.toContain('10:00 PM');
+    const iGap = html.indexOf('12h 0m');
     const iOld = html.indexOf('10:00 AM');
     expect(iGap).toBeGreaterThan(-1);
     expect(iGap).toBeLessThan(iOld);
+  });
+
+  it('does not render the previous entry without an active filter, even when history exists', () => {
+    const acts = [
+      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    const history = [
+      { id: 'h1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T22:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: acts, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: null, allActivities: acts, historyActivities: history, filterHistory: history,
+      })
+    );
+    expect(gapValues(html)).toEqual(['12h 0m']);
+    expect(html).not.toContain('timeline-previous-entry');
   });
 
   it('shows the first-of-day divider also without a filter, anchored at the previous entry of any type', () => {
