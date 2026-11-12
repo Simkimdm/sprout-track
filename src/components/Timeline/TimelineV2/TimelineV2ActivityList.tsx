@@ -219,11 +219,33 @@ const TimelineV2ActivityList = ({
     return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
   }, [activities, activeFilter, historyActivities]);
 
+  // End of an entry for the end-anchored gap math (same rule as the between-entry dividers):
+  // sleep rows end at endTime (or start + duration while ongoing), feed rows at start + feed
+  // duration, everything else at its recorded time.
+  const entryEndMs = (a: ActivityType): number => {
+    if ('duration' in a && 'startTime' in a && !('activities' in a)) {
+      const startMs = new Date(String((a as { startTime: string }).startTime)).getTime();
+      const endTime = (a as { endTime?: string | null }).endTime;
+      if (endTime) return new Date(endTime).getTime();
+      return startMs + (((a as { duration?: number }).duration || 0) * 60_000);
+    }
+    const startMs = new Date(getActivityTime(a)).getTime();
+    if ('amount' in a && 'type' in a && !('foodId' in a)) {
+      const feedRow = a as { type?: string; feedDuration?: number; amount?: number | null };
+      const durSec = feedRow.type === 'BREAST'
+        ? (feedRow.feedDuration || (feedRow.amount ? feedRow.amount * 60 : 0))
+        : (feedRow.feedDuration || 0);
+      return startMs + durSec * 1000;
+    }
+    return startMs;
+  };
+
   // Gap between the first entry of the day (the oldest displayed entry) and the previous
   // entry — of the SAME type as the active filter when one is active, of any type otherwise.
   // Usually anchored at a previous day, so the deep history (filterHistory) is included.
-  // When a filter is active and showPreviousEntry is enabled, that anchor entry is also
-  // rendered below the day's entries, with the gap divider between the two.
+  // End-anchored like the between-entry dividers: oldest entry's start minus the previous
+  // entry's END. When a filter is active and showPreviousEntry is enabled, that anchor entry
+  // is also rendered below the day's entries, with the gap divider between the two.
   const firstOfDayGap = useMemo(() => {
     if (activities.length === 0) return { gapSeconds: null as number | null, previousEntry: null as ActivityType | null };
     const displayedIds = new Set(activities.map((a) => a.id));
@@ -237,8 +259,9 @@ const TimelineV2ActivityList = ({
       .map((a) => ({ activity: a, timeMs: new Date(getActivityTime(a)).getTime() }))
       .sort((a, b) => b.timeMs - a.timeMs);
     const anchor = candidatesDesc.find((c) => c.timeMs < oldestTimeMs) ?? null;
+    const gapSeconds = anchor ? (oldestTimeMs - entryEndMs(anchor.activity)) / 1000 : null;
     return {
-      gapSeconds: anchor ? (oldestTimeMs - anchor.timeMs) / 1000 : null,
+      gapSeconds: gapSeconds != null && gapSeconds > 0 ? gapSeconds : null,
       previousEntry: activeFilter && showPreviousEntry !== false ? anchor?.activity ?? null : null,
     };
   }, [activeFilter, activities, allActivities, historyActivities, filterHistory, showPreviousEntry]);
