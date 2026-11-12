@@ -12,17 +12,13 @@ import { useLocalization } from '@/src/context/localization';
 import { DIAPER_COLORS, DIAPER_COLOR_HEX, DIAPER_SMELLS, DiaperColor } from '@/src/utils/diaperColors';
 
 const COLOR_LABELS: Record<DiaperColor, string> = {
-  BLACK: 'Black',
-  GREEN: 'Green',
-  GREENISH_YELLOW: 'Greenish Yellow',
-  LIGHT_GREEN: 'Light Green',
   YELLOW: 'Yellow',
-  PALE_YELLOW: 'Pale Yellow',
-  ORANGE: 'Orange',
-  GREENISH_BROWN: 'Greenish Brown',
-  BEIGE: 'Beige',
+  YELLOW_BROWN: 'Yellow Brown',
   BROWN: 'Brown',
+  GREEN: 'Green',
+  ORANGE: 'Orange',
   RED: 'Red',
+  BLACK: 'Black',
   WHITE: 'White',
   GREY: 'Gray',
   OTHER: 'Other',

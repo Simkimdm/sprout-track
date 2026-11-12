@@ -92,8 +92,8 @@ describe('hooks reference route', () => {
 
       expect(response.status).toBe(200);
       expect(payload.data.diaperColors).toEqual([
-        'BLACK', 'GREEN', 'GREENISH_YELLOW', 'LIGHT_GREEN', 'YELLOW', 'PALE_YELLOW',
-        'ORANGE', 'GREENISH_BROWN', 'BEIGE', 'BROWN', 'RED', 'WHITE', 'GREY', 'OTHER',
+        'YELLOW', 'YELLOW_BROWN', 'BROWN', 'GREEN', 'ORANGE', 'RED',
+        'BLACK', 'WHITE', 'GREY', 'OTHER',
       ]);
     });
 

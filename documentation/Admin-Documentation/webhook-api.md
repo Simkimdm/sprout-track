@@ -471,7 +471,7 @@ Optional fields: `condition`, `color`, `smell`, `blowout` (boolean), `creamAppli
 
 **`condition` values:** `NORMAL`, `LOOSE`, `FIRM`, `OTHER` (case-insensitive; stored using this exact casing — sending `"loose"` stores `"LOOSE"`). An unrecognized value returns `400 INVALID_CONDITION`.
 
-**`color` values:** `BLACK`, `GREEN`, `GREENISH_YELLOW`, `LIGHT_GREEN`, `YELLOW`, `PALE_YELLOW`, `ORANGE`, `GREENISH_BROWN`, `BEIGE`, `BROWN`, `RED`, `WHITE`, `GREY`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_COLOR`.
+**`color` values:** `YELLOW`, `YELLOW_BROWN`, `BROWN`, `GREEN`, `ORANGE`, `RED`, `BLACK`, `WHITE`, `GREY`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_COLOR`.
 
 **`smell` values:** `ODORLESS`, `MILD`, `SOUR`, `STRONG`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_SMELL`.
 
@@ -813,7 +813,7 @@ curl -s \
       { "value": "other", "description": "Other bottle type" }
     ],
     "diaperConditions": ["NORMAL", "LOOSE", "FIRM", "OTHER"],
-    "diaperColors": ["BLACK", "GREEN", "GREENISH_YELLOW", "LIGHT_GREEN", "YELLOW", "PALE_YELLOW", "ORANGE", "GREENISH_BROWN", "BEIGE", "BROWN", "RED", "WHITE", "GREY", "OTHER"],
+    "diaperColors": ["YELLOW", "YELLOW_BROWN", "BROWN", "GREEN", "ORANGE", "RED", "BLACK", "WHITE", "GREY", "OTHER"],
     "diaperSmells": ["ODORLESS", "MILD", "SOUR", "STRONG", "OTHER"],
     "sleepQualities": ["POOR", "FAIR", "GOOD", "EXCELLENT"],
     "bathTypes": ["Full Bath", "Sponge Bath", "Wipe Down"],
