@@ -26,7 +26,7 @@ import { handleExpirationError } from '@/src/lib/expiration-error-handler';
 import { useParams } from 'next/navigation';
 import { useLocalization } from '@/src/context/localization';
 import { isDirtyDiaper } from '@/src/utils/diaperStats';
-import { DiaperColorSelect, DiaperSmellSelect } from './diaper-selects';
+import { DiaperColorPicker, DiaperSmellSelect } from './diaper-selects';
 
 interface DiaperFormProps {
   isOpen: boolean;
@@ -351,9 +351,9 @@ export default function DiaperForm({
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="sm:col-span-3">
                   <label htmlFor={`${formId}-color`} className="form-label">{t('Color')}</label>
-                  <DiaperColorSelect
+                  <DiaperColorPicker
                     id={`${formId}-color`}
                     value={formData.color}
                     onValueChange={(value: string) =>
