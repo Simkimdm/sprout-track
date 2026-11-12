@@ -197,6 +197,20 @@ export const matchesFilterType = (activity: ActivityType, filter: FilterType): b
   }
 };
 
+/**
+ * Whether an entry belongs to the given day for display purposes: an entry counts for
+ * the day it STARTED on, so overnight entries (e.g. a sleep that began yesterday and
+ * ended today) are not shown again in the following day's list.
+ */
+export const startedOnOrAfter = (activity: ActivityType, day: Date): boolean => {
+  const startOfDay = new Date(day);
+  startOfDay.setHours(0, 0, 0, 0);
+  const startMs = 'startTime' in activity && activity.startTime
+    ? new Date(String(activity.startTime)).getTime()
+    : new Date(getActivityTime(activity)).getTime();
+  return startMs >= startOfDay.getTime();
+};
+
 export const getActivityTime = (activity: ActivityType): string => {
   if ('time' in activity && activity.time) {
     // For breast feeds, prefer startTime (session start) over time (session end)

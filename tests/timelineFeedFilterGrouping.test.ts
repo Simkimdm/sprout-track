@@ -341,6 +341,31 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iOld);
   });
 
+  it('shows the first-of-day divider also without a filter, anchored at the previous entry of any type', () => {
+    // oldest entry of the day is a NAP starting 00:26Z today
+    const acts = [
+      { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
+      { id: 'nap0', babyId: 'b1', type: 'NAP', startTime: '2026-07-22T00:26:00.000Z', endTime: '2026-07-22T03:12:00.000Z', duration: 166 },
+    ];
+    // deep history (all types, no filter): last entry before the day was a feed at 23:59Z yesterday
+    const filterHistory = [
+      { id: 'hf', babyId: 'b1', type: 'BREAST', time: '2026-07-21T23:59:00.000Z', startTime: '2026-07-21T23:59:00.000Z', endTime: '2026-07-22T00:09:00.000Z', feedDuration: 600, amount: null },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: acts, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: null, allActivities: acts, filterHistory,
+      })
+    );
+    // NAP anchors at its start (00:26Z); previous entry 23:59Z -> 27m, divider above the NAP
+    expect(gapValues(html)).toEqual(['27m']);
+    const iGap = html.indexOf('27m');
+    const iNap = html.indexOf('12:26 AM'); // 00:26Z in 12h format (test env TZ=UTC)
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iGap).toBeLessThan(iNap);
+  });
+
   it('omits the date on the side of an overnight sleep that is today', () => {
     // end = today 00:12, start = yesterday 21:26
     const end = new Date(); end.setHours(0, 12, 0, 0);
