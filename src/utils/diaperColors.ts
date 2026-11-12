@@ -21,15 +21,15 @@ export type DiaperColor = (typeof DIAPER_COLORS)[number];
 
 /** Swatch color per stool color, used to compare colors visually in selects. */
 export const DIAPER_COLOR_HEX: Record<DiaperColor, string> = {
-  YELLOW: '#eab308',
-  YELLOW_BROWN: '#b08d3e',
-  BROWN: '#8b5e34',
-  GREEN: '#4d7c0f',
-  ORANGE: '#f97316',
-  RED: '#dc2626',
-  BLACK: '#1f2937',
-  WHITE: '#f8fafc',
-  GREY: '#9ca3af',
+  YELLOW: '#f2c94c',
+  YELLOW_BROWN: '#c19a5b',
+  BROWN: '#8a5a33',
+  GREEN: '#7fa653',
+  ORANGE: '#ee8f4d',
+  RED: '#d64545',
+  BLACK: '#2d2a26',
+  WHITE: '#f7f5ef',
+  GREY: '#a9a9a1',
   OTHER: '#d1d5db',
 };
 
