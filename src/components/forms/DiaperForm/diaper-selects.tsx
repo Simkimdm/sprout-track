@@ -41,7 +41,7 @@ export function DiaperColorSwatch({ color, className }: { color: string; classNa
   return (
     <span
       aria-hidden="true"
-      className={`inline-block h-3.5 w-3.5 shrink-0 rounded-full border border-slate-300 ${className ?? ''}`}
+      className={`inline-block shrink-0 rounded-full border border-slate-300 transition-transform duration-150 hover:scale-150 hover:ring-2 hover:ring-slate-400 ${className ?? 'h-4 w-4'}`}
       style={{ backgroundColor: hex ?? '#d1d5db' }}
     />
   );
