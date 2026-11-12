@@ -212,30 +212,29 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iOld);
   });
 
-  it('shows the first filtered entry with a divider to the previous entry hidden by the filter', () => {
+  it('shows the first entry of the day (oldest) with a divider to the previous entry, usually the previous day', () => {
     const diapers = [
       { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
       { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
     ];
-    // a note at 11:00 sits between the diapers in the full list but is hidden by the filter
-    const allActivities = [
-      ...diapers,
-      { id: 'n1', babyId: 'b1', content: 'note', time: '2026-07-22T11:00:00.000Z' },
+    // last entry of the previous day is a note at 22:00 (hidden by the diaper filter)
+    const history = [
+      { id: 'n1', babyId: 'b1', content: 'note', time: '2026-07-21T22:00:00.000Z' },
     ];
     const html = renderToString(
       React.createElement(TimelineV2ActivityList as any, {
         activities: diapers, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
-        activeFilter: 'diaper', allActivities,
+        activeFilter: 'diaper', allActivities: diapers, historyActivities: history,
       })
     );
-    // divider above the first diaper: gap to the hidden note (11:00 -> 12:30 = 1h 30m),
-    // plus the between-entry divider (10:00 -> 12:30 = 2h 30m) above the older diaper
-    expect(gapValues(html)).toEqual(['1h 30m', '2h 30m']);
-    const iGapFirst = html.indexOf('1h 30m');
-    const iNew = html.indexOf('12:30 PM');
-    expect(iGapFirst).toBeGreaterThan(-1);
-    expect(iGapFirst).toBeLessThan(iNew);
+    // oldest displayed entry (d1, 10:00) carries the divider to the previous entry
+    // (yesterday 22:00 -> today 10:00 = 12h), rendered above the 10:00 AM row
+    expect(gapValues(html)).toEqual(['12h 0m']);
+    const iGap = html.indexOf('12h 0m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iGap).toBeLessThan(iOld);
   });
 
   it('shows the first diaper of the day with a divider to the last diaper of the previous day', () => {
