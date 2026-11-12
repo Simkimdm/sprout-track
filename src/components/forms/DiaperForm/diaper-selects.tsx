@@ -43,17 +43,6 @@ function hexLuminance(hex: string): number {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
-export function DiaperColorSwatch({ color, className }: { color: string; className?: string }) {
-  const hex = (DIAPER_COLOR_HEX as Record<string, string>)[color];
-  return (
-    <span
-      aria-hidden="true"
-      className={`inline-block shrink-0 rounded-md border border-slate-300 transition-transform duration-150 hover:scale-150 hover:ring-2 hover:ring-slate-400 ${className ?? 'h-4 w-7'}`}
-      style={{ backgroundColor: hex ?? '#d1d5db' }}
-    />
-  );
-}
-
 /** Filled color chip with the label inside, like the U-Heft stool color chart. */
 export function DiaperColorChip({ color, label, className }: { color: string; label: string; className?: string }) {
   const hex = (DIAPER_COLOR_HEX as Record<string, string>)[color] ?? '#d1d5db';
@@ -75,24 +64,31 @@ interface DiaperSelectProps {
   disabled?: boolean;
 }
 
-export function DiaperColorSelect({ id, value, onValueChange, disabled }: DiaperSelectProps) {
+/** Grid of large color circles (U-Heft chart style); click again to clear. */
+export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSelectProps) {
   const { t } = useLocalization();
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger id={id} className="w-full">
-        <SelectValue placeholder={t('Select color')} />
-      </SelectTrigger>
-      <SelectContent>
-        {DIAPER_COLORS.map((color) => (
-          <SelectItem key={color} value={color}>
-            <span className="flex items-center gap-2.5">
-              <DiaperColorSwatch color={color} />
-              {t(COLOR_LABELS[color])}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="grid grid-cols-7 gap-2" role="radiogroup" aria-label={t('Color')}>
+      {DIAPER_COLORS.map((color) => {
+        const selected = value === color;
+        return (
+          <button
+            key={color}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={t(COLOR_LABELS[color])}
+            title={t(COLOR_LABELS[color])}
+            disabled={disabled}
+            onClick={() => onValueChange(selected ? '' : color)}
+            className={`h-9 w-9 rounded-full border border-slate-300 transition-transform duration-150 hover:scale-110 disabled:opacity-50 ${
+              selected ? 'scale-110 ring-2 ring-slate-700 ring-offset-2' : ''
+            }`}
+            style={{ backgroundColor: DIAPER_COLOR_HEX[color] }}
+          />
+        );
+      })}
+    </div>
   );
 }
 

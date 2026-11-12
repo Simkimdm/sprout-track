@@ -18,7 +18,7 @@ import { DiaperType } from '@prisma/client';
 import { DiaperLogResponse } from '@/app/api/types';
 import { useLocalization } from '@/src/context/localization';
 import { isDirtyDiaper } from '@/src/utils/diaperStats';
-import { DiaperColorSelect, DiaperSmellSelect } from '@/src/components/forms/DiaperForm/diaper-selects';
+import { DiaperColorPicker, DiaperSmellSelect } from '@/src/components/forms/DiaperForm/diaper-selects';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import { formatLocalDateTimeInput, parseLocalDateTimeInput } from '@/src/utils/dateTimeInput';
 
@@ -193,9 +193,9 @@ export default function DiaperModal({
                 </SelectContent>
               </Select>
               </div>
-              <div>
+              <div className="sm:col-span-3">
                 <label className="form-label">{t('Color')}</label>
-              <DiaperColorSelect
+              <DiaperColorPicker
                 value={formData.color}
                 onValueChange={(value: string) =>
                   setFormData({ ...formData, color: value })
