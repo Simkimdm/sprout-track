@@ -70,6 +70,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
   const showCalendarEvents = (settings as any)?.showCalendarEventsInTimeline ?? false;
+  // Family setting: show the last previous entry (usually of the previous day) below a filtered timeline
+  const showPreviousEntry = (settings as any)?.showPreviousEntryInFilteredTimeline ?? true;
 
   // Gap since the previous same-type entry for every feed/sleep row of the day
   // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
@@ -633,6 +635,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             allActivities={dateFilteredActivities}
             historyActivities={previousDayActivities}
             filterHistory={filterHistory}
+            showPreviousEntry={showPreviousEntry}
             feedTimerFrom={feedTimerFrom}
             gapById={gapById}
             dividerGapById={dividerGapById}

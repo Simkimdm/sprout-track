@@ -2782,5 +2782,7 @@
   "Drank very well": "Drakk veldig godt",
   "Drank well": "Drakk godt",
   "Drank okay": "Drakk greit",
-  "Only suckled": "Bare sugd"
+  "Only suckled": "Bare sugd",
+  "Show previous entry when filtering": "Show previous entry when filtering",
+  "When enabled, the last entry before the selected day (usually from the previous day) is shown below the filtered timeline together with the gap divider": "When enabled, the last entry before the selected day (usually from the previous day) is shown below the filtered timeline together with the gap divider"
 }

@@ -2782,5 +2782,7 @@
   "Drank very well": "Sehr gut getrunken",
   "Drank well": "Gut getrunken",
   "Drank okay": "Mittel getrunken",
-  "Only suckled": "Nur genuckelt"
+  "Only suckled": "Nur genuckelt",
+  "Show previous entry when filtering": "Vorherigen Eintrag bei Filter anzeigen",
+  "When enabled, the last entry before the selected day (usually from the previous day) is shown below the filtered timeline together with the gap divider": "Wenn aktiviert, wird der letzte Eintrag vor dem ausgewählten Tag (meist vom Vortag) unterhalb der gefilterten Timeline zusammen mit dem Abstands-Trenner angezeigt"
 }
