@@ -30,6 +30,7 @@ import {
 import { diaper, bottleBaby } from '@lucide/lab';
 import {
   ActivityType,
+  ActivityDetail,
   ActivityDetails,
   ActivityDescription,
   ActivityStyle,
@@ -575,7 +576,7 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           default: return t(capitalize(smell));
         }
       };
-      const details = [
+      const details: ActivityDetail[] = [
         { label: t('Time'), value: formatTime(activity.time, settings, true, t) },
         { label: t('Type'), value: formatDiaperType(activity.type) },
       ];
@@ -586,7 +587,7 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           details.push({ label: t('Condition'), value: formatDiaperCondition(activity.condition) });
         }
         if (activity.color) {
-          details.push({ label: t('Color'), value: formatDiaperColor(activity.color) });
+          details.push({ label: t('Color'), value: formatDiaperColor(activity.color), swatchColor: activity.color });
         }
         if (activity.smell) {
           details.push({ label: t('Smell'), value: formatDiaperSmell(activity.smell) });

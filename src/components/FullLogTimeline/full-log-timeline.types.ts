@@ -61,6 +61,8 @@ export interface FullLogActivityDetailsProps {
 export interface ActivityDetail {
   label: string;
   value: string;
+  /** Raw diaper color value; when set, a color swatch is shown next to the value */
+  swatchColor?: string;
 }
 
 export interface ActivityDetails {
