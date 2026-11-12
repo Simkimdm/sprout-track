@@ -111,7 +111,7 @@ const FullLogActivityDetails: React.FC<FullLogActivityDetailsProps> = ({
                 <div key={index} className={`flex ${isMultiline ? 'flex-col gap-1' : 'justify-between items-center'}`}>
                   <span className="text-sm font-medium text-gray-500 full-log-timeline-details-label">{detail.label}:</span>
                   <span className={`text-sm text-gray-900 full-log-timeline-details-value ${isMultiline ? 'whitespace-pre-line break-words' : ''}`}>
-                    {detail.swatchColor && <DiaperColorSwatch color={detail.swatchColor} className="mr-1.5 align-middle" />}
+                    {detail.swatchColor && <DiaperColorSwatch color={detail.swatchColor} className="mr-2 h-5 w-5 align-middle" />}
                     {detail.value}
                   </span>
                 </div>
