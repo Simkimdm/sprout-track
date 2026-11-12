@@ -3,6 +3,7 @@ import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel } from '../utils';
 import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { getPreviousEntryGapMs } from '@/src/utils/activityGap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -217,12 +218,27 @@ const TimelineV2ActivityList = ({
     return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
   }, [activities, activeFilter, historyActivities]);
 
+  // Gap between the first displayed entry and the previous entry hidden by the active filter
+  // (any type) — rendered as a divider above the first entry. Entries still visible in the
+  // filtered list are excluded: the between-entry gap dividers already cover those pairs.
+  const firstEntryGapSeconds = useMemo(() => {
+    if (!activeFilter || activities.length === 0) return null;
+    const displayedIds = new Set(activities.map((a) => a.id));
+    const firstTimeMs = new Date(getActivityTime(activities[0])).getTime();
+    const hiddenTimesDescMs = [...(historyActivities ?? []), ...(allActivities ?? [])]
+      .filter((a) => !displayedIds.has(a.id))
+      .map((a) => new Date(getActivityTime(a)).getTime())
+      .sort((a, b) => b - a);
+    const gapMs = getPreviousEntryGapMs(hiddenTimesDescMs, firstTimeMs);
+    return gapMs === null ? null : gapMs / 1000;
+  }, [activeFilter, activities, allActivities, historyActivities]);
+
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
   // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the
   // older entry of the pair so the divider renders between the two entries (only when > 0).
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
-    return groupedActivities.map(group => {
+    return groupedActivities.map((group, groupIndex) => {
       const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string }[] = [];
       for (const activity of group.activities) {
         if (emitted.has(activity.id)) continue;
@@ -260,11 +276,16 @@ const TimelineV2ActivityList = ({
             : otherGapById.get(anchorRow.id)?.gapSeconds;
         }
         if (gap && gap > 0) item.dividerGap = formatDurationWords(gap);
+        // The very first displayed entry gets the gap to the previous (filtered-out) entry
+        // as its divider, unless a same-type gap divider is already anchored on it.
+        if (!item.dividerGap && groupIndex === 0 && items.length === 0 && firstEntryGapSeconds != null) {
+          item.dividerGap = formatDurationWords(firstEntryGapSeconds);
+        }
         items.push(item);
       }
       return { ...group, items };
     });
-  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter]);
+  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter, firstEntryGapSeconds]);
 
   // Render one timeline event row (also used for each row of a grouped L+R session)
   const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {
