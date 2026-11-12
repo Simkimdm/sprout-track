@@ -359,6 +359,35 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iPrev);
   });
 
+  it('anchors the first-of-day feed divider at the previous feed END (duration included), like the between-entry dividers', () => {
+    const feeds = [
+      feed('f1', 'BOTTLE', '2026-07-22T08:00:00.000Z'),
+    ];
+    // previous day's last feed: breast session 23:00 + 10m -> ends 23:10
+    const history = [
+      feed('h1', 'BREAST', '2026-07-21T23:00:00.000Z', { startTime: '2026-07-21T23:00:00.000Z', feedDuration: 600, amount: null }),
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: feeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: feeds, historyActivities: history, feedTimerFrom: 'start',
+        gapById: computeGapById(feeds, history, 'start'), dividerGapById: computeDividerGapById(feeds, history),
+      })
+    );
+    // end-anchored: 08:00 minus 23:10 = 8h 50m (not 9h start-to-start); previous feed rendered below the divider
+    expect(gapValues(html)).toEqual(['8h 50m']);
+    expect(html).toContain('timeline-previous-entry');
+    const iGap = html.indexOf('8h 50m');
+    const iOld = html.indexOf('8:00 AM');
+    const iPrev = html.indexOf('Jul 21 11:00 PM');
+    expect(iOld).toBeGreaterThan(-1);
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iPrev).toBeGreaterThan(-1);
+    expect(iOld).toBeLessThan(iGap);
+    expect(iGap).toBeLessThan(iPrev);
+  });
+
   it('does not render the previous entry when showPreviousEntry is disabled (divider stays above the oldest entry)', () => {
     const diapers = [
       { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },
@@ -418,9 +447,10 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activeFilter: null, allActivities: acts, filterHistory,
       })
     );
-    // NAP anchors at its start (00:26Z); previous entry 23:59Z -> 27m, divider above the NAP
-    expect(gapValues(html)).toEqual(['27m']);
-    const iGap = html.indexOf('27m');
+    // NAP anchors at its start (00:26Z); previous breast feed 23:59Z + 10m ends 00:09Z
+    // -> end-anchored gap 17m (same rule as the between-entry dividers), divider above the NAP
+    expect(gapValues(html)).toEqual(['17m']);
+    const iGap = html.indexOf('17m');
     const iNap = html.indexOf('12:26 AM'); // 00:26Z in 12h format (test env TZ=UTC)
     expect(iGap).toBeGreaterThan(-1);
     expect(iGap).toBeLessThan(iNap);
