@@ -36,14 +36,35 @@ const SMELL_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+function hexLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
 export function DiaperColorSwatch({ color, className }: { color: string; className?: string }) {
   const hex = (DIAPER_COLOR_HEX as Record<string, string>)[color];
   return (
     <span
       aria-hidden="true"
-      className={`inline-block shrink-0 rounded-full border border-slate-300 transition-transform duration-150 hover:scale-150 hover:ring-2 hover:ring-slate-400 ${className ?? 'h-4 w-4'}`}
+      className={`inline-block shrink-0 rounded-md border border-slate-300 transition-transform duration-150 hover:scale-150 hover:ring-2 hover:ring-slate-400 ${className ?? 'h-4 w-7'}`}
       style={{ backgroundColor: hex ?? '#d1d5db' }}
     />
+  );
+}
+
+/** Filled color chip with the label inside, like the U-Heft stool color chart. */
+export function DiaperColorChip({ color, label, className }: { color: string; label: string; className?: string }) {
+  const hex = (DIAPER_COLOR_HEX as Record<string, string>)[color] ?? '#d1d5db';
+  const textColor = hexLuminance(hex) > 0.6 ? '#1f2937' : '#f8fafc';
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border border-slate-300 px-2.5 py-1 text-sm font-medium transition-transform duration-150 hover:scale-110 ${className ?? ''}`}
+      style={{ backgroundColor: hex, color: textColor }}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -64,7 +85,7 @@ export function DiaperColorSelect({ id, value, onValueChange, disabled }: Diaper
       <SelectContent>
         {DIAPER_COLORS.map((color) => (
           <SelectItem key={color} value={color}>
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2.5">
               <DiaperColorSwatch color={color} />
               {t(COLOR_LABELS[color])}
             </span>
