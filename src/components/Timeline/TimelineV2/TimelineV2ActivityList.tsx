@@ -321,10 +321,11 @@ const TimelineV2ActivityList = ({
                               const endTimeStr = formatTimeDisplay(endTime, timeFormat);
 
                               if (isOvernight) {
-                                // Show dates for overnight entries
-                                const startDateFormatted = formatDateShort(startTime, dateFormat);
-                                const endDateFormatted = formatDateShort(endTime, dateFormat);
-                                timeStr = `${startDateFormatted} ${startTimeStr} - ${endDateFormatted} ${endTimeStr}`;
+                                // Show dates for overnight entries, but omit the date on the side that is today
+                                const todayStr = new Date().toDateString();
+                                const startPart = startDateStr === todayStr ? startTimeStr : `${formatDateShort(startTime, dateFormat)} ${startTimeStr}`;
+                                const endPart = endDateStr === todayStr ? endTimeStr : `${formatDateShort(endTime, dateFormat)} ${endTimeStr}`;
+                                timeStr = `${startPart} - ${endPart}`;
                               } else {
                                 timeStr = `${startTimeStr} - ${endTimeStr}`;
                               }
