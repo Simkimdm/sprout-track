@@ -38,6 +38,7 @@ export interface FullLogSearchBarProps {
 
 export interface FullLogActivityListProps {
   activities: ActivityType[];
+  firstEntryGapMinutes?: number | null;
   settings: Settings | null;
   isLoading: boolean;
   itemsPerPage: number;

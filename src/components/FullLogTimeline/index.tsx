@@ -21,6 +21,7 @@ import FullLogActivityList from './FullLogActivityList';
 import FullLogActivityDetails from './FullLogActivityDetails';
 import FullLogExportButton from './FullLogExportButton';
 import { getActivityEndpoint, getActivityTime } from '@/src/components/Timeline/utils';
+import { getPreviousEntryGapMinutes } from '@/src/utils/activityGap';
 import { PumpLogResponse, MedicineLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse } from '@/app/api/types';
 import { cn } from '@/src/lib/utils';
 import styles from './full-log-timeline.styles';
@@ -278,17 +279,24 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
 
   const breastMilkTrackingEnabled = (settings as any)?.enableBreastMilkTracking ?? true;
 
-  // Filter and sort activities
-  const sortedActivities = useMemo(() => {
-    // Filter out breast-milk-adjustment activities when tracking is disabled
+  // Sort all activities newest-first (breast-milk-adjustments hidden when tracking is disabled)
+  const sortedAllActivities = useMemo(() => {
     const baseActivities = !breastMilkTrackingEnabled
       ? activities.filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
       : activities;
 
-    // First filter by activity type
+    return [...baseActivities].sort((a, b) => {
+      const timeA = new Date(getActivityTime(a));
+      const timeB = new Date(getActivityTime(b));
+      return timeB.getTime() - timeA.getTime();
+    });
+  }, [activities, breastMilkTrackingEnabled]);
+
+  // Filter by activity type and search query (sort order preserved)
+  const filteredActivities = useMemo(() => {
     const typeFiltered = !activeFilter
-      ? baseActivities
-      : baseActivities.filter(activity => {
+      ? sortedAllActivities
+      : sortedAllActivities.filter(activity => {
           switch (activeFilter) {
             case 'sleep':
               return 'duration' in activity;
@@ -326,74 +334,28 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
           }
         });
 
-    // Then filter by search query
-    const searchFiltered = !searchQuery
+    return !searchQuery
       ? typeFiltered
       : typeFiltered.filter(activity => matchesSearch(activity, searchQuery));
+  }, [sortedAllActivities, activeFilter, searchQuery, matchesSearch]);
 
-    const sorted = [...searchFiltered].sort((a, b) => {
-      const timeA = new Date(getActivityTime(a));
-      const timeB = new Date(getActivityTime(b));
-      return timeB.getTime() - timeA.getTime();
-    });
-
+  // Paginate the filtered activities
+  const sortedActivities = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return sorted.slice(startIndex, startIndex + itemsPerPage);
-  }, [activities, activeFilter, currentPage, itemsPerPage, searchQuery, matchesSearch, breastMilkTrackingEnabled]);
+    return filteredActivities.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredActivities, currentPage, itemsPerPage]);
+
+  // Time gap between the first displayed entry and the previous entry hidden by the active filter/search
+  const firstEntryGapMinutes = useMemo(() => {
+    if ((!activeFilter && !searchQuery) || sortedActivities.length === 0) return null;
+    const allTimesDescMs = sortedAllActivities.map((activity) => new Date(getActivityTime(activity)).getTime());
+    return getPreviousEntryGapMinutes(allTimesDescMs, new Date(getActivityTime(sortedActivities[0])).getTime());
+  }, [activeFilter, searchQuery, sortedActivities, sortedAllActivities]);
 
   // Calculate total pages
   const totalPages = useMemo(() => {
-    // Filter out breast-milk-adjustment activities when tracking is disabled
-    const baseActivities = !breastMilkTrackingEnabled
-      ? activities.filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
-      : activities;
-
-    // First filter by activity type
-    const typeFiltered = !activeFilter
-      ? baseActivities
-      : baseActivities.filter(activity => {
-          switch (activeFilter) {
-            case 'sleep':
-              return 'duration' in activity;
-            case 'feed':
-              return 'amount' in activity && !('foodId' in activity);
-            case 'diaper':
-              return 'condition' in activity;
-            case 'wet':
-              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
-            case 'poop':
-              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
-            case 'note':
-              return 'content' in activity;
-            case 'bath':
-              return 'soapUsed' in activity;
-            case 'pump':
-              return 'leftAmount' in activity || 'rightAmount' in activity;
-            case 'breast-milk-adjustment':
-              return 'reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity);
-            case 'milestone':
-              return 'title' in activity && 'category' in activity;
-            case 'measurement':
-              return 'value' in activity && 'unit' in activity;
-            case 'medicine':
-              return 'doseAmount' in activity && 'medicineId' in activity;
-            case 'vaccine':
-              return 'vaccineName' in activity;
-            case 'food':
-              // Food logs (issue #203) - foodId is unique to food logs
-              return 'foodId' in activity;
-            default:
-              return true;
-          }
-        });
-
-    // Then filter by search query
-    const searchFiltered = !searchQuery 
-      ? typeFiltered 
-      : typeFiltered.filter(activity => matchesSearch(activity, searchQuery));
-    
-    return Math.ceil(searchFiltered.length / itemsPerPage);
-  }, [activities, activeFilter, itemsPerPage, searchQuery, matchesSearch, breastMilkTrackingEnabled]);
+    return Math.ceil(filteredActivities.length / itemsPerPage);
+  }, [filteredActivities, itemsPerPage]);
 
   // Handle activity deletion
   const handleDelete = async (activity: ActivityType) => {
@@ -472,6 +434,7 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
       {/* Activity List */}
       <FullLogActivityList
         activities={sortedActivities}
+        firstEntryGapMinutes={firstEntryGapMinutes}
         settings={settings}
         isLoading={isLoading}
         itemsPerPage={itemsPerPage}

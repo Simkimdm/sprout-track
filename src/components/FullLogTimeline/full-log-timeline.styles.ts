@@ -42,6 +42,11 @@ export const styles = {
   content: "flex-1 overflow-y-auto bg-white",
   activityList: "divide-y divide-gray-100 h-full",
   
+  // Time-gap divider above the first entry when a filter/search is active
+  gapDivider: "flex items-center gap-3 px-6 py-2",
+  gapDividerLine: "flex-1 border-t border-gray-200",
+  gapDividerText: "text-xs text-gray-500 whitespace-nowrap",
+
   // Activity item styles
   activityItem: "group hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer",
   activityContent: "flex items-center px-6 py-3",

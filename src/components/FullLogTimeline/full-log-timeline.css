@@ -74,6 +74,15 @@ html.dark .full-log-timeline-activity-info {
   color: #e5e7eb !important; /* gray-200 */
 }
 
+/* Time-gap divider */
+html.dark .full-log-timeline-gap-divider-line {
+  border-color: #4b5563 !important; /* gray-600 */
+}
+
+html.dark .full-log-timeline-gap-divider-text {
+  color: #9ca3af !important; /* gray-400 */
+}
+
 /* Empty state */
 html.dark .full-log-timeline-empty-state-title {
   color: #e5e7eb !important; /* gray-200 */
