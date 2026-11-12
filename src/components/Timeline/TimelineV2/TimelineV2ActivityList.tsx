@@ -219,6 +219,13 @@ const TimelineV2ActivityList = ({
     return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
   }, [activities, activeFilter, historyActivities]);
 
+  // Start of an entry for gap math: sleep rows anchor at their start, everything else at
+  // its recorded time (getActivityTime returns endTime for completed sleeps, so handle those).
+  const entryStartMs = (a: ActivityType): number =>
+    'duration' in a && 'startTime' in a && !('activities' in a) && a.startTime
+      ? new Date(String(a.startTime)).getTime()
+      : new Date(getActivityTime(a)).getTime();
+
   // End of an entry for the end-anchored gap math (same rule as the between-entry dividers):
   // sleep rows end at endTime (or start + duration while ongoing), feed rows at start + feed
   // duration, everything else at its recorded time.
@@ -241,28 +248,25 @@ const TimelineV2ActivityList = ({
   };
 
   // Gap between the first entry of the day (the oldest displayed entry) and the previous
-  // entry — of the SAME type as the active filter when one is active, of any type otherwise.
+  // entry of the SAME type as the active filter — dividers only show with an active filter.
   // Usually anchored at a previous day, so the deep history (filterHistory) is included.
   // End-anchored like the between-entry dividers: oldest entry's start minus the previous
-  // entry's END. When a filter is active and showPreviousEntry is enabled, that anchor entry
-  // is also rendered below the day's entries, with the gap divider between the two.
+  // entry's END. When showPreviousEntry is enabled, that anchor entry is also rendered below
+  // the day's entries, with the gap divider between the two.
   const firstOfDayGap = useMemo(() => {
-    if (activities.length === 0) return { gapSeconds: null as number | null, previousEntry: null as ActivityType | null };
+    if (!activeFilter || activities.length === 0) return { gapSeconds: null as number | null, previousEntry: null as ActivityType | null };
     const displayedIds = new Set(activities.map((a) => a.id));
     const oldest = activities[activities.length - 1];
-    // sleep rows anchor at their start (matching the end-anchored gap dividers: start minus previous end)
-    const oldestTimeMs = 'duration' in oldest && 'startTime' in oldest && !('activities' in oldest) && oldest.startTime
-      ? new Date(String(oldest.startTime)).getTime()
-      : new Date(getActivityTime(oldest)).getTime();
+    const oldestTimeMs = entryStartMs(oldest);
     const candidatesDesc = [...(filterHistory ?? []), ...(historyActivities ?? []), ...(allActivities ?? [])]
-      .filter((a) => !displayedIds.has(a.id) && (!activeFilter || matchesFilterType(a, activeFilter)))
+      .filter((a) => !displayedIds.has(a.id) && matchesFilterType(a, activeFilter))
       .map((a) => ({ activity: a, timeMs: new Date(getActivityTime(a)).getTime() }))
       .sort((a, b) => b.timeMs - a.timeMs);
     const anchor = candidatesDesc.find((c) => c.timeMs < oldestTimeMs) ?? null;
     const gapSeconds = anchor ? (oldestTimeMs - entryEndMs(anchor.activity)) / 1000 : null;
     return {
       gapSeconds: gapSeconds != null && gapSeconds > 0 ? gapSeconds : null,
-      previousEntry: activeFilter && showPreviousEntry !== false ? anchor?.activity ?? null : null,
+      previousEntry: showPreviousEntry !== false ? anchor?.activity ?? null : null,
     };
   }, [activeFilter, activities, allActivities, historyActivities, filterHistory, showPreviousEntry]);
 
@@ -313,16 +317,30 @@ const TimelineV2ActivityList = ({
       }
       return { ...group, items };
     });
-    // The first entry of the day (oldest displayed, i.e. the last rendered item) carries
-    // the divider with the gap to the previous same-type entry (usually of the previous day).
-    // When the previous entry itself is shown, the divider sits between the two entries.
-    if (groups.length > 0) {
+    // With an active filter, the first entry of the day (oldest displayed, i.e. the last
+    // rendered item) carries a divider with the gap to the previous same-type entry
+    // (usually of the previous day). When that previous entry is rendered, the cross-day
+    // gap moves to the divider above the previous entry; the oldest entry then shows its
+    // between-entry gap to the next newer entry instead (the divider maps key the
+    // cross-day gap to the oldest entry, so it has to be recomputed here).
+    if (activeFilter && groups.length > 0) {
       const lastGroup = groups[groups.length - 1];
       const lastItem = lastGroup.items[lastGroup.items.length - 1];
       if (firstOfDayGap.previousEntry && firstOfDayGap.gapSeconds != null) {
-        // the first-of-day gap moves to the divider between the oldest entry and the
-        // rendered previous entry; the oldest entry keeps no divider of its own
-        if (lastItem) lastItem.dividerGap = undefined;
+        if (lastItem) {
+          const flatItems = groups.flatMap((g) => g.items);
+          const nextNewer = flatItems.length > 1 ? flatItems[flatItems.length - 2] : null;
+          if (nextNewer) {
+            const newestRow = (item: { sessionRows: ActivityType[] | null; activity: ActivityType | null }) => {
+              const rows = item.sessionRows ?? (item.activity ? [item.activity] : []);
+              return rows.reduce((n, r) => (entryStartMs(r) > entryStartMs(n) ? r : n));
+            };
+            const betweenSec = (entryStartMs(newestRow(nextNewer)) - entryEndMs(newestRow(lastItem))) / 1000;
+            lastItem.dividerGap = betweenSec > 0 ? formatDurationWords(betweenSec) : undefined;
+          } else {
+            lastItem.dividerGap = undefined;
+          }
+        }
         lastGroup.items.push({
           key: `previous-${firstOfDayGap.previousEntry.id}`,
           sessionRows: null,
@@ -330,8 +348,8 @@ const TimelineV2ActivityList = ({
           dividerGap: formatDurationWords(firstOfDayGap.gapSeconds),
           isPreviousEntry: true,
         });
-      } else if (firstOfDayGap.gapSeconds != null) {
-        if (lastItem) lastItem.dividerGap = formatDurationWords(firstOfDayGap.gapSeconds);
+      } else if (firstOfDayGap.gapSeconds != null && lastItem) {
+        lastItem.dividerGap = formatDurationWords(firstOfDayGap.gapSeconds);
       }
     }
     return groups;
