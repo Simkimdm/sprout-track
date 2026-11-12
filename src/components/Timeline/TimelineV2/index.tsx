@@ -20,7 +20,7 @@ import TimelineV2DailyStats from './TimelineV2DailyStats';
 import TimelineV2ActivityList from './TimelineV2ActivityList';
 import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
-import { getActivityEndpoint, getActivityTime, matchesFilterType } from '../utils';
+import { getActivityEndpoint, getActivityTime, matchesFilterType, startedOnOrAfter } from '../utils';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
 import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
@@ -205,17 +205,20 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   };
 
   const fetchFilterHistory = useCallback(async (date: Date, filter: FilterType) => {
-    const typeParam = filterTypeParam(filter);
-    if (!babyId || !typeParam) {
+    if (!babyId) {
       setFilterHistory([]);
       return;
     }
+    // with an active filter: only that type; unfiltered: all types (anchor for the
+    // first-of-day divider at the previous entry of any type)
+    const typeParam = filterTypeParam(filter);
     try {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const authToken = localStorage.getItem('authToken');
+      const typesQuery = typeParam ? `&types=${typeParam}` : '';
       const response = await fetch(
-        `/api/timeline?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}&types=${typeParam}&limit=50&_t=${Date.now()}`,
+        `/api/timeline?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}${typesQuery}&limit=50&_t=${Date.now()}`,
         {
           cache: 'no-store',
           headers: {
@@ -517,10 +520,13 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   }, [babyId, refreshCurrentDay]);
 
   const sortedActivities = useMemo(() => {
+    // An entry belongs to the day it STARTED on: overnight entries (e.g. a sleep that
+    // began yesterday and ended today) are bucketed into both days by the cache, but the
+    // display list of the selected day must not show entries that started before it.
     // Filter out breast-milk-adjustment activities when tracking is disabled
     const baseActivities = !breastMilkTrackingEnabled
-      ? dateFilteredActivities.filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
-      : dateFilteredActivities;
+      ? dateFilteredActivities.filter(a => startedOnOrAfter(a, selectedDate)).filter(activity => !('reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity)))
+      : dateFilteredActivities.filter(a => startedOnOrAfter(a, selectedDate));
 
     // Calendar events join the display list only when the setting is enabled
     const withCalendarEvents = showCalendarEvents
@@ -542,7 +548,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
     });
 
     return sorted;
-  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled, showCalendarEvents, calendarEvents]);
+  }, [dateFilteredActivities, activeFilter, breastMilkTrackingEnabled, showCalendarEvents, calendarEvents, selectedDate]);
 
   const handleDelete = async (activity: ActivityType) => {
     if (!confirm('Are you sure you want to delete this activity?')) return;

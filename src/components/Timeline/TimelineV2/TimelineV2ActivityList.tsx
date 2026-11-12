@@ -220,10 +220,11 @@ const TimelineV2ActivityList = ({
   }, [activities, activeFilter, historyActivities]);
 
   // Gap between the first entry of the day (the oldest displayed entry) and the previous
-  // entry of the SAME type as the active filter — usually from a previous day, so the deep
-  // filter history (filterHistory) is included as anchor source. Rendered on the oldest entry.
+  // entry — of the SAME type as the active filter when one is active, of any type otherwise.
+  // Usually anchored at a previous day, so the deep history (filterHistory) is included.
+  // Rendered as a divider on the oldest entry.
   const firstOfDayGapSeconds = useMemo(() => {
-    if (!activeFilter || activities.length === 0) return null;
+    if (activities.length === 0) return null;
     const displayedIds = new Set(activities.map((a) => a.id));
     const oldest = activities[activities.length - 1];
     // sleep rows anchor at their start (matching the end-anchored gap dividers: start minus previous end)
@@ -231,7 +232,7 @@ const TimelineV2ActivityList = ({
       ? new Date(String(oldest.startTime)).getTime()
       : new Date(getActivityTime(oldest)).getTime();
     const candidateTimesDescMs = [...(filterHistory ?? []), ...(historyActivities ?? []), ...(allActivities ?? [])]
-      .filter((a) => !displayedIds.has(a.id) && matchesFilterType(a, activeFilter))
+      .filter((a) => !displayedIds.has(a.id) && (!activeFilter || matchesFilterType(a, activeFilter)))
       .map((a) => new Date(getActivityTime(a)).getTime())
       .sort((a, b) => b - a);
     const gapMs = getPreviousEntryGapMs(candidateTimesDescMs, oldestTimeMs);
