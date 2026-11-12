@@ -212,6 +212,32 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iOld);
   });
 
+  it('shows the first filtered entry with a divider to the previous entry hidden by the filter', () => {
+    const diapers = [
+      { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
+      { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    // a note at 11:00 sits between the diapers in the full list but is hidden by the filter
+    const allActivities = [
+      ...diapers,
+      { id: 'n1', babyId: 'b1', content: 'note', time: '2026-07-22T11:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities,
+      })
+    );
+    // divider above the first diaper: gap to the hidden note (11:00 -> 12:30 = 1h 30m),
+    // plus the between-entry divider (10:00 -> 12:30 = 2h 30m) above the older diaper
+    expect(gapValues(html)).toEqual(['1h 30m', '2h 30m']);
+    const iGapFirst = html.indexOf('1h 30m');
+    const iNew = html.indexOf('12:30 PM');
+    expect(iGapFirst).toBeGreaterThan(-1);
+    expect(iGapFirst).toBeLessThan(iNew);
+  });
+
   it('shows the first diaper of the day with a divider to the last diaper of the previous day', () => {
     const diapers = [
       { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T10:00:00.000Z' },

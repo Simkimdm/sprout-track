@@ -21,7 +21,7 @@ import FullLogActivityList from './FullLogActivityList';
 import FullLogActivityDetails from './FullLogActivityDetails';
 import FullLogExportButton from './FullLogExportButton';
 import { getActivityEndpoint, getActivityTime } from '@/src/components/Timeline/utils';
-import { getPreviousEntryGapMinutes } from '@/src/utils/activityGap';
+import { getPreviousEntryGapMs } from '@/src/utils/activityGap';
 import { PumpLogResponse, MedicineLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse } from '@/app/api/types';
 import { cn } from '@/src/lib/utils';
 import styles from './full-log-timeline.styles';
@@ -349,7 +349,8 @@ const FullLogTimeline: React.FC<FullLogTimelineProps> = ({
   const firstEntryGapMinutes = useMemo(() => {
     if ((!activeFilter && !searchQuery) || sortedActivities.length === 0) return null;
     const allTimesDescMs = sortedAllActivities.map((activity) => new Date(getActivityTime(activity)).getTime());
-    return getPreviousEntryGapMinutes(allTimesDescMs, new Date(getActivityTime(sortedActivities[0])).getTime());
+    const gapMs = getPreviousEntryGapMs(allTimesDescMs, new Date(getActivityTime(sortedActivities[0])).getTime());
+    return gapMs === null ? null : Math.floor(gapMs / 60000);
   }, [activeFilter, searchQuery, sortedActivities, sortedAllActivities]);
 
   // Calculate total pages
