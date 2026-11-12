@@ -549,17 +549,13 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
       };
       const formatDiaperColor = (color: string) => {
         switch (color) {
-          case 'BLACK': return t('Black');
-          case 'GREEN': return t('Green');
-          case 'GREENISH_YELLOW': return t('Greenish Yellow');
-          case 'LIGHT_GREEN': return t('Light Green');
           case 'YELLOW': return t('Yellow');
-          case 'PALE_YELLOW': return t('Pale Yellow');
-          case 'ORANGE': return t('Orange');
-          case 'GREENISH_BROWN': return t('Greenish Brown');
-          case 'BEIGE': return t('Beige');
+          case 'YELLOW_BROWN': return t('Yellow Brown');
           case 'BROWN': return t('Brown');
+          case 'GREEN': return t('Green');
+          case 'ORANGE': return t('Orange');
           case 'RED': return t('Red');
+          case 'BLACK': return t('Black');
           case 'WHITE': return t('White');
           case 'GREY': return t('Gray');
           case 'OTHER': return t('Other');
@@ -1065,17 +1061,13 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       };
       const formatDiaperColor = (color: string) => {
         switch (color) {
-          case 'BLACK': return t('Black');
-          case 'GREEN': return t('Green');
-          case 'GREENISH_YELLOW': return t('Greenish Yellow');
-          case 'LIGHT_GREEN': return t('Light Green');
           case 'YELLOW': return t('Yellow');
-          case 'PALE_YELLOW': return t('Pale Yellow');
-          case 'ORANGE': return t('Orange');
-          case 'GREENISH_BROWN': return t('Greenish Brown');
-          case 'BEIGE': return t('Beige');
+          case 'YELLOW_BROWN': return t('Yellow Brown');
           case 'BROWN': return t('Brown');
+          case 'GREEN': return t('Green');
+          case 'ORANGE': return t('Orange');
           case 'RED': return t('Red');
+          case 'BLACK': return t('Black');
           case 'WHITE': return t('White');
           case 'GREY': return t('Gray');
           case 'OTHER': return t('Other');

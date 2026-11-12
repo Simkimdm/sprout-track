@@ -138,8 +138,7 @@ const NORMAL_COLORS = new Set([
   'yellow', 'brown', 'tan', 'mustard', 'green-brown', 'dark brown',
   'light brown', 'golden', 'orange', 'greenish', 'dark yellow',
   'light yellow', 'khaki', 'olive',
-  'light green', 'light_green', 'greenish yellow', 'greenish_yellow',
-  'greenish brown', 'greenish_brown', 'yellow-green', 'yellow_green',
+  'yellow brown', 'yellow_brown', 'green', 'yellow',
 ]);
 
 /**

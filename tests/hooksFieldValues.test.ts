@@ -15,8 +15,8 @@ describe('canonical field-value sets', () => {
   it('matches the diaper form dropdown values verbatim', () => {
     expect(DIAPER_CONDITIONS).toEqual(['NORMAL', 'LOOSE', 'FIRM', 'OTHER']);
     expect(DIAPER_COLORS).toEqual([
-      'BLACK', 'GREEN', 'GREENISH_YELLOW', 'LIGHT_GREEN', 'YELLOW', 'PALE_YELLOW',
-      'ORANGE', 'GREENISH_BROWN', 'BEIGE', 'BROWN', 'RED', 'WHITE', 'GREY', 'OTHER',
+      'YELLOW', 'YELLOW_BROWN', 'BROWN', 'GREEN', 'ORANGE', 'RED',
+      'BLACK', 'WHITE', 'GREY', 'OTHER',
     ]);
     expect(DIAPER_SMELLS).toEqual(['ODORLESS', 'MILD', 'SOUR', 'STRONG', 'OTHER']);
   });
@@ -48,7 +48,7 @@ describe('normalizeEnumValue', () => {
     expect(normalizeEnumValue('normal', DIAPER_CONDITIONS)).toBe('NORMAL');
     expect(normalizeEnumValue('Loose', DIAPER_CONDITIONS)).toBe('LOOSE');
     expect(normalizeEnumValue('yellow', DIAPER_COLORS)).toBe('YELLOW');
-    expect(normalizeEnumValue('light_green', DIAPER_COLORS)).toBe('LIGHT_GREEN');
+    expect(normalizeEnumValue('yellow_brown', DIAPER_COLORS)).toBe('YELLOW_BROWN');
     expect(normalizeEnumValue('sour', DIAPER_SMELLS)).toBe('SOUR');
     expect(normalizeEnumValue('good', SLEEP_QUALITIES)).toBe('GOOD');
     expect(normalizeEnumValue('sponge bath', BATH_TYPES)).toBe('Sponge Bath');
