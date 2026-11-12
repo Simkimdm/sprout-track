@@ -68,7 +68,7 @@ interface DiaperSelectProps {
 export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSelectProps) {
   const { t } = useLocalization();
   return (
-    <div className="grid grid-cols-7 gap-2" role="radiogroup" aria-label={t('Color')}>
+    <div className="grid grid-cols-2 gap-2 justify-items-start" role="radiogroup" aria-label={t('Color')}>
       {DIAPER_COLORS.map((color) => {
         const selected = value === color;
         return (
@@ -81,7 +81,7 @@ export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSele
             title={t(COLOR_LABELS[color])}
             disabled={disabled}
             onClick={() => onValueChange(selected ? '' : color)}
-            className={`h-9 w-9 rounded-full border border-slate-300 transition-transform duration-150 hover:scale-110 disabled:opacity-50 ${
+            className={`h-10 w-10 rounded-full border border-slate-300 transition-transform duration-150 hover:scale-110 disabled:opacity-50 ${
               selected ? 'scale-110 ring-2 ring-slate-700 ring-offset-2' : ''
             }`}
             style={{ backgroundColor: DIAPER_COLOR_HEX[color] }}
