@@ -553,8 +553,10 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           case 'GREENISH_YELLOW': return t('Greenish Yellow');
           case 'LIGHT_GREEN': return t('Light Green');
           case 'YELLOW': return t('Yellow');
+          case 'PALE_YELLOW': return t('Pale Yellow');
           case 'ORANGE': return t('Orange');
           case 'GREENISH_BROWN': return t('Greenish Brown');
+          case 'BEIGE': return t('Beige');
           case 'BROWN': return t('Brown');
           case 'RED': return t('Red');
           case 'WHITE': return t('White');
@@ -1067,8 +1069,10 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
           case 'GREENISH_YELLOW': return t('Greenish Yellow');
           case 'LIGHT_GREEN': return t('Light Green');
           case 'YELLOW': return t('Yellow');
+          case 'PALE_YELLOW': return t('Pale Yellow');
           case 'ORANGE': return t('Orange');
           case 'GREENISH_BROWN': return t('Greenish Brown');
+          case 'BEIGE': return t('Beige');
           case 'BROWN': return t('Brown');
           case 'RED': return t('Red');
           case 'WHITE': return t('White');

@@ -15,8 +15,8 @@ describe('canonical field-value sets', () => {
   it('matches the diaper form dropdown values verbatim', () => {
     expect(DIAPER_CONDITIONS).toEqual(['NORMAL', 'LOOSE', 'FIRM', 'OTHER']);
     expect(DIAPER_COLORS).toEqual([
-      'BLACK', 'GREEN', 'GREENISH_YELLOW', 'LIGHT_GREEN', 'YELLOW', 'ORANGE',
-      'GREENISH_BROWN', 'BROWN', 'RED', 'WHITE', 'GREY', 'OTHER',
+      'BLACK', 'GREEN', 'GREENISH_YELLOW', 'LIGHT_GREEN', 'YELLOW', 'PALE_YELLOW',
+      'ORANGE', 'GREENISH_BROWN', 'BEIGE', 'BROWN', 'RED', 'WHITE', 'GREY', 'OTHER',
     ]);
     expect(DIAPER_SMELLS).toEqual(['ODORLESS', 'MILD', 'SOUR', 'STRONG', 'OTHER']);
   });
