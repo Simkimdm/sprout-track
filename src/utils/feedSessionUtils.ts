@@ -326,6 +326,7 @@ export function buildGapDividerMap(
 ): Map<string, FeedGapInfo> {
   const result = new Map<string, FeedGapInfo>();
   const sorted = [...points].sort((a, b) => a.startTs - b.startTs);
+  const crossBoundary: { rowIds: string[]; info: FeedGapInfo }[] = [];
   sorted.forEach((point, index) => {
     const prev = index > 0 ? sorted[index - 1] : null;
     if (!prev) return;
@@ -333,10 +334,22 @@ export function buildGapDividerMap(
       gapSeconds: Math.max(0, point.startTs - (from === 'end' ? prev.endTs : prev.startTs)) / 1000,
       durationSeconds: point.durationSeconds,
     };
-    const target = renderedRowIds && !prev.rowIds.some(id => renderedRowIds.has(id)) ? point : prev;
-    for (const rowId of target.rowIds) {
-      result.set(rowId, info);
+    if (renderedRowIds && !prev.rowIds.some(id => renderedRowIds.has(id))) {
+      // gap anchored at an unrendered history row (e.g. previous day): stays on the newer
+      // point so the first entry of the day shows its divider to the previous day's last entry
+      crossBoundary.push({ rowIds: point.rowIds, info });
+    } else {
+      for (const rowId of prev.rowIds) {
+        result.set(rowId, info);
+      }
     }
   });
+  // cross-boundary gaps win on the first entry of the day, so they are not overwritten
+  // by the between-entry gap when the day has several entries of the same type
+  for (const cb of crossBoundary) {
+    for (const rowId of cb.rowIds) {
+      result.set(rowId, cb.info);
+    }
+  }
   return result;
 }

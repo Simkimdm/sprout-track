@@ -213,14 +213,14 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iOld);
   });
 
-  it('shows the first entry of the day (oldest) with a divider to the previous entry, usually the previous day', () => {
+  it('shows the first entry of the day (oldest) with a divider to the previous same-type entry of the previous day, even with several entries today', () => {
     const diapers = [
       { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
       { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
     ];
-    // last entry of the previous day is a note at 22:00 (hidden by the diaper filter)
+    // last diaper of the previous day at 22:00 (hidden by the filter, not rendered)
     const history = [
-      { id: 'n1', babyId: 'b1', content: 'note', time: '2026-07-21T22:00:00.000Z' },
+      { id: 'h1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T22:00:00.000Z' },
     ];
     const html = renderToString(
       React.createElement(TimelineV2ActivityList as any, {
@@ -229,8 +229,8 @@ describe('TimelineV2ActivityList filtered feed view', () => {
         activeFilter: 'diaper', allActivities: diapers, historyActivities: history,
       })
     );
-    // oldest displayed entry (d1, 10:00) carries the divider to the previous entry
-    // (yesterday 22:00 -> today 10:00 = 12h), rendered above the 10:00 AM row
+    // the oldest diaper (10:00) shows the cross-midnight gap (22:00 -> 10:00 = 12h),
+    // not the between-entry gap (10:00 -> 12:30 = 2h 30m)
     expect(gapValues(html)).toEqual(['12h 0m']);
     const iGap = html.indexOf('12h 0m');
     const iOld = html.indexOf('10:00 AM');
@@ -281,24 +281,29 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(gapValues(html)).toEqual([]);
   });
 
-  it('shows the first feed of the day with a divider to the last entry of the previous day (any type)', () => {
+  it('shows the first feed of the day with a divider to the previous feed of the previous day', () => {
     const feeds = [
       { id: 'f2', babyId: 'b1', type: 'BOTTLE', time: '2026-07-22T14:00:00.000Z', amount: 100 },
       { id: 'f1', babyId: 'b1', type: 'BOTTLE', time: '2026-07-22T08:00:00.000Z', amount: 90 },
     ];
-    // last entry of the previous day is a diaper at 23:00 (hidden by the feed filter)
+    // last feed of the previous day at 23:00 (the previous day's last entry was a sleep,
+    // but the feed filter must anchor at the previous FEED, not at that sleep)
+    const historyFeeds = [
+      { id: 'hf', babyId: 'b1', type: 'BOTTLE', time: '2026-07-21T23:00:00.000Z', amount: 80 },
+    ];
     const history = [
-      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T23:00:00.000Z' },
+      ...historyFeeds,
+      { id: 'hs', babyId: 'b1', type: 'NIGHT', startTime: '2026-07-21T23:30:00.000Z', endTime: '2026-07-22T01:00:00.000Z', duration: 90 },
     ];
     const html = renderToString(
       React.createElement(TimelineV2ActivityList as any, {
         activities: feeds, settings: null, isLoading: false, isAnimated: false,
         selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
         activeFilter: 'feed', allActivities: feeds, historyActivities: history,
-        feedTimerFrom: 'start', gapById: new Map(), dividerGapById: computeDividerGapById(feeds, []),
+        feedTimerFrom: 'start', gapById: new Map(), dividerGapById: computeDividerGapById(feeds, historyFeeds),
       })
     );
-    // oldest feed (08:00) carries the divider to the previous entry (yesterday 23:00 -> 9h)
+    // oldest feed (08:00) anchors at the previous feed (yesterday 23:00 -> 9h), not at the later sleep
     expect(gapValues(html)).toEqual(['9h 0m']);
     const iGap = html.indexOf('9h 0m');
     const iOldest = html.indexOf('8:00 AM');
