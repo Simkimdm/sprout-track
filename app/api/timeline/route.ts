@@ -180,18 +180,20 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
       // console.log(`${key}: ${value}`);
     // });
     
-    const limit = Number(searchParams.get('limit')) || 200;
+    const limitParam = searchParams.get('limit');
+    const limit = Number(limitParam) || 200;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    
+
     // console.log(`API Request - babyId: ${babyId}, startDate: ${startDate}, endDate: ${endDate}`);
 
     let effectiveStartDate = startDate;
     let effectiveEndDate = endDate;
     let useLimit = true;
-    
-    if (startDate && endDate) {
-      // Don't use limit when filtering by date range
+
+    if (startDate && endDate && !limitParam) {
+      // Don't use limit when filtering by date range, unless an explicit limit is requested
+      // (e.g. "last N of one type before a date" for gap-divider anchors)
       useLimit = false;
       // console.log(`Using date range: ${startDate} to ${endDate}`);
     } else {

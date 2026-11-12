@@ -1,8 +1,9 @@
 import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
-import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel } from '../utils';
+import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel, matchesFilterType } from '../utils';
 import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { getPreviousEntryGapMs } from '@/src/utils/activityGap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -72,6 +73,7 @@ const TimelineV2ActivityList = ({
   activeFilter,
   allActivities,
   historyActivities,
+  filterHistory,
   feedTimerFrom,
   gapById,
   dividerGapById,
@@ -217,12 +219,31 @@ const TimelineV2ActivityList = ({
     return buildGapDividerMap(points, 'start', new Set(activities.map(a => a.id)));
   }, [activities, activeFilter, historyActivities]);
 
+  // Gap between the first entry of the day (the oldest displayed entry) and the previous
+  // entry of the SAME type as the active filter — usually from a previous day, so the deep
+  // filter history (filterHistory) is included as anchor source. Rendered on the oldest entry.
+  const firstOfDayGapSeconds = useMemo(() => {
+    if (!activeFilter || activities.length === 0) return null;
+    const displayedIds = new Set(activities.map((a) => a.id));
+    const oldest = activities[activities.length - 1];
+    // sleep rows anchor at their start (matching the end-anchored gap dividers: start minus previous end)
+    const oldestTimeMs = 'duration' in oldest && 'startTime' in oldest && !('activities' in oldest) && oldest.startTime
+      ? new Date(String(oldest.startTime)).getTime()
+      : new Date(getActivityTime(oldest)).getTime();
+    const candidateTimesDescMs = [...(filterHistory ?? []), ...(historyActivities ?? []), ...(allActivities ?? [])]
+      .filter((a) => !displayedIds.has(a.id) && matchesFilterType(a, activeFilter))
+      .map((a) => new Date(getActivityTime(a)).getTime())
+      .sort((a, b) => b - a);
+    const gapMs = getPreviousEntryGapMs(candidateTimesDescMs, oldestTimeMs);
+    return gapMs === null ? null : gapMs / 1000;
+  }, [activeFilter, activities, allActivities, historyActivities, filterHistory]);
+
   // Group each time-of-day bucket into render items; multi-row breast sessions become one item.
   // Feed/sleep items carry a dividerGap: the gap to the next newer same-type entry, keyed to the
   // older entry of the pair so the divider renders between the two entries (only when > 0).
   const renderGroups = useMemo(() => {
     const emitted = new Set<string>();
-    return groupedActivities.map((group) => {
+    const groups = groupedActivities.map((group) => {
       const items: { key: string; sessionRows: ActivityType[] | null; activity: ActivityType | null; dividerGap?: string }[] = [];
       for (const activity of group.activities) {
         if (emitted.has(activity.id)) continue;
@@ -264,7 +285,15 @@ const TimelineV2ActivityList = ({
       }
       return { ...group, items };
     });
-  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter]);
+    // The first entry of the day (oldest displayed, i.e. the last rendered item) carries
+    // the divider with the gap to the previous same-type entry (usually of the previous day).
+    if (firstOfDayGapSeconds != null && groups.length > 0) {
+      const lastGroup = groups[groups.length - 1];
+      const lastItem = lastGroup.items[lastGroup.items.length - 1];
+      if (lastItem) lastItem.dividerGap = formatDurationWords(firstOfDayGapSeconds);
+    }
+    return groups;
+  }, [groupedActivities, sessionByRowId, dividerGapById, otherGapById, activeFilter, firstOfDayGapSeconds]);
 
   // Render one timeline event row (also used for each row of a grouped L+R session)
   const renderActivity = (activity: ActivityType, groupIndex: number, activityIndex: number) => {

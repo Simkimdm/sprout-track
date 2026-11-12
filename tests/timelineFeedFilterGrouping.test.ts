@@ -311,6 +311,36 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(iGap).toBeLessThan(iOldest);
   });
 
+  it('anchors the first-of-day divider at the previous same-type entry from deep history when the previous day has none of that type', () => {
+    const diapers = [
+      { id: 'd2', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-22T12:30:00.000Z' },
+      { id: 'd1', babyId: 'b1', type: 'DIRTY', condition: 'DIRTY', time: '2026-07-22T10:00:00.000Z' },
+    ];
+    // yesterday (+/-1 day window) only has a sleep and a feed — no diaper
+    const history = [
+      { id: 'hSleep', babyId: 'b1', type: 'NIGHT', startTime: '2026-07-21T22:00:00.000Z', endTime: '2026-07-21T23:30:00.000Z', duration: 90 },
+      { id: 'hFeed', babyId: 'b1', type: 'BOTTLE', time: '2026-07-21T20:00:00.000Z', amount: 80 },
+    ];
+    // deep history: last diaper was two days ago at 20:00
+    const filterHistory = [
+      { id: 'hDiaper', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-20T20:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: diapers, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'diaper', allActivities: [...diapers, ...history], historyActivities: history,
+        filterHistory,
+      })
+    );
+    // oldest diaper (today 10:00) anchors at the diaper from two days ago (20:00 -> 38h)
+    expect(gapValues(html)).toEqual(['38h 0m']);
+    const iGap = html.indexOf('38h 0m');
+    const iOld = html.indexOf('10:00 AM');
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iGap).toBeLessThan(iOld);
+  });
+
   it('omits the date on the side of an overnight sleep that is today', () => {
     // end = today 00:12, start = yesterday 21:26
     const end = new Date(); end.setHours(0, 12, 0, 0);
