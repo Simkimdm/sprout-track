@@ -3,11 +3,12 @@
 // items 3, 5, 10, 13). Writers normalize known values to this exact casing;
 // GET /reference exposes the same sets so a client can discover them.
 
-/** src/components/forms/DiaperForm/index.tsx */
-export const DIAPER_CONDITIONS = ['NORMAL', 'LOOSE', 'FIRM', 'OTHER'] as const;
+import { DIAPER_COLORS, DIAPER_SMELLS } from '@/src/utils/diaperColors';
+
+export { DIAPER_COLORS, DIAPER_SMELLS };
 
 /** src/components/forms/DiaperForm/index.tsx */
-export const DIAPER_COLORS = ['YELLOW', 'BROWN', 'GREEN', 'BLACK', 'RED', 'OTHER'] as const;
+export const DIAPER_CONDITIONS = ['NORMAL', 'LOOSE', 'FIRM', 'OTHER'] as const;
 
 /** src/components/forms/SleepForm/index.tsx */
 export const SLEEP_QUALITIES = ['POOR', 'FAIR', 'GOOD', 'EXCELLENT'] as const;

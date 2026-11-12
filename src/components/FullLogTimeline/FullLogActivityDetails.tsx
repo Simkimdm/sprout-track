@@ -6,12 +6,13 @@ import {
   FormPageContent,
   FormPageFooter
 } from '@/src/components/ui/form-page';
-import { FullLogActivityDetailsProps } from './full-log-timeline.types';
+import { ActivityDetail, FullLogActivityDetailsProps } from './full-log-timeline.types';
 import { getActivityDetails, formatTime } from '@/src/components/Timeline/utils';
 import { useLocalization } from '@/src/context/localization';
 import { useUnit } from '@/src/hooks/useUnit';
 import { FeedLogResponse } from '@/app/api/types';
 import LinkedFeedsSection from '@/src/components/forms/FeedForm/LinkedFeedsSection';
+import { DiaperColorSwatch } from '@/src/components/forms/DiaperForm/diaper-selects';
 
 import './full-log-timeline.css';
 
@@ -104,12 +105,15 @@ const FullLogActivityDetails: React.FC<FullLogActivityDetailsProps> = ({
               );
             })
           ) : (
-            activityDetails.details.map((detail, index) => {
+            activityDetails.details.map((detail: ActivityDetail, index) => {
               const isMultiline = detail.value.includes('\n');
               return (
                 <div key={index} className={`flex ${isMultiline ? 'flex-col gap-1' : 'justify-between items-center'}`}>
                   <span className="text-sm font-medium text-gray-500 full-log-timeline-details-label">{detail.label}:</span>
-                  <span className={`text-sm text-gray-900 full-log-timeline-details-value ${isMultiline ? 'whitespace-pre-line break-words' : ''}`}>{detail.value}</span>
+                  <span className={`text-sm text-gray-900 full-log-timeline-details-value ${isMultiline ? 'whitespace-pre-line break-words' : ''}`}>
+                    {detail.swatchColor && <DiaperColorSwatch color={detail.swatchColor} className="mr-1.5 align-middle" />}
+                    {detail.value}
+                  </span>
                 </div>
               );
             })

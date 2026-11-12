@@ -3,14 +3,14 @@ import prisma from '../../../../../db';
 import { withApiKeyAuth, ApiKeyContext, validateBabyAccess } from '../../../auth';
 import { checkRateLimit } from '../../../rate-limiter';
 import { hookSuccess, hookError } from '../../../response';
-import { BATH_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, SLEEP_QUALITIES } from '../../../field-values';
+import { BATH_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, DIAPER_SMELLS, SLEEP_QUALITIES } from '../../../field-values';
 import { DEFAULT_SLEEP_LOCATIONS } from '@/src/constants/sleepLocations';
 import { applyLocationOrder } from '@/src/utils/sleepLocationUtils';
 import { FOOD_ENJOYMENT_VALUES } from '@/src/utils/foodLogUtils';
 
 const VALID_TYPES = [
   'medicines', 'supplements', 'sleep-locations', 'play-categories', 'feed-types',
-  'diaper-conditions', 'diaper-colors', 'sleep-qualities', 'bath-types', 'units',
+  'diaper-conditions', 'diaper-colors', 'diaper-smells', 'sleep-qualities', 'bath-types', 'units',
   'foods', 'food-enjoyments',
 ] as const;
 type RefType = typeof VALID_TYPES[number];
@@ -157,6 +157,9 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
   }
   if (!typeParam || typeParam === 'diaper-colors') {
     data.diaperColors = DIAPER_COLORS;
+  }
+  if (!typeParam || typeParam === 'diaper-smells') {
+    data.diaperSmells = DIAPER_SMELLS;
   }
   if (!typeParam || typeParam === 'sleep-qualities') {
     data.sleepQualities = SLEEP_QUALITIES;

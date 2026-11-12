@@ -30,6 +30,7 @@ import {
 import { diaper, bottleBaby } from '@lucide/lab';
 import {
   ActivityType,
+  ActivityDetail,
   ActivityDetails,
   ActivityDescription,
   ActivityStyle,
@@ -548,14 +549,34 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
       };
       const formatDiaperColor = (color: string) => {
         switch (color) {
-          case 'YELLOW': return t('Yellow');
-          case 'BROWN': return t('Brown');
+          case 'BLACK': return t('Black');
           case 'GREEN': return t('Green');
+          case 'GREENISH_YELLOW': return t('Greenish Yellow');
+          case 'LIGHT_GREEN': return t('Light Green');
+          case 'YELLOW': return t('Yellow');
+          case 'PALE_YELLOW': return t('Pale Yellow');
+          case 'ORANGE': return t('Orange');
+          case 'GREENISH_BROWN': return t('Greenish Brown');
+          case 'BEIGE': return t('Beige');
+          case 'BROWN': return t('Brown');
+          case 'RED': return t('Red');
+          case 'WHITE': return t('White');
+          case 'GREY': return t('Gray');
           case 'OTHER': return t('Other');
           default: return t(capitalize(color));
         }
       };
-      const details = [
+      const formatDiaperSmell = (smell: string) => {
+        switch (smell) {
+          case 'ODORLESS': return t('Odorless');
+          case 'MILD': return t('Mild');
+          case 'SOUR': return t('Sour');
+          case 'STRONG': return t('Strong');
+          case 'OTHER': return t('Other');
+          default: return t(capitalize(smell));
+        }
+      };
+      const details: ActivityDetail[] = [
         { label: t('Time'), value: formatTime(activity.time, settings, true, t) },
         { label: t('Type'), value: formatDiaperType(activity.type) },
       ];
@@ -566,7 +587,10 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           details.push({ label: t('Condition'), value: formatDiaperCondition(activity.condition) });
         }
         if (activity.color) {
-          details.push({ label: t('Color'), value: formatDiaperColor(activity.color) });
+          details.push({ label: t('Color'), value: formatDiaperColor(activity.color), swatchColor: activity.color });
+        }
+        if (activity.smell) {
+          details.push({ label: t('Smell'), value: formatDiaperSmell(activity.smell) });
         }
       }
 
@@ -1041,11 +1065,31 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       };
       const formatDiaperColor = (color: string) => {
         switch (color) {
-          case 'YELLOW': return t('Yellow');
-          case 'BROWN': return t('Brown');
+          case 'BLACK': return t('Black');
           case 'GREEN': return t('Green');
+          case 'GREENISH_YELLOW': return t('Greenish Yellow');
+          case 'LIGHT_GREEN': return t('Light Green');
+          case 'YELLOW': return t('Yellow');
+          case 'PALE_YELLOW': return t('Pale Yellow');
+          case 'ORANGE': return t('Orange');
+          case 'GREENISH_BROWN': return t('Greenish Brown');
+          case 'BEIGE': return t('Beige');
+          case 'BROWN': return t('Brown');
+          case 'RED': return t('Red');
+          case 'WHITE': return t('White');
+          case 'GREY': return t('Gray');
           case 'OTHER': return t('Other');
           default: return t(capitalize(color));
+        }
+      };
+      const formatDiaperSmell = (smell: string) => {
+        switch (smell) {
+          case 'ODORLESS': return t('Odorless');
+          case 'MILD': return t('Mild');
+          case 'SOUR': return t('Sour');
+          case 'STRONG': return t('Strong');
+          case 'OTHER': return t('Other');
+          default: return t(capitalize(smell));
         }
       };
       
@@ -1053,6 +1097,7 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       if (isDirtyDiaper(activity.type)) {
         if (activity.condition) conditions.push(formatDiaperCondition(activity.condition));
         if (activity.color) conditions.push(formatDiaperColor(activity.color));
+        if (activity.smell) conditions.push(formatDiaperSmell(activity.smell));
       }
 
       // Add blowout information for all diaper types

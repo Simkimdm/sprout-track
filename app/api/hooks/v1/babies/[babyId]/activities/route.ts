@@ -6,7 +6,7 @@ import { hookSuccess, hookError } from '../../../response';
 import { notifyActivityCreated, resetTimerNotificationState } from '@/src/lib/notifications/activityHook';
 import { startBreastfeedSession, updateBreastfeedSession, endBreastfeedSession } from '../../../../../utils/activeBreastFeed';
 import { maybeEndActiveSleepOnFeed } from '../../../../../utils/autoEndSleep';
-import { BATH_TYPES, BOTTLE_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, FEED_SIDES, PUMP_ACTIONS, SLEEP_QUALITIES, normalizeEnumValue } from '../../../field-values';
+import { BATH_TYPES, BOTTLE_TYPES, DIAPER_COLORS, DIAPER_CONDITIONS, DIAPER_SMELLS, FEED_SIDES, PUMP_ACTIONS, SLEEP_QUALITIES, normalizeEnumValue } from '../../../field-values';
 import { FOOD_FIELDS, formatFoodDetails, getDefaultSolidsUnit, loadFoodCatalog, parseEnjoyment, parseFoodAmount, parseFoodItemInputs, planFoodUnit, resolveFoodItems, resolveItemUnits } from '../../../food';
 import { buildFoodLogFoodFields, deriveMealAmountFromItems } from '@/src/utils/foodLogUtils';
 import { findExistingFoodLog } from '@/scripts/convert-solids-feeds-runner';
@@ -22,7 +22,7 @@ type ActivityType = typeof VALID_TYPES[number];
 // instead of being silently accepted and dropped.
 const TYPE_FIELDS: Record<ActivityType, readonly string[]> = {
   feed: ['type', 'time', 'caretakerName', 'feedType', 'amount', 'unitAbbr', 'side', 'food', 'notes', 'bottleType', 'action', 'duration'],
-  diaper: ['type', 'time', 'caretakerName', 'diaperType', 'condition', 'color', 'blowout', 'creamApplied', 'notes'],
+  diaper: ['type', 'time', 'caretakerName', 'diaperType', 'condition', 'color', 'smell', 'blowout', 'creamApplied', 'notes'],
   sleep: ['type', 'time', 'caretakerName', 'sleepType', 'action', 'duration', 'location', 'quality', 'notes'],
   note: ['type', 'time', 'caretakerName', 'content', 'category'],
   pump: ['type', 'time', 'caretakerName', 'action', 'duration', 'leftAmount', 'rightAmount', 'totalAmount', 'unitAbbr', 'pumpAction'],
@@ -247,7 +247,7 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
           activityType: 'diaper',
           id: r.id,
           time: r.time.toISOString(),
-          details: { type: r.type, condition: r.condition, color: r.color, blowout: r.blowout, creamApplied: r.creamApplied, notes: r.notes },
+          details: { type: r.type, condition: r.condition, color: r.color, smell: r.smell, blowout: r.blowout, creamApplied: r.creamApplied, notes: r.notes },
           caretakerName: r.caretaker?.name || null,
         }));
       })
@@ -632,7 +632,7 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
       }
 
       case 'diaper': {
-        const { diaperType, condition, color, blowout, creamApplied, notes } = body;
+        const { diaperType, condition, color, smell, blowout, creamApplied, notes } = body;
         if (!diaperType || !['WET', 'DIRTY', 'BOTH', 'DRY'].includes(diaperType)) {
           return hookError('INVALID_DIAPER_TYPE', 'diaperType must be WET, DIRTY, BOTH, or DRY', 400, rl.headers);
         }
@@ -646,13 +646,15 @@ async function handlePost(req: NextRequest, ctx: ApiKeyContext, routeContext: an
         if (conditionResult.error) return hookError('INVALID_CONDITION', conditionResult.error, 400, rl.headers);
         const colorResult = normalizeRequiredEnumIfPresent(color, 'color', DIAPER_COLORS);
         if (colorResult.error) return hookError('INVALID_COLOR', colorResult.error, 400, rl.headers);
+        const smellResult = normalizeRequiredEnumIfPresent(smell, 'smell', DIAPER_SMELLS);
+        if (smellResult.error) return hookError('INVALID_SMELL', smellResult.error, 400, rl.headers);
 
         result = await prisma.diaperLog.create({
-          data: { time, type: diaperType, condition: conditionResult.value, color: colorResult.value, blowout: blowout === true, creamApplied: creamApplied === true, notes: notes || null, babyId, caretakerId, familyId },
+          data: { time, type: diaperType, condition: conditionResult.value, color: colorResult.value, smell: smellResult.value, blowout: blowout === true, creamApplied: creamApplied === true, notes: notes || null, babyId, caretakerId, familyId },
         });
         notifyActivityCreated(babyId, 'diaper', { caretakerId }, { type: diaperType }).catch(console.error);
         resetTimerNotificationState(babyId, 'diaper').catch(console.error);
-        return hookSuccess({ activityType: 'diaper', id: result.id, time: result.time.toISOString(), details: { type: diaperType, condition: conditionResult.value, color: colorResult.value, blowout: result.blowout, creamApplied: result.creamApplied, notes: result.notes } }, { familyId, babyId }, rl.headers);
+        return hookSuccess({ activityType: 'diaper', id: result.id, time: result.time.toISOString(), details: { type: diaperType, condition: conditionResult.value, color: colorResult.value, smell: smellResult.value, blowout: result.blowout, creamApplied: result.creamApplied, notes: result.notes } }, { familyId, babyId }, rl.headers);
       }
 
       case 'sleep': {

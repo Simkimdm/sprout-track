@@ -26,6 +26,7 @@ import { handleExpirationError } from '@/src/lib/expiration-error-handler';
 import { useParams } from 'next/navigation';
 import { useLocalization } from '@/src/context/localization';
 import { isDirtyDiaper } from '@/src/utils/diaperStats';
+import { DiaperColorSelect, DiaperSmellSelect } from './diaper-selects';
 
 interface DiaperFormProps {
   isOpen: boolean;
@@ -70,6 +71,7 @@ export default function DiaperForm({
     type: '' as DiaperType | '',
     condition: '',
     color: '',
+    smell: '',
     blowout: false,
     creamApplied: false,
     notes: '',
@@ -122,6 +124,7 @@ export default function DiaperForm({
           type: activity.type,
           condition: activity.condition || '',
           color: activity.color || '',
+          smell: activity.smell || '',
           blowout: activity.blowout || false,
           creamApplied: activity.creamApplied || false,
           notes: activity.notes || '',
@@ -193,10 +196,11 @@ export default function DiaperForm({
         babyId,
         time: utcTimeString, // Send the UTC ISO string instead of local time
         type: formData.type,
-        // Condition/color only apply when there's contents — clear stale values from a
+        // Condition/color/smell only apply when there's contents — clear stale values from a
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
         color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
+        smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
         blowout: formData.blowout,
         creamApplied: formData.creamApplied,
         notes: formData.notes || null,
@@ -242,6 +246,7 @@ export default function DiaperForm({
         type: '' as DiaperType | '',
         condition: '',
         color: '',
+        smell: '',
         blowout: false,
         creamApplied: false,
         notes: '',
@@ -325,7 +330,7 @@ export default function DiaperForm({
             )}
 
             {formData.type && isDirtyDiaper(formData.type) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label htmlFor={`${formId}-condition`} className="form-label">{t('Condition')}</label>
                   <Select
@@ -348,25 +353,25 @@ export default function DiaperForm({
                 </div>
                 <div>
                   <label htmlFor={`${formId}-color`} className="form-label">{t('Color')}</label>
-                  <Select
+                  <DiaperColorSelect
+                    id={`${formId}-color`}
                     value={formData.color}
                     onValueChange={(value: string) =>
                       setFormData({ ...formData, color: value })
                     }
                     disabled={loading}
-                  >
-                    <SelectTrigger id={`${formId}-color`} className="w-full">
-                      <SelectValue placeholder={t("Select color")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="YELLOW">{t('Yellow')}</SelectItem>
-                      <SelectItem value="BROWN">{t('Brown')}</SelectItem>
-                      <SelectItem value="GREEN">{t('Green')}</SelectItem>
-                      <SelectItem value="BLACK">{t('Black')}</SelectItem>
-                      <SelectItem value="RED">{t('Red')}</SelectItem>
-                      <SelectItem value="OTHER">{t('Other')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`${formId}-smell`} className="form-label">{t('Smell')}</label>
+                  <DiaperSmellSelect
+                    id={`${formId}-smell`}
+                    value={formData.smell}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, smell: value })
+                    }
+                    disabled={loading}
+                  />
                 </div>
               </div>
             )}

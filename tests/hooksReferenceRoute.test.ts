@@ -91,7 +91,10 @@ describe('hooks reference route', () => {
       const payload = await json(response);
 
       expect(response.status).toBe(200);
-      expect(payload.data.diaperColors).toEqual(['YELLOW', 'BROWN', 'GREEN', 'BLACK', 'RED', 'OTHER']);
+      expect(payload.data.diaperColors).toEqual([
+        'BLACK', 'GREEN', 'GREENISH_YELLOW', 'LIGHT_GREEN', 'YELLOW', 'PALE_YELLOW',
+        'ORANGE', 'GREENISH_BROWN', 'BEIGE', 'BROWN', 'RED', 'WHITE', 'GREY', 'OTHER',
+      ]);
     });
 
     it('returns the canonical sleep qualities', async () => {

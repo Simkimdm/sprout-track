@@ -341,7 +341,7 @@ Create a new activity record.
 | `INVALID_AMOUNT` | 400 | A numeric amount field (`amount`, `leftAmount`, `rightAmount`, `totalAmount`) is non-numeric, or a required amount (medicine/supplement `amount`) is missing/null |
 | `INVALID_UNIT` | 400 | `unitAbbr` (feed, pump, medicine, supplement) doesn't match any unit configured for your family; the message lists available `unitAbbr` values. Matching is case-insensitive — `"oz"` resolves to the stored `"OZ"` |
 
-**Validated enum-like fields:** `diaper.condition`, `diaper.color`, `sleep.quality`, `feed.bottleType`, and `feed.side` are matched case-insensitively against a canonical set and stored using that set's exact casing — sending `"loose"` stores `"LOOSE"`. An unrecognized value returns `400` naming the field's error code (`INVALID_CONDITION`, `INVALID_COLOR`, `INVALID_QUALITY`, `INVALID_BOTTLE_TYPE`, `INVALID_SIDE`) with the valid values listed. `bath.bathType` is normalized the same way for its known values, but an unrecognized `bathType` is accepted verbatim rather than rejected — the app supports free-text custom bath types. Use `GET /reference` (below) to discover every one of these sets, plus the family's configured units, ahead of time.
+**Validated enum-like fields:** `diaper.condition`, `diaper.color`, `diaper.smell`, `sleep.quality`, `feed.bottleType`, and `feed.side` are matched case-insensitively against a canonical set and stored using that set's exact casing — sending `"loose"` stores `"LOOSE"`. An unrecognized value returns `400` naming the field's error code (`INVALID_CONDITION`, `INVALID_COLOR`, `INVALID_SMELL`, `INVALID_QUALITY`, `INVALID_BOTTLE_TYPE`, `INVALID_SIDE`) with the valid values listed. `bath.bathType` is normalized the same way for its known values, but an unrecognized `bathType` is accepted verbatim rather than rejected — the app supports free-text custom bath types. Use `GET /reference` (below) to discover every one of these sets, plus the family's configured units, ahead of time.
 
 #### Feed
 
@@ -465,13 +465,15 @@ The feed fields are mapped the way the server's startup conversion of old SOLIDS
 
 **diaperType:** `WET`, `DIRTY`, `BOTH`, or `DRY` (`DRY` records a change with no contents)
 
-Optional fields: `condition`, `color`, `blowout` (boolean), `creamApplied` (boolean), `notes`
+Optional fields: `condition`, `color`, `smell`, `blowout` (boolean), `creamApplied` (boolean), `notes`
 
 `blowout` and `creamApplied` both default to `false` when omitted. If sent, the value must be a real JSON boolean (`true`/`false`) — a truthy-but-not-boolean value (e.g. the string `"true"`, `1`) returns `400`. `creamApplied` is also included in the `GET /activities` response for diaper entries.
 
 **`condition` values:** `NORMAL`, `LOOSE`, `FIRM`, `OTHER` (case-insensitive; stored using this exact casing — sending `"loose"` stores `"LOOSE"`). An unrecognized value returns `400 INVALID_CONDITION`.
 
-**`color` values:** `YELLOW`, `BROWN`, `GREEN`, `BLACK`, `RED`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_COLOR`.
+**`color` values:** `BLACK`, `GREEN`, `GREENISH_YELLOW`, `LIGHT_GREEN`, `YELLOW`, `PALE_YELLOW`, `ORANGE`, `GREENISH_BROWN`, `BEIGE`, `BROWN`, `RED`, `WHITE`, `GREY`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_COLOR`.
+
+**`smell` values:** `ODORLESS`, `MILD`, `SOUR`, `STRONG`, `OTHER` (case-insensitive; stored using this exact casing). An unrecognized value returns `400 INVALID_SMELL`.
 
 #### Sleep
 
@@ -779,7 +781,7 @@ Returns valid values for use with POST endpoints. Use this to discover medicines
 
 | Param | Default | Description |
 |-------|---------|-------------|
-| `type` | all | `medicines`, `supplements`, `sleep-locations`, `play-categories`, `feed-types`, `diaper-conditions`, `diaper-colors`, `sleep-qualities`, `bath-types`, `units`, `foods`, or `food-enjoyments` |
+| `type` | all | `medicines`, `supplements`, `sleep-locations`, `play-categories`, `feed-types`, `diaper-conditions`, `diaper-colors`, `diaper-smells`, `sleep-qualities`, `bath-types`, `units`, `foods`, or `food-enjoyments` |
 | `playType` | -- | Filter play categories by play type |
 
 ```bash
@@ -811,7 +813,8 @@ curl -s \
       { "value": "other", "description": "Other bottle type" }
     ],
     "diaperConditions": ["NORMAL", "LOOSE", "FIRM", "OTHER"],
-    "diaperColors": ["YELLOW", "BROWN", "GREEN", "BLACK", "RED", "OTHER"],
+    "diaperColors": ["BLACK", "GREEN", "GREENISH_YELLOW", "LIGHT_GREEN", "YELLOW", "PALE_YELLOW", "ORANGE", "GREENISH_BROWN", "BEIGE", "BROWN", "RED", "WHITE", "GREY", "OTHER"],
+    "diaperSmells": ["ODORLESS", "MILD", "SOUR", "STRONG", "OTHER"],
     "sleepQualities": ["POOR", "FAIR", "GOOD", "EXCELLENT"],
     "bathTypes": ["Full Bath", "Sponge Bath", "Wipe Down"],
     "units": [
