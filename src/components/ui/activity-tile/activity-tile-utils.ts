@@ -163,17 +163,30 @@ export const useActivityDescription = () => {
             case 'BROWN': return 'Brown';
             case 'GREEN': return 'Green';
             case 'OTHER': return 'Other';
-            default: return color.split('_').map(word => 
+            default: return color.split('_').map(word =>
               word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
             ).join(' ');
           }
         };
-        
+        const formatDiaperSmell = (smell: string) => {
+          switch (smell) {
+            case 'ODORLESS': return 'Odorless';
+            case 'MILD': return 'Mild';
+            case 'SOUR': return 'Sour';
+            case 'STRONG': return 'Strong';
+            case 'OTHER': return 'Other';
+            default: return smell.split('_').map(word =>
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+          }
+        };
+
         let details = '';
         if (isDirtyDiaper(activity.type)) {
           const conditions = [];
           if (activity.condition) conditions.push(formatDiaperCondition(activity.condition));
           if (activity.color) conditions.push(formatDiaperColor(activity.color));
+          if (activity.smell) conditions.push(formatDiaperSmell(activity.smell));
           if (conditions.length > 0) {
             details = ` (${conditions.join(', ')}) - `;
           }

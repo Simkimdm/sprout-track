@@ -456,6 +456,7 @@ model DiaperLog {
   type      DiaperType
   condition String?
   color     String?
+  smell     String?
   blowout      Boolean    @default(false)
   creamApplied Boolean    @default(false)
   notes        String?

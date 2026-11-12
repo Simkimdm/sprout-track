@@ -18,6 +18,7 @@ import { DiaperType } from '@prisma/client';
 import { DiaperLogResponse } from '@/app/api/types';
 import { useLocalization } from '@/src/context/localization';
 import { isDirtyDiaper } from '@/src/utils/diaperStats';
+import { DiaperColorSelect, DiaperSmellSelect } from '@/src/components/forms/DiaperForm/diaper-selects';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import { formatLocalDateTimeInput, parseLocalDateTimeInput } from '@/src/utils/dateTimeInput';
 
@@ -48,6 +49,7 @@ export default function DiaperModal({
     type: '' as DiaperType | '',
     condition: '',
     color: '',
+    smell: '',
   });
 
   // Format date string as a local YYYY-MM-DDTHH:mm value for form state
@@ -66,6 +68,7 @@ export default function DiaperModal({
           type: activity.type,
           condition: activity.condition || '',
           color: activity.color || '',
+          smell: activity.smell || '',
         });
       } else {
         // New entry mode
@@ -92,10 +95,11 @@ export default function DiaperModal({
         babyId,
         time: formData.time,
         type: formData.type,
-        // Condition/color only apply when there's contents — clear stale values from a
+        // Condition/color/smell only apply when there's contents — clear stale values from a
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
         color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
+        smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
       };
 
       const response = await fetch(`/api/diaper-log${activity ? `?id=${activity.id}` : ''}`, {
@@ -118,6 +122,7 @@ export default function DiaperModal({
         type: '' as DiaperType | '',
         condition: '',
         color: '',
+        smell: '',
       });
     } catch (error) {
       console.error('Error saving diaper log:', error);
@@ -168,7 +173,7 @@ export default function DiaperModal({
           </div>
           
           {formData.type && isDirtyDiaper(formData.type) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="form-label">{t('Condition')}</label>
               <Select
@@ -190,22 +195,21 @@ export default function DiaperModal({
               </div>
               <div>
                 <label className="form-label">{t('Color')}</label>
-              <Select
+              <DiaperColorSelect
                 value={formData.color}
                 onValueChange={(value: string) =>
                   setFormData({ ...formData, color: value })
                 }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("Select color")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="YELLOW">{t('Yellow')}</SelectItem>
-                  <SelectItem value="BROWN">{t('Brown')}</SelectItem>
-                  <SelectItem value="GREEN">{t('Green')}</SelectItem>
-                  <SelectItem value="OTHER">{t('Other')}</SelectItem>
-                </SelectContent>
-              </Select>
+              />
+              </div>
+              <div>
+                <label className="form-label">{t('Smell')}</label>
+              <DiaperSmellSelect
+                value={formData.smell}
+                onValueChange={(value: string) =>
+                  setFormData({ ...formData, smell: value })
+                }
+              />
               </div>
             </div>
           )}
