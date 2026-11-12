@@ -32,13 +32,14 @@ import {
   ActivityType,
   ActivityDetails,
   ActivityDescription,
-  ActivityStyle
+  ActivityStyle,
+  FilterType
 } from './types';
 import { getSymbol } from '@/src/hooks/useUnit';
 import { FOOD_ENJOYMENT_LABELS, formatFoodItemDetail, formatFoodLogAmountSummary, formatFoodMealTitle, isFoodLogActivity, isValidEnjoyment, type FoodItemDisplay } from '@/src/utils/foodLogUtils';
 import { lbToLbOz, formatWeightDisplay } from '@/src/utils/weightUnits';
 import { formatPauseDuration } from '@/src/utils/pauseDisplay';
-import { isDirtyDiaper } from '@/src/utils/diaperStats';
+import { isDirtyDiaper, isWetDiaper } from '@/src/utils/diaperStats';
 import { localizeSleepLocation } from '@/src/utils/sleepLocationUtils';
 import { formatSleepTimeSpan } from '@/src/utils/sleepTimeSpan';
 
@@ -146,6 +147,54 @@ export const getActivityIcon = (activity: ActivityType) => {
     }
   }
   return null;
+};
+
+/**
+ * Whether an activity matches a timeline filter type (same rules as the
+ * filtered display list, minus the calendar-event special case which is
+ * handled by the caller). Used both for filtering and for anchoring the
+ * first-of-day gap divider at the previous same-type entry.
+ */
+export const matchesFilterType = (activity: ActivityType, filter: FilterType): boolean => {
+  switch (filter) {
+    case 'sleep':
+      return 'duration' in activity;
+    case 'feed':
+      // Bottle and breast feeds only; unconverted SOLIDS feeds live under the
+      // food filter and breast-milk adjustments (amount without type) stay out
+      return 'amount' in activity && 'type' in activity &&
+             (activity as any).type !== 'SOLIDS';
+    case 'diaper':
+      return 'condition' in activity;
+    case 'wet':
+      return 'condition' in activity && 'type' in activity && isWetDiaper((activity as any).type);
+    case 'poop':
+      return 'condition' in activity && 'type' in activity && isDirtyDiaper((activity as any).type);
+    case 'medicine':
+      return 'doseAmount' in activity && 'medicineId' in activity;
+    case 'note':
+      return 'content' in activity;
+    case 'bath':
+      return 'soapUsed' in activity;
+    case 'pump':
+      return 'leftAmount' in activity || 'rightAmount' in activity;
+    case 'breast-milk-adjustment':
+      return 'reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity);
+    case 'milestone':
+      return 'title' in activity && 'category' in activity;
+    case 'measurement':
+      return 'value' in activity && 'unit' in activity;
+    case 'play':
+      return 'activities' in activity && 'type' in activity && ['TUMMY_TIME', 'INDOOR_PLAY', 'OUTDOOR_PLAY', 'WALK', 'CUSTOM'].includes((activity as any).type);
+    case 'vaccine':
+      return 'vaccineName' in activity;
+    case 'food':
+      return 'foodId' in activity;
+    case 'photo':
+      return 'photoLogId' in activity || !!(activity as any).photos?.length;
+    default:
+      return true;
+  }
 };
 
 export const getActivityTime = (activity: ActivityType): string => {

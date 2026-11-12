@@ -20,8 +20,7 @@ import TimelineV2DailyStats from './TimelineV2DailyStats';
 import TimelineV2ActivityList from './TimelineV2ActivityList';
 import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
-import { getActivityEndpoint, getActivityTime } from '../utils';
-import { isWetDiaper, isDirtyDiaper } from '@/src/utils/diaperStats';
+import { getActivityEndpoint, getActivityTime, matchesFilterType } from '../utils';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
 import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
@@ -53,6 +52,9 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   const [calendarEvents, setCalendarEvents] = useState<TimelineCalendarEvent[]>([]);
   // Recent feed entries before the selected day, used as gap anchor for the day's first feeding
   const [historyFeeds, setHistoryFeeds] = useState<ActivityType[]>([]);
+  // Recent entries of the active filter's type before the selected day (deep history,
+  // beyond the +/-1 day window) — anchor for the first-of-day gap divider of any filter
+  const [filterHistory, setFilterHistory] = useState<ActivityType[]>([]);
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
   const [windowActivities, setWindowActivities] = useState<ActivityType[]>([]);
   const [heatmapActivities, setHeatmapActivities] = useState<ActivityType[]>([]);
@@ -187,6 +189,55 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       console.error('Error fetching history feeds:', error);
     }
   }, [babyId]);
+
+  // Fetch the latest entries of the active filter's type before the start of `date`.
+  // One bounded call (types + explicit limit=50), so the first entry of the day can
+  // anchor its gap divider at the previous same-type entry even if that is days ago.
+  const filterTypeParam = (filter: FilterType): string | null => {
+    if (!filter) return null;
+    const map: Record<string, string> = {
+      sleep: 'sleep', feed: 'feed', diaper: 'diaper', wet: 'diaper', poop: 'diaper',
+      note: 'note', bath: 'bath', pump: 'pump', 'breast-milk-adjustment': 'breast-milk-adjustment',
+      milestone: 'milestone', measurement: 'measurement', medicine: 'medicine',
+      play: 'play', vaccine: 'vaccine', food: 'food', photo: 'photo',
+    };
+    return map[filter] ?? null;
+  };
+
+  const fetchFilterHistory = useCallback(async (date: Date, filter: FilterType) => {
+    const typeParam = filterTypeParam(filter);
+    if (!babyId || !typeParam) {
+      setFilterHistory([]);
+      return;
+    }
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(
+        `/api/timeline?babyId=${babyId}&startDate=${encodeURIComponent('1970-01-01T00:00:00.000Z')}&endDate=${encodeURIComponent(startOfDay.toISOString())}&types=${typeParam}&limit=50&_t=${Date.now()}`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Expires': '0',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setFilterHistory(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching filter history:', error);
+    }
+  }, [babyId]);
+
+  useEffect(() => {
+    fetchFilterHistory(selectedDate, activeFilter);
+  }, [fetchFilterHistory, selectedDate, activeFilter]);
 
   // Fetch the calendar events starting on `date` (for the optional timeline merge)
   const fetchCalendarEvents = useCallback(async (date: Date) => {
@@ -481,49 +532,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       : withCalendarEvents.filter(activity => {
           // Calendar events only show unfiltered or under their own filter
           if ('calendarEventId' in activity) return activeFilter === 'calendar';
-          switch (activeFilter) {
-            case 'sleep':
-              return 'duration' in activity;
-            case 'feed':
-              // Bottle and breast feeds only; any unconverted SOLIDS feeds
-              // are left out (solids live under the food filter now) and
-              // breast-milk adjustments (amount without type) stay excluded
-              return 'amount' in activity && 'type' in activity &&
-                     (activity as any).type !== 'SOLIDS';
-            case 'diaper':
-              return 'condition' in activity;
-            case 'wet':
-              return 'condition' in activity && 'type' in activity && isWetDiaper(activity.type);
-            case 'poop':
-              return 'condition' in activity && 'type' in activity && isDirtyDiaper(activity.type);
-            case 'medicine':
-              return 'doseAmount' in activity && 'medicineId' in activity;
-            case 'note':
-              return 'content' in activity;
-            case 'bath':
-              return 'soapUsed' in activity;
-            case 'pump':
-              return 'leftAmount' in activity || 'rightAmount' in activity;
-            case 'breast-milk-adjustment':
-              return 'reason' in activity && 'amount' in activity && !('type' in activity) && !('leftAmount' in activity);
-            case 'milestone':
-              return 'title' in activity && 'category' in activity;
-            case 'measurement':
-              return 'value' in activity && 'unit' in activity;
-            case 'play':
-              return 'activities' in activity && 'type' in activity && ['TUMMY_TIME', 'INDOOR_PLAY', 'OUTDOOR_PLAY', 'WALK', 'CUSTOM'].includes((activity as any).type);
-            case 'vaccine':
-              return 'vaccineName' in activity;
-            case 'food':
-              // Food logs (issue #203) - foodId is unique to food logs
-              return 'foodId' in activity;
-            case 'photo':
-              // Match what the Photos Today stat counts: standalone photo
-              // logs plus any activity with attached photos
-              return 'photoLogId' in activity || !!(activity as any).photos?.length;
-            default:
-              return true;
-          }
+          return matchesFilterType(activity, activeFilter);
         });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -617,6 +626,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             activeFilter={activeFilter}
             allActivities={dateFilteredActivities}
             historyActivities={previousDayActivities}
+            filterHistory={filterHistory}
             feedTimerFrom={feedTimerFrom}
             gapById={gapById}
             dividerGapById={dividerGapById}

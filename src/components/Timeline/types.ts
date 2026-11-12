@@ -110,6 +110,8 @@ export interface TimelineActivityListProps {
   allActivities?: ActivityType[];
   /** Feed entries before the selected day, used as gap anchor for the day's first feeding */
   historyActivities?: ActivityType[];
+  /** Entries of the active filter's type before the selected day (deep history) — anchor for the first-of-day gap divider */
+  filterHistory?: ActivityType[];
   /** Per-entry gap since the previous same-type entry (feeds + sleep), keyed by activity id */
   gapById?: Map<string, import('@/src/utils/feedSessionUtils').FeedGapInfo>;
   /** End-anchored variant (pause since previous entry ENDED, durations included) for the between-entry dividers */
