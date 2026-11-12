@@ -14,6 +14,7 @@ vi.mock('@/src/hooks/useAuthedImage', () => ({
 
 import TimelineV2ActivityList from '@/src/components/Timeline/TimelineV2/TimelineV2ActivityList';
 import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
+import { formatDateShort } from '@/src/utils/dateFormat';
 
 // mirror of TimelineV2's gapById computation
 const computeGapById = (activities: any[], history: any[], from: 'start' | 'end'): Map<string, FeedGapInfo> => {
@@ -278,5 +279,65 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     const html = renderList(null);
     expect(html).toContain('timeline-feed-session');
     expect(gapValues(html)).toEqual([]);
+  });
+
+  it('shows the first feed of the day with a divider to the last entry of the previous day (any type)', () => {
+    const feeds = [
+      { id: 'f2', babyId: 'b1', type: 'BOTTLE', time: '2026-07-22T14:00:00.000Z', amount: 100 },
+      { id: 'f1', babyId: 'b1', type: 'BOTTLE', time: '2026-07-22T08:00:00.000Z', amount: 90 },
+    ];
+    // last entry of the previous day is a diaper at 23:00 (hidden by the feed filter)
+    const history = [
+      { id: 'd1', babyId: 'b1', type: 'WET', condition: 'WET', time: '2026-07-21T23:00:00.000Z' },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: feeds, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T18:00:00'), onActivitySelect: () => {},
+        activeFilter: 'feed', allActivities: feeds, historyActivities: history,
+        feedTimerFrom: 'start', gapById: new Map(), dividerGapById: computeDividerGapById(feeds, []),
+      })
+    );
+    // oldest feed (08:00) carries the divider to the previous entry (yesterday 23:00 -> 9h)
+    expect(gapValues(html)).toEqual(['9h 0m']);
+    const iGap = html.indexOf('9h 0m');
+    const iOldest = html.indexOf('8:00 AM');
+    expect(iGap).toBeGreaterThan(-1);
+    expect(iGap).toBeLessThan(iOldest);
+  });
+
+  it('omits the date on the side of an overnight sleep that is today', () => {
+    // end = today 00:12, start = yesterday 21:26
+    const end = new Date(); end.setHours(0, 12, 0, 0);
+    const start = new Date(end); start.setDate(start.getDate() - 1); start.setHours(21, 26, 0, 0);
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NIGHT', startTime: start.toISOString(), endTime: end.toISOString(), duration: 166 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date(), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+        gapById: new Map(), dividerGapById: new Map(),
+      })
+    );
+    // start keeps its date (yesterday), end shows time only (today): "9:26 PM - 12:12 AM"
+    expect(html).toContain('9:26 PM - 12:12 AM');
+    expect(html).not.toContain(`${formatDateShort(end, 'MM/DD/YYYY')} 12:12 AM`);
+  });
+
+  it('keeps both dates for an overnight sleep when neither side is today', () => {
+    const sleeps = [
+      { id: 's1', babyId: 'b1', type: 'NIGHT', startTime: '2026-07-21T21:26:00.000Z', endTime: '2026-07-22T00:12:00.000Z', duration: 166 },
+    ];
+    const html = renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: sleeps, settings: null, isLoading: false, isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'), onActivitySelect: () => {},
+        activeFilter: 'sleep', allActivities: sleeps,
+        gapById: new Map(), dividerGapById: new Map(),
+      })
+    );
+    expect(html).toContain(`${formatDateShort(new Date('2026-07-21T21:26:00.000Z'), 'MM/DD/YYYY')} 9:26 PM - ${formatDateShort(new Date('2026-07-22T00:12:00.000Z'), 'MM/DD/YYYY')} 12:12 AM`);
   });
 });
