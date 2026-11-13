@@ -68,7 +68,7 @@ export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSele
   const { t } = useLocalization();
   return (
     <div
-      className="grid grid-cols-2 gap-3 justify-items-start"
+      className="grid grid-cols-2 gap-3"
       role="radiogroup"
       aria-label={t('Color')}
     >
@@ -84,8 +84,8 @@ export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSele
             title={t(COLOR_LABELS[color])}
             disabled={disabled}
             onClick={() => onValueChange(selected ? '' : color)}
-            className={`h-8 w-8 rounded-full border border-black/10 shadow-sm transition-all duration-150 hover:scale-110 hover:shadow-md disabled:opacity-50 dark:border-white/10 ${
-              selected ? 'scale-110 ring-2 ring-slate-700 ring-offset-2 dark:ring-slate-300' : ''
+            className={`h-11 w-full rounded-xl border border-black/10 shadow-sm transition-all duration-150 hover:scale-[1.03] hover:shadow-md disabled:opacity-50 dark:border-white/10 ${
+              selected ? 'scale-[1.03] ring-2 ring-slate-700 ring-offset-2 dark:ring-slate-300' : ''
             }`}
             style={{ background: DIAPER_COLOR_BG[color] }}
           />
