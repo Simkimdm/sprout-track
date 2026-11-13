@@ -19,18 +19,18 @@ export const DIAPER_COLORS = [
 
 export type DiaperColor = (typeof DIAPER_COLORS)[number];
 
-/** Swatch color per stool color, used to compare colors visually in selects. */
-export const DIAPER_COLOR_HEX: Record<DiaperColor, string> = {
-  YELLOW: '#f2c94c',
-  YELLOW_BROWN: '#c19a5b',
-  BROWN: '#8a5a33',
-  GREEN: '#7fa653',
-  ORANGE: '#ee8f4d',
-  RED: '#d64545',
-  BLACK: '#2d2a26',
-  WHITE: '#f7f5ef',
-  GREY: '#a9a9a1',
-  OTHER: '#d1d5db',
+/** Swatch background per stool color (kidygrow.com gradients), used to compare colors visually. */
+export const DIAPER_COLOR_BG: Record<DiaperColor, string> = {
+  YELLOW: 'linear-gradient(135deg, #F5E08C, #E8C868)',
+  YELLOW_BROWN: 'linear-gradient(135deg, #D4A574, #B68658)',
+  BROWN: 'linear-gradient(135deg, #8B6F47, #6A5333)',
+  GREEN: 'linear-gradient(135deg, #6B9B57, #4F7A3F)',
+  ORANGE: 'linear-gradient(135deg, #E89858, #D17836)',
+  RED: 'linear-gradient(135deg, #C8443B, #8E2A22)',
+  BLACK: 'linear-gradient(135deg, #2D2D2D, #0F0F0F)',
+  WHITE: 'linear-gradient(135deg, #FDFCF8, #EDEBE2)',
+  GREY: 'linear-gradient(135deg, #EFEEE6, #D8D6CA)',
+  OTHER: 'linear-gradient(135deg, #D8D8D8, #BDBDBD)',
 };
 
 /** Canonical stool smell set for diaper logs (DiaperLog.smell). */
