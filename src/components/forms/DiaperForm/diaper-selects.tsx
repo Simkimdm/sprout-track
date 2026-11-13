@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/src/components/ui/select';
 import { useLocalization } from '@/src/context/localization';
-import { DIAPER_COLORS, DIAPER_COLOR_HEX, DIAPER_SMELLS, DiaperColor } from '@/src/utils/diaperColors';
+import { DIAPER_COLORS, DIAPER_COLOR_BG, DIAPER_SMELLS, DiaperColor } from '@/src/utils/diaperColors';
 
 const COLOR_LABELS: Record<DiaperColor, string> = {
   YELLOW: 'Yellow',
@@ -32,7 +32,10 @@ const SMELL_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-function hexLuminance(hex: string): number {
+function hexLuminance(background: string): number {
+  const match = background.match(/#[0-9a-fA-F]{6}/);
+  if (!match) return 0.5;
+  const hex = match[0];
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -41,12 +44,12 @@ function hexLuminance(hex: string): number {
 
 /** Filled color chip with the label inside, like the U-Heft stool color chart. */
 export function DiaperColorChip({ color, label, className }: { color: string; label: string; className?: string }) {
-  const hex = (DIAPER_COLOR_HEX as Record<string, string>)[color] ?? '#d1d5db';
-  const textColor = hexLuminance(hex) > 0.6 ? '#1f2937' : '#f8fafc';
+  const background = (DIAPER_COLOR_BG as Record<string, string>)[color] ?? 'linear-gradient(135deg, #D8D8D8, #BDBDBD)';
+  const textColor = hexLuminance(background) > 0.6 ? '#1f2937' : '#f8fafc';
   return (
     <span
       className={`inline-flex items-center rounded-md border border-slate-300 px-2.5 py-1 text-sm font-medium transition-transform duration-150 hover:scale-110 ${className ?? ''}`}
-      style={{ backgroundColor: hex, color: textColor }}
+      style={{ background, color: textColor }}
     >
       {label}
     </span>
@@ -65,7 +68,7 @@ export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSele
   const { t } = useLocalization();
   return (
     <div
-      className="grid grid-cols-2 gap-3 justify-items-start rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+      className="grid grid-cols-2 gap-3 justify-items-start"
       role="radiogroup"
       aria-label={t('Color')}
     >
@@ -81,10 +84,10 @@ export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSele
             title={t(COLOR_LABELS[color])}
             disabled={disabled}
             onClick={() => onValueChange(selected ? '' : color)}
-            className={`h-10 w-10 rounded-full border border-black/10 shadow-sm transition-all duration-150 hover:scale-110 hover:shadow-md disabled:opacity-50 dark:border-white/10 ${
-              selected ? 'scale-110 ring-2 ring-slate-700 ring-offset-2 ring-offset-slate-50 dark:ring-slate-300 dark:ring-offset-slate-800' : ''
+            className={`h-8 w-8 rounded-full border border-black/10 shadow-sm transition-all duration-150 hover:scale-110 hover:shadow-md disabled:opacity-50 dark:border-white/10 ${
+              selected ? 'scale-110 ring-2 ring-slate-700 ring-offset-2 dark:ring-slate-300' : ''
             }`}
-            style={{ backgroundColor: DIAPER_COLOR_HEX[color] }}
+            style={{ background: DIAPER_COLOR_BG[color] }}
           />
         );
       })}
