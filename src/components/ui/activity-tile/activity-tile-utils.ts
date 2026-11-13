@@ -185,7 +185,10 @@ export const useActivityDescription = () => {
         if (isDirtyDiaper(activity.type)) {
           const conditions = [];
           if (activity.condition) conditions.push(formatDiaperCondition(activity.condition));
-          if (activity.color) conditions.push(formatDiaperColor(activity.color));
+          if (activity.color) {
+            const colorText = activity.color === 'OTHER' && (activity as any).colorText ? ` (${(activity as any).colorText})` : '';
+            conditions.push(formatDiaperColor(activity.color) + colorText);
+          }
           if (activity.smell) conditions.push(formatDiaperSmell(activity.smell));
           if (conditions.length > 0) {
             details = ` (${conditions.join(', ')}) - `;

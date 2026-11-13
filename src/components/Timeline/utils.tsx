@@ -583,7 +583,8 @@ export const getActivityDetails = (activity: ActivityType, settings: Settings | 
           details.push({ label: t('Condition'), value: formatDiaperCondition(activity.condition) });
         }
         if (activity.color) {
-          details.push({ label: t('Color'), value: formatDiaperColor(activity.color), swatchColor: activity.color });
+          const colorText = activity.color === 'OTHER' && (activity as any).colorText ? ` (${(activity as any).colorText})` : '';
+          details.push({ label: t('Color'), value: formatDiaperColor(activity.color) + colorText, swatchColor: activity.color });
         }
         if (activity.smell) {
           details.push({ label: t('Smell'), value: formatDiaperSmell(activity.smell) });
@@ -1088,7 +1089,10 @@ export const getActivityDescription = (activity: ActivityType, settings: Setting
       const conditions = [];
       if (isDirtyDiaper(activity.type)) {
         if (activity.condition) conditions.push(formatDiaperCondition(activity.condition));
-        if (activity.color) conditions.push(formatDiaperColor(activity.color));
+        if (activity.color) {
+          const colorText = activity.color === 'OTHER' && (activity as any).colorText ? ` (${(activity as any).colorText})` : '';
+          conditions.push(formatDiaperColor(activity.color) + colorText);
+        }
         if (activity.smell) conditions.push(formatDiaperSmell(activity.smell));
       }
 

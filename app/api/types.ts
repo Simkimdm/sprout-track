@@ -187,6 +187,7 @@ export interface DiaperLogCreate {
   type: DiaperType;
   condition?: string;
   color?: string;
+  colorText?: string;
   smell?: string;
   blowout?: boolean;
   creamApplied?: boolean;
