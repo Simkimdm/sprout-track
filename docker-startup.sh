@@ -4,22 +4,27 @@
 DB_PROVIDER="${DATABASE_PROVIDER:-sqlite}"
 echo "Database provider: $DB_PROVIDER"
 
+# Repair ownership of data volumes created by older root-based images. Only root
+# can chown, and a dir-level writetest passes for root even while the files inside
+# are still root-owned, so when running as root chown unconditionally — one root
+# run is then always enough to fix the volume for later non-root runs.
+fix_volume_ownership() {
+  if [ "$(id -u)" = "0" ]; then
+    chown -R 1000:1000 /db /app/env /app/Files /app/logs 2>/dev/null
+  fi
+}
+fix_volume_ownership
+
 # Verify writable mounts early: the container runs as non-root (node, uid 1000).
-# Existing volumes created by older root-based images are root-owned — if we
-# happen to run as root (e.g. --user root override), fix ownership automatically;
-# otherwise fail fast with instructions.
+# Existing volumes created by older root-based images are root-owned — when running
+# as root, ownership was fixed above; otherwise fail fast with instructions.
 for d in /db /app/env /app/Files /app/logs; do
   mkdir -p "$d" 2>/dev/null
   if ! touch "$d/.writetest" 2>/dev/null; then
-    if [ "$(id -u)" = "0" ]; then
-      echo "Volume $d not writable — running as root, fixing ownership to 1000:1000..."
-      chown -R 1000:1000 "$d" 2>/dev/null
-    fi
-    if ! touch "$d/.writetest" 2>/dev/null; then
-      echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
-      echo "  docker exec --user root <container> chown -R 1000:1000 $d"
-      exit 1
-    fi
+    echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
+    echo "  docker exec --user root <container> chown -R 1000:1000 $d"
+    echo "Newer images fix this automatically when the container runs once as root (compose: user: \"0\")."
+    exit 1
   fi
   rm -f "$d/.writetest"
 done
@@ -100,6 +105,35 @@ if [ "$DB_PROVIDER" = "postgresql" ]; then
   esac
 fi
 
+# The dir writetest above only proves the directory is writable. SQLite also needs
+# write access to the database files themselves: a root-owned db file from an older
+# image passes the dir test but makes `migrate deploy` fail mid-run (P3009), which
+# then blocks every later migration and drifts the schema out of sync.
+if [ "$DB_PROVIDER" = "sqlite" ]; then
+  for url in "$DATABASE_URL" "$LOG_DATABASE_URL"; do
+    case "$url" in
+      file:*)
+        dbfile="${url#file:}"
+        dbfile="${dbfile%%\?*}"
+        case "$dbfile" in /*) ;; *) dbfile="$(pwd)/prisma/$dbfile" ;; esac
+        for f in "$dbfile" "$dbfile-wal" "$dbfile-shm" "$dbfile-journal"; do
+          if [ -e "$f" ] && ! [ -w "$f" ]; then
+            if [ "$(id -u)" = "0" ]; then
+              echo "$f is not writable — running as root, fixing ownership to 1000:1000..."
+              chown 1000:1000 "$f" 2>/dev/null
+            fi
+            if ! [ -w "$f" ]; then
+              echo "ERROR: $f is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
+              echo "  docker exec --user root <container> chown -R 1000:1000 /db"
+              exit 1
+            fi
+          fi
+        done
+        ;;
+    esac
+  done
+fi
+
 echo "Generating Prisma clients..."
 npm run prisma:generate
 npm run prisma:generate:log
@@ -135,7 +169,20 @@ if [ "$DB_PROVIDER" = "postgresql" ]; then
 else
   # SQLite: use migration deploy (existing behavior)
   echo "Running database migrations..."
-  npx prisma migrate deploy
+  if ! npx prisma migrate deploy; then
+    # P3009: a migration that failed in an earlier run blocks all new migrations and
+    # leaves the schema drifted (missing columns crash later startup steps, e.g. the
+    # solids conversion). Repair automatically — failed migrations whose change is
+    # already present are marked applied, all others rolled back so deploy retries
+    # them — and retry. Never continue with a drifted schema.
+    echo "Migration deploy failed — repairing failed migrations and retrying..."
+    if ! node scripts/repair-failed-migrations.js; then
+      echo "ERROR: Automatic migration repair failed (see above). The database schema is out of sync with the app;"
+      echo "resolve the failed migration(s) manually, e.g.: npx prisma migrate resolve --rolled-back <migration_name>"
+      echo "See https://pris.ly/d/migrate-resolve — then restart the container."
+      exit 1
+    fi
+  fi
 
   echo "Creating log database schema..."
   npx prisma db push --config prisma/log.config.ts --accept-data-loss
@@ -211,6 +258,10 @@ if [ "$ENABLE_NOTIFICATIONS" = "true" ]; then
 else
   echo "Notifications are disabled (ENABLE_NOTIFICATIONS != true)"
 fi
+
+# A run as root (e.g. --user root to repair a volume) must not leave root-owned
+# files behind — the next start as uid 1000 would fail its writetest again.
+fix_volume_ownership
 
 echo "Starting application..."
 exec "$@"
