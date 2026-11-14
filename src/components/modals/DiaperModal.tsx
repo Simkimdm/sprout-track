@@ -6,7 +6,6 @@ import {
   DialogDescription,
 } from '@/src/components/ui/dialog';
 import { Button } from '@/src/components/ui/button';
-import { Input } from '@/src/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -205,15 +204,11 @@ export default function DiaperModal({
                 onValueChange={(value: string) =>
                   setFormData({ ...formData, color: value })
                 }
+                otherText={formData.colorText}
+                onOtherTextChange={(value: string) =>
+                  setFormData({ ...formData, colorText: value })
+                }
               />
-              {formData.color === 'OTHER' && (
-                <Input
-                  className="mt-2"
-                  placeholder={t('Describe the color')}
-                  value={formData.colorText}
-                  onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
-                />
-              )}
               </div>
               <div>
                 <label className="form-label">{t('Smell')}</label>
