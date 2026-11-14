@@ -4,7 +4,7 @@ import {
   verifyRefreshToken,
   createRefreshToken,
   setRefreshTokenCookie,
-  ACCESS_TOKEN_LIFE,
+  getAccessTokenLife,
   getJwtSecret,
 } from '../../utils/auth';
 import jwt from 'jsonwebtoken';
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     // Sign new access token
     const newAccessToken = jwt.sign(accessTokenData, getJwtSecret(), {
-      expiresIn: `${ACCESS_TOKEN_LIFE}s`,
+      expiresIn: `${getAccessTokenLife()}s`,
     });
 
     // Create response

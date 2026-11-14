@@ -6,10 +6,9 @@ import { checkIpLockout, recordFailedAttempt, resetFailedAttempts } from '../uti
 import { decrypt, isEncrypted } from '../utils/encryption';
 import { randomUUID } from 'crypto';
 import { logApiCall, getClientInfo } from '../utils/api-logger';
-import { ACCESS_TOKEN_LIFE, createRefreshToken, setRefreshTokenCookie, getJwtSecret } from '../utils/auth';
+import { getAccessTokenLife, createRefreshToken, setRefreshTokenCookie, getJwtSecret } from '../utils/auth';
 import { hashPin, isHashedPin, verifyPin } from '../utils/pin-utils';
 
-const TOKEN_EXPIRATION = ACCESS_TOKEN_LIFE;
 
 // Authentication endpoint for caretakers or system PIN
 export async function POST(req: NextRequest) {
@@ -91,7 +90,7 @@ export async function POST(req: NextRequest) {
               isSysAdmin: true,
             },
             getJwtSecret(),
-            { expiresIn: `${TOKEN_EXPIRATION}s` }
+            { expiresIn: `${getAccessTokenLife()}s` }
           );
 
           // Reset failed attempts on successful login
@@ -290,7 +289,7 @@ export async function POST(req: NextRequest) {
             tokenData.planType = targetFamily.account.planType;
           }
 
-          const token = jwt.sign(tokenData, getJwtSecret(), { expiresIn: `${TOKEN_EXPIRATION}s` });
+          const token = jwt.sign(tokenData, getJwtSecret(), { expiresIn: `${getAccessTokenLife()}s` });
           
           // Create response with token
           const response = NextResponse.json<ApiResponse<{ 
@@ -316,6 +315,7 @@ export async function POST(req: NextRequest) {
             }
           );
           
+
           // Update settings with detected authType if it was auto-detected
           if (!settings.authType) {
             try {
@@ -461,7 +461,7 @@ export async function POST(req: NextRequest) {
           tokenData.planType = targetFamily.account.planType;
         }
 
-        const token = jwt.sign(tokenData, getJwtSecret(), { expiresIn: `${TOKEN_EXPIRATION}s` });
+        const token = jwt.sign(tokenData, getJwtSecret(), { expiresIn: `${getAccessTokenLife()}s` });
         
         // Create response with token
         const response = NextResponse.json<ApiResponse<{ 
@@ -488,6 +488,7 @@ export async function POST(req: NextRequest) {
           }
         );
         
+
         // Update settings with detected authType if it was auto-detected
         if (!settings.authType) {
           try {

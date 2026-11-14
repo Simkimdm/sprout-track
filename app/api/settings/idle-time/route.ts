@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '../../types';
-import { REFRESH_TOKEN_LIFE } from '../../utils/auth';
+import { getRefreshTokenLife } from '../../utils/auth';
 
 /**
  * API endpoint to get the idle time value.
@@ -10,7 +10,7 @@ import { REFRESH_TOKEN_LIFE } from '../../utils/auth';
 export async function GET(req: NextRequest) {
   // Use REFRESH_TOKEN_LIFE so idle timeout matches the refresh window
   // Falls back to IDLE_TIME env var for backward compatibility if set
-  const idleTime = parseInt(process.env.IDLE_TIME || '0', 10) || REFRESH_TOKEN_LIFE;
+  const idleTime = parseInt(process.env.IDLE_TIME || '0', 10) || getRefreshTokenLife();
 
   return NextResponse.json<ApiResponse<number>>(
     {

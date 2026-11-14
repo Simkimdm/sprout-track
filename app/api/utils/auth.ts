@@ -22,11 +22,19 @@ function getRefreshTokenSecret(): string {
   return getJwtSecret() + '-refresh';
 }
 
-// Access token lifetime (uses existing AUTH_LIFE env var, admin-configurable)
-export const ACCESS_TOKEN_LIFE = parseInt(process.env.AUTH_LIFE || '1800', 10);
+// Access token lifetime (uses existing AUTH_LIFE env var, admin-configurable).
+// Read via getter so runtime env changes (e.g. after backup restore) take
+// effect without a restart — same as getJwtSecret().
+export function getAccessTokenLife(): number {
+  const v = parseInt(process.env.AUTH_LIFE || '1800', 10);
+  return Number.isFinite(v) && v > 0 ? v : 1800;
+}
 
 // Refresh token lifetime (sliding window - max inactivity gap before re-login)
-export const REFRESH_TOKEN_LIFE = parseInt(process.env.REFRESH_TOKEN_LIFE || '604800', 10); // Default 7 days
+export function getRefreshTokenLife(): number {
+  const v = parseInt(process.env.REFRESH_TOKEN_LIFE || '604800', 10); // Default 7 days
+  return Number.isFinite(v) && v > 0 ? v : 604800;
+}
 
 /**
  * Refresh token payload - minimal claims for looking up fresh data on refresh
@@ -46,7 +54,7 @@ export function createRefreshToken(payload: Omit<RefreshTokenPayload, 'tokenType
   return jwt.sign(
     { ...payload, tokenType: 'refresh' },
     getRefreshTokenSecret(),
-    { expiresIn: `${REFRESH_TOKEN_LIFE}s` }
+    { expiresIn: `${getRefreshTokenLife()}s` }
   );
 }
 
@@ -74,7 +82,7 @@ export function setRefreshTokenCookie(response: NextResponse, token: string): vo
     httpOnly: true,
     secure: process.env.COOKIE_SECURE === 'true',
     sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_LIFE,
+    maxAge: getRefreshTokenLife(),
     path: '/',
   });
 }
