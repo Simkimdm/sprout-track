@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from '@/src/components/ui/select';
 import { useLocalization } from '@/src/context/localization';
-import { Input } from '@/src/components/ui/input';
 import { DIAPER_COLORS, DIAPER_COLOR_BG, DIAPER_SMELLS, DiaperColor } from '@/src/utils/diaperColors';
 
 const COLOR_LABELS: Record<DiaperColor, string> = {
@@ -64,14 +63,8 @@ interface DiaperSelectProps {
   disabled?: boolean;
 }
 
-interface DiaperColorPickerProps extends DiaperSelectProps {
-  otherText?: string;
-  onOtherTextChange?: (value: string) => void;
-}
-
-/** Grid of gradient tiles (U-Heft chart style); click again to clear.
- *  The OTHER tile turns into a free-text input while selected. */
-export function DiaperColorPicker({ value, onValueChange, disabled, otherText, onOtherTextChange }: DiaperColorPickerProps) {
+/** Grid of gradient tiles (U-Heft chart style); click again to clear. */
+export function DiaperColorPicker({ value, onValueChange, disabled }: DiaperSelectProps) {
   const { t } = useLocalization();
   return (
     <div
@@ -81,20 +74,6 @@ export function DiaperColorPicker({ value, onValueChange, disabled, otherText, o
     >
       {DIAPER_COLORS.map((color) => {
         const selected = value === color;
-        if (color === 'OTHER' && selected && onOtherTextChange) {
-          return (
-            <Input
-              key={color}
-              autoFocus
-              className="h-11 w-full rounded-xl shadow-sm"
-              placeholder={t('Describe the color')}
-              aria-label={t('Describe the color')}
-              value={otherText ?? ''}
-              onChange={(e) => onOtherTextChange(e.target.value)}
-              disabled={disabled}
-            />
-          );
-        }
         return (
           <button
             key={color}
