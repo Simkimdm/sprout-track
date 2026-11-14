@@ -364,17 +364,11 @@ export default function DiaperForm({
                       setFormData({ ...formData, color: value })
                     }
                     disabled={loading}
+                    otherText={formData.colorText}
+                    onOtherTextChange={(value: string) =>
+                      setFormData({ ...formData, colorText: value })
+                    }
                   />
-                  {formData.color === 'OTHER' && (
-                    <Input
-                      id={`${formId}-colorText`}
-                      className="mt-2"
-                      placeholder={t('Describe the color')}
-                      value={formData.colorText}
-                      onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
-                      disabled={loading}
-                    />
-                  )}
                 </div>
                 <div>
                   <label htmlFor={`${formId}-smell`} className="form-label">{t('Smell')}</label>
