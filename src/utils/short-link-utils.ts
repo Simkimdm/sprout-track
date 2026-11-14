@@ -131,9 +131,12 @@ export function bytesToSlug(bytes: Uint8Array): string {
 export function getClientIp(headers: Headers): string | null {
   const forwardedFor = headers.get('x-forwarded-for');
   if (forwardedFor) {
-    const first = forwardedFor.split(',')[0]?.trim();
-    if (first) {
-      return first;
+    // Rightmost entry: appended by the trusted proxy closest to us, so
+    // client-supplied (leftmost, spoofable) entries are ignored.
+    const entries = forwardedFor.split(',').map((s) => s.trim()).filter(Boolean);
+    const rightmost = entries[entries.length - 1];
+    if (rightmost) {
+      return rightmost;
     }
   }
   return headers.get('x-real-ip');
