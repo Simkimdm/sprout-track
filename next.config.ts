@@ -22,6 +22,43 @@ import type { NextConfig } from 'next';
  * that actually loads, so a single image serves both sqlite and postgresql.
  */
 const nextConfig: NextConfig = {
+  // Baseline security headers for all routes. CSP allows 'unsafe-inline' for
+  // script/style because Next.js hydration relies on inline scripts; everything
+  // else is locked to self (images/media also allow data:/blob: for photos and
+  // camera previews, worker-src blob: for the PWA service worker).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob:",
+              "font-src 'self' data:",
+              "media-src 'self' blob:",
+              "connect-src 'self' blob:",
+              "worker-src 'self' blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Ignored by browsers on plain HTTP, enforced when served over HTTPS
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          // Camera is used for photo capture (getUserMedia); mic/geo stay off
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+        ],
+      },
+    ];
+  },
   serverExternalPackages: [
     // The main client is imported as `@prisma/client`; the log client is
     // generated to a custom output and imported directly as `.prisma/log-client`
