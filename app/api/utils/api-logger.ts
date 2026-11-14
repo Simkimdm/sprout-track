@@ -15,6 +15,35 @@ export interface ApiLogEntry {
   responseBody?: any;
 }
 
+// Keys whose values must never be written to the log database, matched
+// case-insensitively at any nesting level of request/response bodies.
+const SENSITIVE_KEYS = new Set([
+  'password', 'adminpassword', 'newpassword', 'oldpassword', 'currentpassword',
+  'securitypin', 'pin', 'newpin', 'currentpin',
+  'token', 'refreshtoken', 'accesstoken', 'idtoken',
+  'authorization', 'apikey', 'secret', 'clientsecret',
+  'privatekey', 'vapidprivatekey',
+]);
+
+/**
+ * Deep-redacts sensitive fields (passwords, PINs, tokens, keys, secrets) from
+ * a value before it is logged. Defense-in-depth on top of the per-route
+ * '[REDACTED]' markers: even if a route forgets to redact, the log DB never
+ * receives credentials.
+ */
+export function redactSensitive(value: unknown, depth = 0): unknown {
+  if (depth > 8) return '[MaxDepth]';
+  if (Array.isArray(value)) return value.map((v) => redactSensitive(v, depth + 1));
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = SENSITIVE_KEYS.has(k.toLowerCase()) ? '[REDACTED]' : redactSensitive(v, depth + 1);
+    }
+    return out;
+  }
+  return value;
+}
+
 export async function logApiCall(entry: ApiLogEntry): Promise<void> {
   // Check if logging is enabled
   if (process.env.ENABLE_LOG !== 'true') {
@@ -33,8 +62,8 @@ export async function logApiCall(entry: ApiLogEntry): Promise<void> {
         caretakerId: entry.caretakerId ?? null,
         familyId: entry.familyId ?? null,
         error: entry.error ?? null,
-        requestBody: entry.requestBody ? JSON.stringify(entry.requestBody) : null,
-        responseBody: entry.responseBody ? JSON.stringify(entry.responseBody) : null,
+        requestBody: entry.requestBody ? JSON.stringify(redactSensitive(entry.requestBody)) : null,
+        responseBody: entry.responseBody ? JSON.stringify(redactSensitive(entry.responseBody)) : null,
       },
     });
   } catch (error) {
