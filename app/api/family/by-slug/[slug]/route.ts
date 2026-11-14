@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/api/db';
-import { ApiResponse } from '@/app/api/utils/auth';
+import { ApiResponse, getAuthenticatedUser } from '@/app/api/utils/auth';
 import { validateSlug } from '@/app/api/utils/slug-validation';
 
 // This endpoint is unauthenticated (used for slug resolution/availability before login),
@@ -20,11 +20,14 @@ interface PublicFamily {
   };
 }
 
+// In SaaS mode, unauthenticated callers only get the slug-existence answer.
+type PublicFamilyResponse = PublicFamily | { slug: string; exists: boolean };
+
 // This endpoint doesn't require authentication as it's used for the initial family selection
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
-): Promise<NextResponse<ApiResponse<PublicFamily | null>>> {
+): Promise<NextResponse<ApiResponse<PublicFamilyResponse | null>>> {
   try {
     const { slug } = await params;
     
@@ -119,6 +122,17 @@ export async function GET(
           expirationDate,
           betaparticipant: false
         };
+      }
+    }
+
+    // In SaaS mode (multi-tenant) an unauthenticated caller only learns whether
+    // the slug exists — family name, id and account/subscription status are
+    // tenant data and must not be enumerable pre-login.
+    const isSaas = (process.env.DEPLOYMENT_MODE || 'selfhosted') === 'saas';
+    if (isSaas) {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth.authenticated) {
+        return NextResponse.json({ success: true, data: { slug, exists: true } });
       }
     }
 
