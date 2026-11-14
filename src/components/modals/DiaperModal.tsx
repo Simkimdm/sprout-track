@@ -6,6 +6,7 @@ import {
   DialogDescription,
 } from '@/src/components/ui/dialog';
 import { Button } from '@/src/components/ui/button';
+import { Input } from '@/src/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -100,8 +101,9 @@ export default function DiaperModal({
         // Condition/color/smell only apply when there's contents — clear stale values from a
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
-        color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
-        colorText: isDirtyDiaper(formData.type) && formData.color === 'OTHER' ? (formData.colorText || null) : null,
+        // A filled free-text field implies the OTHER color
+        color: isDirtyDiaper(formData.type) ? (formData.colorText.trim() ? 'OTHER' : (formData.color || null)) : null,
+        colorText: isDirtyDiaper(formData.type) ? (formData.colorText.trim() || null) : null,
         smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
       };
 
@@ -204,10 +206,12 @@ export default function DiaperModal({
                 onValueChange={(value: string) =>
                   setFormData({ ...formData, color: value })
                 }
-                otherText={formData.colorText}
-                onOtherTextChange={(value: string) =>
-                  setFormData({ ...formData, colorText: value })
-                }
+              />
+              <Input
+                className="mt-2"
+                placeholder={t('Describe the color')}
+                value={formData.colorText}
+                onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
               />
               </div>
               <div>

@@ -201,8 +201,9 @@ export default function DiaperForm({
         // Condition/color/smell only apply when there's contents — clear stale values from a
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
-        color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
-        colorText: isDirtyDiaper(formData.type) && formData.color === 'OTHER' ? (formData.colorText || null) : null,
+        // A filled free-text field implies the OTHER color
+        color: isDirtyDiaper(formData.type) ? (formData.colorText.trim() ? 'OTHER' : (formData.color || null)) : null,
+        colorText: isDirtyDiaper(formData.type) ? (formData.colorText.trim() || null) : null,
         smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
         blowout: formData.blowout,
         creamApplied: formData.creamApplied,
@@ -364,10 +365,14 @@ export default function DiaperForm({
                       setFormData({ ...formData, color: value })
                     }
                     disabled={loading}
-                    otherText={formData.colorText}
-                    onOtherTextChange={(value: string) =>
-                      setFormData({ ...formData, colorText: value })
-                    }
+                  />
+                  <Input
+                    id={`${formId}-colorText`}
+                    className="mt-2"
+                    placeholder={t('Describe the color')}
+                    value={formData.colorText}
+                    onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
                 <div>
