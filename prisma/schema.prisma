@@ -538,7 +538,7 @@ model Note {
 model Settings {
   id                  String   @id @default(uuid())
   familyName          String   @default("My Family")
-  securityPin         String   @default("111222")
+  securityPin         String // Set to a random PIN at creation; no well-known default
   authType            String? // "SYSTEM" or "CARETAKER" - determines authentication method, auto-detected if empty
   defaultBottleUnit   String   @default("OZ") // Default unit for bottle feeding
   defaultSolidsUnit   String   @default("TBSP") // Default unit for solid feeding

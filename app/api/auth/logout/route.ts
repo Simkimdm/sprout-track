@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Clear the caretakerId cookie (for backward compatibility)
     const response = NextResponse.json<ApiResponse<{ success: boolean }>>(
       {
         success: true,
@@ -27,15 +26,6 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     );
-    
-    // Clear the caretakerId cookie with the same settings it was set with
-    response.cookies.set('caretakerId', '', {
-      httpOnly: true,
-      secure: process.env.COOKIE_SECURE === 'true',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 0, // Expire immediately
-    });
 
     // Clear the refresh token cookie
     clearRefreshTokenCookie(response);

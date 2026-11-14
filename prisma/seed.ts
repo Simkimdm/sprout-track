@@ -1,4 +1,5 @@
 import prisma from './db';
+import { generateSecurityPin } from '../app/api/utils/security-pin';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -38,7 +39,7 @@ async function main() {
         name: 'system',
         type: 'System Administrator',
         role: 'ADMIN',
-        securityPin: '111222', // Default PIN
+        securityPin: generateSecurityPin(),
         familyId: defaultFamilyId,
         inactive: false,
         deletedAt: null
@@ -53,15 +54,15 @@ async function main() {
     console.log(`Using existing family: ${firstFamily!.name} for settings`);
   }
 
-  // Ensure default settings exist with PIN 111222
+  // Ensure default settings exist with a random PIN
   const settingsCount = await prisma.settings.count();
   if (settingsCount === 0) {
-    console.log('Creating default settings with PIN: 111222');
+    console.log('Creating default settings with a random PIN');
     await prisma.settings.create({
       data: {
         familyId: defaultFamilyId,
         familyName: "My Family",
-        securityPin: "111222",
+        securityPin: generateSecurityPin(),
         // authType will be auto-detected based on caretaker existence
         defaultBottleUnit: "OZ",
         defaultSolidsUnit: "TBSP",

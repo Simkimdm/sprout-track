@@ -128,6 +128,13 @@ RUN mkdir -p /app/env && \
     # Create symlink so Next.js can find the env file at build time and runtime
     ln -sf /app/env/.env /app/.env
 
+# Run the app as the non-root "node" user (uid 1000). The startup script needs
+# write access to /db, /app/env, /app/Files, /app/logs, the /app/.env symlink and
+# node_modules/.prisma (prisma generate at container start), so hand /app and
+# /db to node here. Fresh named volumes inherit this ownership on first mount.
+RUN mkdir -p /db /app/Files /app/logs && chown -R node:node /app /db
+USER node
+
 # Create volume mount points
 VOLUME /db
 VOLUME /app/env

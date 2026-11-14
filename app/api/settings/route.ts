@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
+import { generateSecurityPin } from '../utils/security-pin';
 import { ApiResponse } from '../types';
 import { Settings } from '@prisma/client';
 import { withAuthContext, AuthResult } from '../utils/auth';
@@ -32,6 +33,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult) {
       settings = await prisma.settings.create({
         data: {
           familyName: 'My Family', // Default family name
+          securityPin: generateSecurityPin(),
           defaultBottleUnit: 'OZ',
           defaultSolidsUnit: 'TBSP',
           defaultHeightUnit: 'IN',
