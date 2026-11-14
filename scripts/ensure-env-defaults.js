@@ -116,6 +116,13 @@ const ENV_DEFAULTS = [
     quoted: true
   },
   {
+    key: 'ENC_SALT',
+    generate: true,
+    protected: true,
+    comment: 'Per-instance salt for PBKDF2 key derivation (auto-generated, do not change)',
+    quoted: true
+  },
+  {
     key: 'JWT_SECRET',
     generate: true,
     protected: true,
