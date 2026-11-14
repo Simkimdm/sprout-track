@@ -3,6 +3,7 @@ import prisma from '../../db';
 import { ApiResponse } from '../../types';
 import { withAuthContext, AuthResult } from '../../utils/auth';
 import { resolveFamilyScope } from '../../utils/family-scope';
+import { hashPin, isHashedPin, verifyPin } from '../../utils/pin-utils';
 
 /**
  * POST /api/settings/verify-pin
@@ -41,10 +42,16 @@ async function handler(
 
     const settings = await prisma.settings.findFirst({
       where: { familyId: targetFamilyId },
-      select: { securityPin: true },
+      select: { id: true, securityPin: true },
     });
 
-    const valid = !!settings && settings.securityPin === pin;
+    const valid = !!settings && verifyPin(pin, settings.securityPin);
+
+    // Migrate a legacy plaintext PIN to a hash on successful verification
+    if (valid && settings && !isHashedPin(settings.securityPin)) {
+      prisma.settings.update({ where: { id: settings.id }, data: { securityPin: hashPin(pin) } })
+        .catch((err) => console.error('Failed to hash legacy settings PIN:', err));
+    }
 
     return NextResponse.json<ApiResponse<{ valid: boolean }>>({
       success: true,

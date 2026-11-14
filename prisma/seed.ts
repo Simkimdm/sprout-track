@@ -1,5 +1,6 @@
 import prisma from './db';
 import { generateSecurityPin } from '../app/api/utils/security-pin';
+import { hashPin } from '../app/api/utils/pin-utils';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -39,7 +40,7 @@ async function main() {
         name: 'system',
         type: 'System Administrator',
         role: 'ADMIN',
-        securityPin: generateSecurityPin(),
+        securityPin: hashPin(generateSecurityPin()),
         familyId: defaultFamilyId,
         inactive: false,
         deletedAt: null
@@ -62,7 +63,7 @@ async function main() {
       data: {
         familyId: defaultFamilyId,
         familyName: "My Family",
-        securityPin: generateSecurityPin(),
+        securityPin: hashPin(generateSecurityPin()),
         // authType will be auto-detected based on caretaker existence
         defaultBottleUnit: "OZ",
         defaultSolidsUnit: "TBSP",

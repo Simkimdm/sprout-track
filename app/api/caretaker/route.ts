@@ -5,6 +5,7 @@ import { withAuthContext, AuthResult } from '../utils/auth';
 import { checkWritePermission } from '../utils/writeProtection';
 import { pickFields } from '../utils/pick-fields';
 import { toCaretakerResponse } from '../utils/caretaker';
+import { hashPin } from '../utils/pin-utils';
 import { resolveFamilyScope } from '../utils/family-scope';
 import { isValidBadgeColorId } from '@/src/constants/caretakerBadge';
 
@@ -74,9 +75,15 @@ async function postHandler(req: NextRequest, authContext: AuthResult) {
       );
     }
 
+    const createData = pickFields(body, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']);
+    if (createData.securityPin) {
+      // PINs are stored hashed, never in plaintext
+      createData.securityPin = hashPin(createData.securityPin);
+    }
+
     const caretaker = await prisma.caretaker.create({
       data: {
-        ...pickFields(body, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']),
+        ...createData,
         familyId: targetFamilyId,
       },
     });
@@ -187,10 +194,16 @@ async function putHandler(req: NextRequest, authContext: AuthResult) {
       }
     }
 
+    const updateFields = pickFields(updateData, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']);
+    if (updateFields.securityPin) {
+      // PINs are stored hashed, never in plaintext
+      updateFields.securityPin = hashPin(updateFields.securityPin);
+    }
+
     const caretaker = await prisma.caretaker.update({
       where: { id },
       data: {
-        ...pickFields(updateData, ['loginId', 'name', 'type', 'role', 'inactive', 'securityPin', 'badgeColor']),
+        ...updateFields,
         familyId: targetFamilyId,
       },
     });

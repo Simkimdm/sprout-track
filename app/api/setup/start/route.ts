@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSecurityPin } from '@/app/api/utils/security-pin';
+import { hashPin } from '@/app/api/utils/pin-utils';
 import prisma from '@/app/api/db';
 import { ApiResponse, withAdminAuth, getAuthenticatedUser, AuthResult } from '@/app/api/utils/auth';
 import { Family } from '@prisma/client';
@@ -79,7 +80,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
           data: {
             familyId: family.id,
             familyName: name,
-            securityPin: generateSecurityPin(),
+            securityPin: hashPin(generateSecurityPin()),
           },
         });
 
@@ -90,7 +91,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
             name: 'system',
             type: 'System Administrator',
             role: 'ADMIN',
-            securityPin: generateSecurityPin(),
+            securityPin: hashPin(generateSecurityPin()),
             familyId: family.id,
             inactive: false,
           },
@@ -140,7 +141,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
           data: {
             familyId: newFamily.id,
             familyName: name,
-            securityPin: generateSecurityPin(),
+            securityPin: hashPin(generateSecurityPin()),
             defaultBottleUnit: 'OZ',
             defaultSolidsUnit: 'TBSP',
             defaultHeightUnit: 'IN',
@@ -162,7 +163,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
             name: 'system',
             type: 'System Administrator',
             role: 'ADMIN',
-            securityPin: generateSecurityPin(),
+            securityPin: hashPin(generateSecurityPin()),
             familyId: newFamily.id,
             inactive: false,
           },
@@ -231,7 +232,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
             data: {
               familyId: family.id,
               familyName: name,
-            securityPin: generateSecurityPin(),
+              securityPin: hashPin(generateSecurityPin()),
             },
           });
 
@@ -242,7 +243,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
               name: 'system',
               type: 'System Administrator',
               role: 'ADMIN',
-              securityPin: generateSecurityPin(),
+              securityPin: hashPin(generateSecurityPin()),
               familyId: family.id,
               inactive: false,
             },
@@ -285,7 +286,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
               data: {
                 familyId: family.id,
                 familyName: name,
-            securityPin: generateSecurityPin(),
+                securityPin: hashPin(generateSecurityPin()),
               },
             });
 
@@ -296,7 +297,7 @@ async function handler(req: NextRequest): Promise<NextResponse<ApiResponse<Famil
                 name: 'system',
                 type: 'System Administrator',
                 role: 'ADMIN',
-                securityPin: generateSecurityPin(),
+                securityPin: hashPin(generateSecurityPin()),
                 familyId: family.id,
                 inactive: false,
               },

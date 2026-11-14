@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
 import { generateSecurityPin } from '../utils/security-pin';
+import { hashPin } from '../utils/pin-utils';
 import { ApiResponse } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { normalizeNurserySettings, NurserySettings } from '@/src/utils/nursery/settings';
@@ -79,7 +80,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult): Promise<Ne
         data: {
           familyId,
           familyName: 'My Family',
-          securityPin: generateSecurityPin(),
+          securityPin: hashPin(generateSecurityPin()),
           defaultBottleUnit: 'OZ',
           defaultSolidsUnit: 'TBSP',
           defaultHeightUnit: 'IN',
