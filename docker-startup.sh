@@ -4,14 +4,22 @@
 DB_PROVIDER="${DATABASE_PROVIDER:-sqlite}"
 echo "Database provider: $DB_PROVIDER"
 
-# Verify writable mounts early: the container runs as non-root, so existing
-# volumes created by older root-based images must be chowned once manually.
+# Verify writable mounts early: the container runs as non-root (node, uid 1000).
+# Existing volumes created by older root-based images are root-owned — if we
+# happen to run as root (e.g. --user root override), fix ownership automatically;
+# otherwise fail fast with instructions.
 for d in /db /app/env /app/Files /app/logs; do
   mkdir -p "$d" 2>/dev/null
   if ! touch "$d/.writetest" 2>/dev/null; then
-    echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
-    echo "  docker exec --user root <container> chown -R 1000:1000 $d"
-    exit 1
+    if [ "$(id -u)" = "0" ]; then
+      echo "Volume $d not writable — running as root, fixing ownership to 1000:1000..."
+      chown -R 1000:1000 "$d" 2>/dev/null
+    fi
+    if ! touch "$d/.writetest" 2>/dev/null; then
+      echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
+      echo "  docker exec --user root <container> chown -R 1000:1000 $d"
+      exit 1
+    fi
   fi
   rm -f "$d/.writetest"
 done
