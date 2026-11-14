@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '../../types';
-import { checkIpLockout, recordFailedAttempt, resetFailedAttempts } from '../../utils/ip-lockout';
+import { checkIpLockout } from '../../utils/ip-lockout';
 
 /**
- * API endpoint to check if an IP is locked out
+ * Read-only lockout status for the login UI.
+ *
+ * Only GET is allowed: recording/resetting failed attempts is done server-side
+ * inside the login routes themselves. Exposing POST/DELETE here would let any
+ * unauthenticated caller lock out arbitrary IPs (via a spoofed X-Forwarded-For)
+ * or clear the lockout and brute-force PINs without limit.
  */
 export async function GET(req: NextRequest) {
   // Get the client IP
-  const ip = req.headers.get('x-forwarded-for') || 
-             req.headers.get('x-real-ip') || 
+  const ip = req.headers.get('x-forwarded-for') ||
+             req.headers.get('x-real-ip') ||
              'unknown';
-  
+
   const { locked, remainingTime } = checkIpLockout(ip);
-  
+
   return NextResponse.json<ApiResponse<{ locked: boolean; remainingTime: number }>>(
     {
       success: true,
@@ -21,39 +26,17 @@ export async function GET(req: NextRequest) {
   );
 }
 
-/**
- * API endpoint to record a failed login attempt
- */
-export async function POST(req: NextRequest) {
-  // Get the client IP
-  const ip = req.headers.get('x-forwarded-for') || 
-             req.headers.get('x-real-ip') || 
-             'unknown';
-  
-  const { locked, remainingTime } = recordFailedAttempt(ip);
-  
-  return NextResponse.json<ApiResponse<{ locked: boolean; remainingTime: number }>>(
-    {
-      success: true,
-      data: { locked, remainingTime }
-    }
-  );
-}
-
-/**
- * API endpoint to reset failed login attempts after successful login
- */
-export async function DELETE(req: NextRequest) {
-  // Get the client IP
-  const ip = req.headers.get('x-forwarded-for') || 
-             req.headers.get('x-real-ip') || 
-             'unknown';
-  
-  resetFailedAttempts(ip);
-  
+function methodNotAllowed(): NextResponse {
   return NextResponse.json<ApiResponse<null>>(
     {
-      success: true
-    }
+      success: false,
+      error: 'Method not allowed. Failed attempts are tracked server-side during login.'
+    },
+    { status: 405, headers: { Allow: 'GET' } }
   );
 }
+
+export const POST = methodNotAllowed;
+export const PUT = methodNotAllowed;
+export const PATCH = methodNotAllowed;
+export const DELETE = methodNotAllowed;

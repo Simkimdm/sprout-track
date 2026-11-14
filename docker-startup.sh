@@ -4,6 +4,18 @@
 DB_PROVIDER="${DATABASE_PROVIDER:-sqlite}"
 echo "Database provider: $DB_PROVIDER"
 
+# Verify writable mounts early: the container runs as non-root, so existing
+# volumes created by older root-based images must be chowned once manually.
+for d in /db /app/env /app/Files /app/logs; do
+  mkdir -p "$d" 2>/dev/null
+  if ! touch "$d/.writetest" 2>/dev/null; then
+    echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
+    echo "  docker exec --user root <container> chown -R 1000:1000 $d"
+    exit 1
+  fi
+  rm -f "$d/.writetest"
+done
+
 # Capture DB settings provided via the container runtime environment (compose /
 # docker run -e) before the persisted env file is sourced. The image bakes
 # sqlite placeholder URLs into ENV; those are not user intent, so ignore them.
@@ -31,8 +43,9 @@ if [ "$DB_PROVIDER" = "sqlite" ]; then
   fi
 fi
 
-# Set up timezone for Alpine Linux
-if [ -n "$TZ" ]; then
+# Set up timezone for Alpine Linux (writing /etc requires root; the container
+# image sets TZ via ENV, so non-root just relies on that)
+if [ -n "$TZ" ] && [ "$(id -u)" = "0" ]; then
   # Create the timezone file if it doesn't exist
   echo "$TZ" > /etc/TZ
   # Create a symlink to the zoneinfo file if it exists
@@ -152,23 +165,37 @@ if [ "$ENABLE_NOTIFICATIONS" = "true" ]; then
     echo "✓ API URL configuration found"
   fi
 
-  # Setup cron job
-  echo "Setting up notification cron job..."
-  npm run notification:cron:setup
-  if [ $? -eq 0 ]; then
-    echo "✓ Cron job setup completed"
-  else
-    echo "⚠ Warning: Cron job setup failed, but continuing..."
-  fi
+  # Setup cron job (crontab(1) requires root; as non-root we skip it and use
+  # the loop below instead)
+  if [ "$(id -u)" = "0" ]; then
+    echo "Setting up notification cron job..."
+    npm run notification:cron:setup
+    if [ $? -eq 0 ]; then
+      echo "✓ Cron job setup completed"
+    else
+      echo "⚠ Warning: Cron job setup failed, but continuing..."
+    fi
 
-  # Start cron daemon in background
-  echo "Starting cron daemon..."
-  crond -f -d 8 &
-  CRON_PID=$!
-  if [ $? -eq 0 ]; then
-    echo "✓ Cron daemon started (PID: $CRON_PID)"
+    # Start cron daemon in background
+    echo "Starting cron daemon..."
+    crond -f -d 8 &
+    CRON_PID=$!
+    if [ $? -eq 0 ]; then
+      echo "✓ Cron daemon started (PID: $CRON_PID)"
+    else
+      echo "⚠ Warning: Failed to start cron daemon"
+    fi
   else
-    echo "⚠ Warning: Failed to start cron daemon"
+    # Non-root: crond needs root, so run the notification cron in a simple
+    # every-minute loop instead (same schedule as the crontab entry).
+    echo "Running as non-root: starting notification cron loop instead of crond..."
+    (
+      while true; do
+        sleep 60
+        /bin/sh /app/scripts/run-notification-cron.sh >> /app/logs/notification-cron.log 2>&1
+      done
+    ) &
+    echo "✓ Notification cron loop started (PID: $!)"
   fi
 
   echo "=== Notification Setup Complete ==="

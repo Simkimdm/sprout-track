@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
+import { generateSecurityPin } from '../utils/security-pin';
 import {
   ApiResponse,
   SleepLocationRenameResult,
@@ -60,7 +61,7 @@ async function writeLocationSettings(
       data: {
         familyId,
         familyName: 'My Family',
-        securityPin: '111222',
+        securityPin: generateSecurityPin(),
         defaultBottleUnit: 'OZ',
         defaultSolidsUnit: 'TBSP',
         defaultHeightUnit: 'IN',

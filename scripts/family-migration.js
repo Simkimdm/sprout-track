@@ -193,18 +193,19 @@ async function updateDatabase() {
       if (!systemCaretaker) {
         console.log('Creating system caretaker...');
         
-        // Get security pin from settings table
-        let securityPin = '111222'; // Default fallback from schema
+        // Get security pin from settings table; fall back to a random PIN
+        // (the schema no longer provides a well-known default)
+        let securityPin = require('crypto').randomInt(0, 1000000).toString().padStart(6, '0');
         try {
           const settings = await prisma.settings.findFirst();
           if (settings && settings.securityPin) {
             securityPin = settings.securityPin;
             console.log('Using security pin from settings table.');
           } else {
-            console.log('No settings found or no security pin set, using default: 111222');
+            console.log('No settings found or no security pin set, generated a random PIN.');
           }
         } catch (error) {
-          console.log('Error reading security pin from settings, using default 111222:', error.message);
+          console.log('Error reading security pin from settings, generated a random PIN:', error.message);
         }
         
         systemCaretaker = await prisma.caretaker.create({

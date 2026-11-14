@@ -10,7 +10,7 @@ async function getDomainUrl(): Promise<string> {
       // Create default app config if none exists
       appConfig = await prisma.appConfig.create({
         data: {
-          adminPass: 'admin',
+          adminPass: '', // Blank = admin login disabled until a password is set (no default credential)
           rootDomain: 'localhost:3000',
           enableHttps: false,
         },

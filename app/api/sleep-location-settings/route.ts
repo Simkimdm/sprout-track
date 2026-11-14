@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
+import { generateSecurityPin } from '../utils/security-pin';
 import { ApiResponse, SleepLocationSettings } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import { mergeLocationSettings } from '@/src/utils/sleepLocationUtils';
@@ -102,7 +103,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult): Promise<Ne
           data: {
             familyId: userFamilyId,
             familyName: 'My Family',
-            securityPin: '111222',
+            securityPin: generateSecurityPin(),
             defaultBottleUnit: 'OZ',
             defaultSolidsUnit: 'TBSP',
             defaultHeightUnit: 'IN',

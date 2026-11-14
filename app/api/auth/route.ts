@@ -58,19 +58,24 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Decrypt the stored admin password and compare
-        // If adminPass is blank/empty, use default "admin" password
-        let decryptedAdminPass: string;
-
+        // No default password: a blank adminPass means admin login is disabled
+        // until a password is set (app configuration or scripts/reset-admin-password.js).
+        // Falling back to a well-known default here would be a default-credential hole.
         if (!appConfig.adminPass || appConfig.adminPass.trim() === '') {
-          // Use default password if stored password is blank
-          decryptedAdminPass = 'admin';
-        } else {
-          // Decrypt if encrypted, otherwise use as-is
-          decryptedAdminPass = isEncrypted(appConfig.adminPass)
-            ? decrypt(appConfig.adminPass)
-            : appConfig.adminPass;
+          recordFailedAttempt(ip);
+          return NextResponse.json<ApiResponse<null>>(
+            {
+              success: false,
+              error: 'Admin password is not configured',
+            },
+            { status: 401 }
+          );
         }
+
+        // Decrypt the stored admin password and compare
+        const decryptedAdminPass = isEncrypted(appConfig.adminPass)
+          ? decrypt(appConfig.adminPass)
+          : appConfig.adminPass;
 
         if (adminPassword === decryptedAdminPass) {
           // Create system admin JWT token
@@ -310,15 +315,6 @@ export async function POST(req: NextRequest) {
             }
           );
           
-          // Also set the caretakerId cookie for backward compatibility
-          response.cookies.set('caretakerId', systemCaretaker.id, {
-            httpOnly: true,
-            secure: process.env.COOKIE_SECURE === 'true',
-            sameSite: 'strict',
-            maxAge: TOKEN_EXPIRATION, // Use AUTH_LIFE env variable
-            path: '/',
-          });
-          
           // Update settings with detected authType if it was auto-detected
           if (!settings.authType) {
             try {
@@ -484,15 +480,6 @@ export async function POST(req: NextRequest) {
             },
           }
         );
-        
-        // Also set the caretakerId cookie for backward compatibility
-        response.cookies.set('caretakerId', caretaker.id, {
-          httpOnly: true,
-          secure: process.env.COOKIE_SECURE === 'true',
-          sameSite: 'strict',
-          maxAge: TOKEN_EXPIRATION, // Use AUTH_LIFE env variable
-          path: '/',
-        });
         
         // Update settings with detected authType if it was auto-detected
         if (!settings.authType) {
