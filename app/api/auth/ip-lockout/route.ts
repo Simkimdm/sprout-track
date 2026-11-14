@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   // Get the client IP (rightmost X-Forwarded-For entry, anti-spoofing)
   const ip = extractClientIp(req.headers);
 
-  const { locked, remainingTime } = checkIpLockout(ip);
+  const { locked, remainingTime } = await checkIpLockout(ip);
 
   return NextResponse.json<ApiResponse<{ locked: boolean; remainingTime: number }>>(
     {

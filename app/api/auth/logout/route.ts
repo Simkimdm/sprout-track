@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       token = authHeader.substring(7); // Remove 'Bearer ' prefix
       // Add the token to the blacklist
       if (token) {
-        invalidateToken(token);
+        await invalidateToken(token);
       }
     }
     

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   try {
 
     // Check if the IP is locked out
-    const { locked, remainingTime } = checkIpLockout(ip);
+    const { locked, remainingTime } = await checkIpLockout(ip);
     if (locked) {
       return NextResponse.json<ApiResponse<null>>(
         {
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
           );
 
           // Reset failed attempts on successful login
-          resetFailedAttempts(ip);
+          await resetFailedAttempts(ip);
 
           // Create response with system admin token
           const response = NextResponse.json<ApiResponse<{
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
           return response;
         } else {
           // Record failed attempt for invalid admin password
-          recordFailedAttempt(ip);
+          await recordFailedAttempt(ip);
           return NextResponse.json<ApiResponse<null>>(
             {
               success: false,
@@ -329,7 +329,7 @@ export async function POST(req: NextRequest) {
           }
 
           // Reset failed attempts on successful login
-          resetFailedAttempts(ip);
+          await resetFailedAttempts(ip);
 
           // Migrate a legacy plaintext PIN to a hash on successful login
           if (!isHashedPin(settings.securityPin)) {
@@ -375,7 +375,7 @@ export async function POST(req: NextRequest) {
     } else if (authType === 'CARETAKER') {
       // If authType is CARETAKER, block system PIN authentication
       if (!loginId) {
-        recordFailedAttempt(ip);
+        await recordFailedAttempt(ip);
         return NextResponse.json<ApiResponse<null>>(
           {
             success: false,
@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
 
       // Security check: If authType is CARETAKER and this is a system caretaker (loginId '00'), deny access
       if (caretaker && caretaker.loginId === '00' && authType === 'CARETAKER') {
-        recordFailedAttempt(ip);
+        await recordFailedAttempt(ip);
         return NextResponse.json<ApiResponse<null>>(
           {
             success: false,
@@ -428,7 +428,7 @@ export async function POST(req: NextRequest) {
 
         if (regularCaretakerCount > 0) {
           // Record failed attempt for security
-          recordFailedAttempt(ip);
+          await recordFailedAttempt(ip);
           return NextResponse.json<ApiResponse<null>>(
             {
               success: false,
@@ -501,7 +501,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Reset failed attempts on successful login
-        resetFailedAttempts(ip);
+        await resetFailedAttempts(ip);
 
         // Migrate a legacy plaintext PIN to a hash on successful login
         if (!isHashedPin(caretaker.securityPin)) {
@@ -538,7 +538,7 @@ export async function POST(req: NextRequest) {
     
     // If we get here, authentication failed
     // Record the failed attempt
-    recordFailedAttempt(ip);
+    await recordFailedAttempt(ip);
 
     // Provide a more specific error message if family validation failed
     const errorMessage = targetFamily

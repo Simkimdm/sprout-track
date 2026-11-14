@@ -46,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
   try {
     
     // Check if the IP is locked out
-    const { locked, remainingTime } = checkIpLockout(ip);
+    const { locked, remainingTime } = await checkIpLockout(ip);
     if (locked) {
       const errorMsg = `Too many failed attempts. Please try again in ${Math.ceil(remainingTime / 60000)} minutes.`;
       
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
 
     // Validate input
     if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       const errorMsg = 'Email and password are required';
 
       logApiCall({
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     }
 
     if (!/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(email)) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       const errorMsg = 'Please enter a valid email address';
 
       logApiCall({
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
 
     // Check if account exists
     if (!account) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       const errorMsg = 'Invalid email or password';
 
       logApiCall({
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
 
     // Check if account is closed using the proper closed field
     if (account.closed) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       const errorMsg = 'This account has been closed';
 
       logApiCall({
@@ -188,7 +188,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     // Verify password
     const passwordMatch = await verifyPassword(password, account.password);
     if (!passwordMatch) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       const errorMsg = 'Invalid email or password';
 
       logApiCall({
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
     }
 
     // Reset failed attempts on successful authentication
-    resetFailedAttempts(ip);
+    await resetFailedAttempts(ip);
 
     // Generate JWT token for account holder
     const token = jwt.sign({

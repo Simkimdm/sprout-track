@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { logApiCall, getClientInfo } from './api-logger';
 import { setupTokenMayTarget } from './setup-token-scope';
 
@@ -92,20 +93,32 @@ export function clearRefreshTokenCookie(response: NextResponse): void {
   });
 }
 
-// In-memory token blacklist (in a production app, this would be in Redis or similar)
-// This is a simple Map that stores invalidated tokens with their expiry time
-const tokenBlacklist = new Map<string, number>();
+// Persistent token blacklist in the database (SecurityEvent, kind
+// 'token_blacklist', key = SHA-256 of the token). Survives restarts and works
+// across multiple app instances, unlike an in-memory Map. Only the token hash
+// is stored, never the token itself.
+const BLACKLIST_KIND = 'token_blacklist';
 
-// Clean up expired tokens from the blacklist every hour
-setInterval(() => {
-  const now = Date.now();
-  // Use Array.from to avoid TypeScript iterator issues
-  Array.from(tokenBlacklist.entries()).forEach(([token, expiry]) => {
-    if (now > expiry) {
-      tokenBlacklist.delete(token);
+function blacklistKey(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function isTokenBlacklisted(token: string): Promise<boolean> {
+  try {
+    const row = await prisma.securityEvent.findUnique({
+      where: { kind_key: { kind: BLACKLIST_KIND, key: blacklistKey(token) } },
+    });
+    if (!row) return false;
+    if (row.expiresAt.getTime() <= Date.now()) {
+      await prisma.securityEvent.delete({ where: { kind_key: { kind: BLACKLIST_KIND, key: blacklistKey(token) } } }).catch(() => {});
+      return false;
     }
-  });
-}, 60 * 60 * 1000); // 1 hour
+    return true;
+  } catch (error) {
+    console.error('isTokenBlacklisted error:', error);
+    return false;
+  }
+}
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -179,7 +192,7 @@ export async function getAuthenticatedUser(req: NextRequest): Promise<AuthResult
       }
 
       // Check if token is blacklisted
-      if (tokenBlacklist.has(token)) {
+      if (await isTokenBlacklisted(token)) {
         return { authenticated: false, error: 'Token has been invalidated' };
       }
 
@@ -774,22 +787,31 @@ export function withAuthContext<T>(
 }
 
 /**
- * Invalidates a JWT token by adding it to the blacklist
+ * Invalidates a JWT token by adding its hash to the persistent blacklist
  * @param token The JWT token to invalidate
  * @returns True if the token was successfully invalidated
  */
-export function invalidateToken(token: string): boolean {
+export async function invalidateToken(token: string): Promise<boolean> {
   try {
     // Decode the token without verification to get expiry
     const decoded = jwt.decode(token) as { exp?: number };
-    
+
     if (decoded && decoded.exp) {
-      // Store the token in the blacklist until its original expiry time
-      const expiryMs = decoded.exp * 1000; // Convert seconds to milliseconds
-      tokenBlacklist.set(token, expiryMs);
+      // Store only the hash, until the token's original expiry time
+      const key = blacklistKey(token);
+      const expiresAt = new Date(decoded.exp * 1000); // Convert seconds to ms
+      await prisma.securityEvent.upsert({
+        where: { kind_key: { kind: BLACKLIST_KIND, key } },
+        create: { kind: BLACKLIST_KIND, key, expiresAt },
+        update: { expiresAt },
+      });
+      // Opportunistic cleanup of expired entries
+      prisma.securityEvent.deleteMany({
+        where: { kind: BLACKLIST_KIND, expiresAt: { lte: new Date() } },
+      }).catch(() => {});
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('Error invalidating token:', error);
