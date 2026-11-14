@@ -105,10 +105,10 @@ function parseUrl(req) {
 
 function authenticate(req) {
   if (!CONFIG.guardianKey) return false;
-  const url = parseUrl(req);
-  const keyFromQuery = url.searchParams.get('key');
+  // Header only: a key in the query string leaks into access logs, shell
+  // history and browser history.
   const keyFromHeader = req.headers['x-guardian-key'];
-  return keyFromQuery === CONFIG.guardianKey || keyFromHeader === CONFIG.guardianKey;
+  return keyFromHeader === CONFIG.guardianKey;
 }
 
 // =============================================================================
@@ -1416,7 +1416,9 @@ process.on('SIGINT', () => shutdown('SIGINT'));
   // Start health monitor
   startHealthMonitor();
 
-  server.listen(CONFIG.guardianPort, () => {
-    log(`Listening on port ${CONFIG.guardianPort}`);
+  // Loopback only: the guardian is only ever called by the app on the same
+  // host (127.0.0.1), never exposed to the network.
+  server.listen(CONFIG.guardianPort, '127.0.0.1', () => {
+    log(`Listening on 127.0.0.1:${CONFIG.guardianPort}`);
   });
 })();
