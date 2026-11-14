@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  create: vi.fn(() => Promise.resolve()),
+  create: vi.fn((_entry: unknown) => Promise.resolve()),
 }));
 
 vi.mock('../prisma/log-db', () => ({ default: { apiLog: { create: mocks.create } } }));
@@ -48,7 +48,7 @@ describe('logApiCall redacts bodies before writing', () => {
       requestBody: { loginId: '01', securityPin: '111222' },
       responseBody: { success: true, data: { token: 'jwt-secret' } },
     });
-    const stored = mocks.create.mock.calls[0]?.[0].data;
+    const stored = (mocks.create.mock.calls[0]?.[0] as { data: Record<string, string> }).data;
     expect(stored.requestBody).toBe(JSON.stringify({ loginId: '01', securityPin: '[REDACTED]' }));
     expect(stored.responseBody).not.toContain('jwt-secret');
     expect(JSON.parse(stored.responseBody).data.token).toBe('[REDACTED]');
