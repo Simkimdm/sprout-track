@@ -54,7 +54,7 @@ const TYPE_ALIASES: Record<string, ActivityType> = {
 const TYPE_FIELDS: Record<ActivityType, readonly string[]> = {
   sleep: ['type', 'sleepType', 'time', 'startTime', 'endTime', 'duration', 'location', 'quality', 'notes'],
   feed: ['type', 'feedType', 'time', 'startTime', 'endTime', 'duration', 'feedDuration', 'amount', 'unitAbbr', 'side', 'food', 'notes', 'bottleType', 'breastMilkAmount'],
-  diaper: ['type', 'diaperType', 'time', 'condition', 'color', 'smell', 'blowout', 'creamApplied', 'notes'],
+  diaper: ['type', 'diaperType', 'time', 'condition', 'color', 'colorText', 'smell', 'blowout', 'creamApplied', 'notes'],
   note: ['type', 'time', 'content', 'category'],
   pump: ['type', 'time', 'startTime', 'endTime', 'duration', 'leftAmount', 'rightAmount', 'totalAmount', 'unitAbbr', 'pumpAction', 'notes'],
   play: ['type', 'time', 'startTime', 'duration', 'playType', 'notes', 'activities'],
@@ -264,6 +264,8 @@ function buildDiaperData(body: JsonObject): { data?: Prisma.DiaperLogUpdateInput
   if (conditionError) return { error: conditionError };
   const colorError = assignEnum(data, body, 'color', DIAPER_COLORS);
   if (colorError) return { error: colorError };
+  const colorTextError = assignString(data, body, 'colorText');
+  if (colorTextError) return { error: colorTextError };
   const smellError = assignEnum(data, body, 'smell', DIAPER_SMELLS);
   if (smellError) return { error: smellError };
   for (const field of ['blowout', 'creamApplied'] as const) {
@@ -544,7 +546,7 @@ async function updateActivity(type: ActivityType, activityId: string, babyId: st
       const built = buildDiaperData(body);
       if (built.error) return { error: built.error, status: 400 };
       const row = await prisma.diaperLog.update({ where: { id: activityId }, data: built.data! });
-      return { result: summary(type, row.id, row.babyId, 'updated', row.time, { type: row.type, condition: row.condition, color: row.color, smell: row.smell, blowout: row.blowout, creamApplied: row.creamApplied, notes: row.notes }) };
+      return { result: summary(type, row.id, row.babyId, 'updated', row.time, { type: row.type, condition: row.condition, color: row.color, colorText: row.colorText, smell: row.smell, blowout: row.blowout, creamApplied: row.creamApplied, notes: row.notes }) };
     }
     case 'sleep': {
       const built = buildSleepData(body, existing.time!);

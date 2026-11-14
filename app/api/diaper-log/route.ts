@@ -34,7 +34,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
     
     const diaperLog = await prisma.diaperLog.create({
       data: {
-        ...pickFields(body, ['babyId', 'type', 'condition', 'color', 'smell', 'blowout', 'creamApplied', 'notes']),
+        ...pickFields(body, ['babyId', 'type', 'condition', 'color', 'colorText', 'smell', 'blowout', 'creamApplied', 'notes']),
         time: timeUTC,
         caretakerId: caretakerId,
         familyId: userFamilyId,
@@ -113,7 +113,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
 
     // Convert time to UTC if provided; only whitelisted columns are updated
     const data = {
-      ...pickFields(body, ['type', 'condition', 'color', 'smell', 'blowout', 'creamApplied', 'notes']),
+      ...pickFields(body, ['type', 'condition', 'color', 'colorText', 'smell', 'blowout', 'creamApplied', 'notes']),
       ...(body.time ? { time: toUTC(body.time) } : {}),
     };
 

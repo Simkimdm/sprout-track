@@ -6,6 +6,7 @@ import {
   DialogDescription,
 } from '@/src/components/ui/dialog';
 import { Button } from '@/src/components/ui/button';
+import { Input } from '@/src/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -49,6 +50,7 @@ export default function DiaperModal({
     type: '' as DiaperType | '',
     condition: '',
     color: '',
+    colorText: '',
     smell: '',
   });
 
@@ -68,6 +70,7 @@ export default function DiaperModal({
           type: activity.type,
           condition: activity.condition || '',
           color: activity.color || '',
+          colorText: activity.colorText || '',
           smell: activity.smell || '',
         });
       } else {
@@ -99,6 +102,7 @@ export default function DiaperModal({
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
         color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
+        colorText: isDirtyDiaper(formData.type) && formData.color === 'OTHER' ? (formData.colorText || null) : null,
         smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
       };
 
@@ -122,6 +126,7 @@ export default function DiaperModal({
         type: '' as DiaperType | '',
         condition: '',
         color: '',
+        colorText: '',
         smell: '',
       });
     } catch (error) {
@@ -201,6 +206,14 @@ export default function DiaperModal({
                   setFormData({ ...formData, color: value })
                 }
               />
+              {formData.color === 'OTHER' && (
+                <Input
+                  className="mt-2"
+                  placeholder={t('Describe the color')}
+                  value={formData.colorText}
+                  onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
+                />
+              )}
               </div>
               <div>
                 <label className="form-label">{t('Smell')}</label>

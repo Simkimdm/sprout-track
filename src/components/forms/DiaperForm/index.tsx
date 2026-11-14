@@ -71,6 +71,7 @@ export default function DiaperForm({
     type: '' as DiaperType | '',
     condition: '',
     color: '',
+    colorText: '',
     smell: '',
     blowout: false,
     creamApplied: false,
@@ -124,6 +125,7 @@ export default function DiaperForm({
           type: activity.type,
           condition: activity.condition || '',
           color: activity.color || '',
+          colorText: activity.colorText || '',
           smell: activity.smell || '',
           blowout: activity.blowout || false,
           creamApplied: activity.creamApplied || false,
@@ -200,6 +202,7 @@ export default function DiaperForm({
         // previous type instead of carrying them into a WET/DRY log (e.g. DIRTY -> DRY).
         condition: isDirtyDiaper(formData.type) ? (formData.condition || null) : null,
         color: isDirtyDiaper(formData.type) ? (formData.color || null) : null,
+        colorText: isDirtyDiaper(formData.type) && formData.color === 'OTHER' ? (formData.colorText || null) : null,
         smell: isDirtyDiaper(formData.type) ? (formData.smell || null) : null,
         blowout: formData.blowout,
         creamApplied: formData.creamApplied,
@@ -246,6 +249,7 @@ export default function DiaperForm({
         type: '' as DiaperType | '',
         condition: '',
         color: '',
+        colorText: '',
         smell: '',
         blowout: false,
         creamApplied: false,
@@ -361,6 +365,16 @@ export default function DiaperForm({
                     }
                     disabled={loading}
                   />
+                  {formData.color === 'OTHER' && (
+                    <Input
+                      id={`${formId}-colorText`}
+                      className="mt-2"
+                      placeholder={t('Describe the color')}
+                      value={formData.colorText}
+                      onChange={(e) => setFormData({ ...formData, colorText: e.target.value })}
+                      disabled={loading}
+                    />
+                  )}
                 </div>
                 <div>
                   <label htmlFor={`${formId}-smell`} className="form-label">{t('Smell')}</label>
