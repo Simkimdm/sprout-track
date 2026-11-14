@@ -133,7 +133,6 @@ RUN mkdir -p /app/env && \
 # node_modules/.prisma (prisma generate at container start), so hand /app and
 # /db to node here. Fresh named volumes inherit this ownership on first mount.
 RUN mkdir -p /db /app/Files /app/logs && chown -R node:node /app /db
-USER node
 
 # Create volume mount points
 VOLUME /db
@@ -146,6 +145,13 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-startup.sh && \
     chmod +x /usr/local/bin/docker-startup.sh && \
     ls -la /usr/local/bin/docker-startup.sh && \
     echo "Startup script copied and made executable"
+
+# Switch to the non-root "node" user (uid 1000) only after all root-requiring
+# build steps above are done. The startup script needs write access to /db,
+# /app/env, /app/Files, /app/logs, the /app/.env symlink and node_modules/.prisma
+# (prisma generate at container start) — all owned by node via the chown above.
+# Fresh named volumes inherit this ownership on first mount.
+USER node
 
 # Set entrypoint to run migrations before starting the app
 ENTRYPOINT ["/usr/local/bin/docker-startup.sh"]
