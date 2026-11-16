@@ -21,7 +21,10 @@ import {
   Syringe,
   Camera,
   Apple,
-  Droplets
+  Droplets,
+  ArrowUp,
+  ArrowDown,
+  Minus
 } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { Button } from '@/src/components/ui/button';
@@ -43,14 +46,12 @@ import TimelineV2Heatmap from './TimelineV2Heatmap';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
 import { formatDateLong } from '@/src/utils/dateFormat';
-import { convertVolume } from '@/src/utils/unit-conversion';
-import { aggregateFeedStats } from '@/src/utils/feedStatsUtils';
 import { formatAmountsByUnit } from '@/src/utils/foodLogUtils';
 import { useUnit } from '@/src/hooks/useUnit';
 import { fetchPhotosEnabled } from '@/src/utils/photoClientApi';
-import { countUniquePhotoIds } from '@/src/utils/photoUtils';
-import { isDirtyDiaper, isWetDiaper } from '@/src/utils/diaperStats';
 import { formatAmount } from '@/src/utils/formatAmount';
+import { computeDailyStats, computeDayTrend, DayTrend, HistoryDayStats, MetricKey, TREND_HISTORY_DAYS } from '@/src/utils/dailyStats';
+import { bucketByDate, toDateKey } from './useActivityCache';
 
 import './TimelineV2DailyStats.css';
 
@@ -59,6 +60,8 @@ interface TimelineV2DailyStatsProps {
   /** Activities from the surrounding days too, so breast-feed sessions that span midnight group correctly. Falls back to activities. */
   windowActivities?: ActivityType[];
   heatmapActivities: ActivityType[];
+  /** Activities of the days before the selected day — trend baseline for the tiles. */
+  historyActivities?: ActivityType[];
   date: Date;
   isLoading?: boolean;
   activeFilter: FilterType;
@@ -83,12 +86,17 @@ interface StatTile {
   bgActiveColor: string;
   /** Overrides the default filter-toggle behavior when the tile is tapped (e.g. navigating away). */
   onClick?: () => void;
+  /** Numeric metric the trend (delta vs average + sparkline) is computed from. */
+  metricKey?: MetricKey;
+  metricKind?: 'count' | 'minutes';
+  trend?: DayTrend | null;
 }
 
 const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   activities,
   windowActivities,
   heatmapActivities,
+  historyActivities = [],
   date,
   isLoading = false,
   activeFilter,
@@ -124,215 +132,57 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     return `${hours}h ${mins}${t('min')}`;
   };
 
+  const formatMetricValue = (kind: 'count' | 'minutes' | undefined, value: number): string => {
+    const rounded = Math.round(value * 100) / 100;
+    if (kind === 'minutes') return formatMinutes(rounded);
+    return String(rounded);
+  };
+
+  const stats = useMemo(
+    () => computeDailyStats(activities, windowActivities, date, { defaultBottleUnit, unitSymbol, t }),
+    [activities, windowActivities, date, defaultBottleUnit, t]
+  );
+
+  const historyDayStats = useMemo<HistoryDayStats[]>(() => {
+    const buckets = bucketByDate(historyActivities);
+    const days: HistoryDayStats[] = [];
+    for (let i = TREND_HISTORY_DAYS; i >= 1; i--) {
+      const day = new Date(date);
+      day.setHours(0, 0, 0, 0);
+      day.setDate(day.getDate() - i);
+      const bucket = buckets.get(toDateKey(day)) ?? [];
+      days.push({
+        date: day,
+        hasData: bucket.length > 0,
+        metrics: computeDailyStats(bucket, historyActivities, day, { defaultBottleUnit, unitSymbol, t }),
+      });
+    }
+    return days;
+  }, [historyActivities, date, defaultBottleUnit, t]);
+
   // Calculate stats and create dynamic tiles
   const statTiles = useMemo(() => {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    let totalSleepMinutes = 0;
-    let diaperCount = 0;
-    let wetCount = 0;
-    let dirtyCount = 0;
-    let poopCount = 0;
-    const preferredUnit = defaultBottleUnit || 'OZ';
-    const medicineStats: Record<string, { count: number, total: number, unit: string }> = {};
-    const supplementStats: Record<string, { count: number, total: number, unit: string }> = {};
-    let noteCount = 0;
-    let bathCount = 0;
-    let pumpCount = 0;
-    let pumpTotal = 0;
-    let milestoneCount = 0;
-    let measurementCount = 0;
-    let playCount = 0;
-    let totalPlayMinutes = 0;
-    let vaccineCount = 0;
-    let awakeMinutes = 0;
-
-    const PLAY_TYPES = ['TUMMY_TIME', 'INDOOR_PLAY', 'OUTDOOR_PLAY', 'WALK', 'CUSTOM'];
-
-    activities.forEach(activity => {
-      // Food logs (issue #203) - counted by aggregateFeedStats as solids
-      if ('foodId' in activity) {
-        return; // Skip further checks for this activity
-      }
-
-      // Play activities - check before sleep since both have duration, startTime, type
-      if ('activities' in activity && 'type' in activity && PLAY_TYPES.includes((activity as any).type)) {
-        const time = new Date((activity as any).startTime);
-        if (time >= startOfDay && time <= endOfDay) {
-          playCount++;
-          if ((activity as any).duration) {
-            totalPlayMinutes += (activity as any).duration;
-          }
-        }
-        return; // Skip further checks for this activity
-      }
-
-      // Sleep activities (exclude pump activities which also have duration and startTime)
-      if ('duration' in activity && 'startTime' in activity &&
-          'type' in activity && // Sleep activities have type (NAP or NIGHT_SLEEP)
-          !('leftAmount' in activity || 'rightAmount' in activity)) { // Exclude pump activities
-        const startTime = new Date(activity.startTime);
-        const endTime = 'endTime' in activity && activity.endTime ? new Date(activity.endTime) : null;
-        
-        if (endTime) {
-          const overlapStart = Math.max(startTime.getTime(), startOfDay.getTime());
-          const overlapEnd = Math.min(endTime.getTime(), endOfDay.getTime());
-          
-          if (overlapEnd > overlapStart) {
-            const overlapMinutes = Math.floor((overlapEnd - overlapStart) / (1000 * 60));
-            totalSleepMinutes += overlapMinutes;
-          }
-        }
-      }
-      
-      // Diaper activities
-      if ('condition' in activity && 'type' in activity) {
-        const time = new Date(activity.time);
-        if (time >= startOfDay && time <= endOfDay) {
-          // Every diaper log is a change; wet/dirty split below (BOTH counts as both, DRY as neither).
-          diaperCount++;
-          if (isWetDiaper(activity.type)) {
-            wetCount++;
-          }
-          if (isDirtyDiaper(activity.type)) {
-            dirtyCount++;
-            poopCount++;
-          }
-        }
-      }
-      
-      // Medicine and supplement activities
-      if ('doseAmount' in activity && 'medicineId' in activity) {
-        const time = new Date(activity.time);
-        if (time >= startOfDay && time <= endOfDay) {
-          // Determine if supplement
-          const isSupplement = 'medicine' in activity && activity.medicine && typeof activity.medicine === 'object' && 'isSupplement' in activity.medicine && (activity.medicine as any).isSupplement;
-          const targetStats = isSupplement ? supplementStats : medicineStats;
-
-          // Get medicine/supplement name
-          let medicineName = t('unknown');
-          if ('medicine' in activity && activity.medicine && typeof activity.medicine === 'object' && 'name' in activity.medicine) {
-            medicineName = (activity.medicine as { name?: string }).name || medicineName;
-          }
-
-          // Initialize record if it doesn't exist
-          if (!targetStats[medicineName]) {
-            targetStats[medicineName] = {
-              count: 0,
-              total: 0,
-              unit: unitSymbol(activity.unitAbbr)
-            };
-          }
-
-          // Increment count and add to total
-          targetStats[medicineName].count += 1;
-          if (activity.doseAmount && typeof activity.doseAmount === 'number') {
-            targetStats[medicineName].total += activity.doseAmount;
-          }
-        }
-      }
-      
-      // Note activities
-      if ('content' in activity) {
-        const time = new Date(activity.time);
-        if (time >= startOfDay && time <= endOfDay) {
-          noteCount++;
-        }
-      }
-      
-      // Bath activities
-      if ('soapUsed' in activity) {
-        const time = new Date(activity.time);
-        if (time >= startOfDay && time <= endOfDay) {
-          bathCount++;
-        }
-      }
-      
-      // Pump activities
-      if ('leftAmount' in activity || 'rightAmount' in activity) {
-        let time: Date | null = null;
-        if ('startTime' in activity && activity.startTime) {
-          time = new Date(activity.startTime);
-        } else if ('time' in activity && activity.time) {
-          time = new Date(activity.time);
-        }
-        if (time && time >= startOfDay && time <= endOfDay) {
-          pumpCount++;
-          const total = (activity as any).totalAmount || 0;
-          if (total > 0) {
-            const entryUnit = (activity as any).unitAbbr || 'OZ';
-            pumpTotal += convertVolume(total, entryUnit, preferredUnit);
-          }
-        }
-      }
-      
-      // Vaccine activities
-      if ('vaccineName' in activity) {
-        const time = new Date((activity as any).time);
-        if (time >= startOfDay && time <= endOfDay) {
-          vaccineCount++;
-        }
-        return;
-      }
-
-      // Milestone activities
-      if ('title' in activity && 'category' in activity) {
-        const activityDate = new Date(activity.date);
-        if (activityDate >= startOfDay && activityDate <= endOfDay) {
-          milestoneCount++;
-        }
-      }
-      
-      // Measurement activities
-      if ('value' in activity && 'unit' in activity) {
-        const activityDate = new Date(activity.date);
-        if (activityDate >= startOfDay && activityDate <= endOfDay) {
-          measurementCount++;
-        }
-      }
-    });
-
-    // Feed stats: bottle + breast (grouped into nursing sessions, issue #198)
-    // counted together, solids counted separately (issue #207).
-    const feedStats = aggregateFeedStats(activities, windowActivities, startOfDay, endOfDay, preferredUnit);
-
-    // Check for active sleep (sleep without endTime)
-    // Note: Must exclude pump activities which also have duration and startTime
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    
-    const activeSleep = activities.find(activity => 
-      'duration' in activity && 
-      'startTime' in activity && 
-      'type' in activity && // Sleep activities have type (NAP or NIGHT_SLEEP)
-      !('leftAmount' in activity || 'rightAmount' in activity) && // Exclude pump activities
-      !('endTime' in activity && activity.endTime) &&
-      new Date(activity.startTime) >= startOfDay &&
-      new Date(activity.startTime) <= endOfDay
-    );
-
-    if (activeSleep && 'startTime' in activeSleep && activeSleep.startTime) {
-      const startTime = new Date(activeSleep.startTime);
-      const endTime = isToday ? now : endOfDay;
-      const activeSleepMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-      if (activeSleepMinutes > 0) {
-        totalSleepMinutes += activeSleepMinutes;
-      }
-    }
-
-    // Calculate awake time (elapsed time since start of day - sleep time)
-    const referenceTime = isToday ? now : endOfDay;
-    
-    const elapsedMinutes = Math.floor((referenceTime.getTime() - startOfDay.getTime()) / (1000 * 60));
-    awakeMinutes = Math.max(0, elapsedMinutes - totalSleepMinutes);
-
-    // Photos today - unique photo ids across the day's activities (standalone
-    // photo-log entries plus photos attached to other activity types), deduped by id
-    const photosTodayCount = countUniquePhotoIds(activities as { photos?: { id: string }[] }[]);
+    const {
+      awakeMinutes,
+      totalSleepMinutes,
+      diaperCount,
+      wetCount,
+      poopCount,
+      medicineStats,
+      supplementStats,
+      noteCount,
+      bathCount,
+      pumpCount,
+      pumpTotal,
+      milestoneCount,
+      measurementCount,
+      playCount,
+      totalPlayMinutes,
+      vaccineCount,
+      photoCount: photosTodayCount,
+      feedStats,
+      preferredUnit,
+    } = stats;
 
     const tiles: StatTile[] = [];
 
@@ -342,6 +192,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: null,
         label: t('Awake Time'),
         value: formatMinutes(awakeMinutes),
+        metricKey: 'awakeMinutes',
+        metricKind: 'minutes',
         icon: <Sun className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-amber-600',
@@ -356,6 +208,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'sleep',
         label: t('Total Sleep'),
         value: formatMinutes(totalSleepMinutes),
+        metricKey: 'totalSleepMinutes',
+        metricKind: 'minutes',
         icon: <Moon className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#9ca3af]', // gray-400 - matches timeline
@@ -400,6 +254,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'feed',
         label: combinedLabel,
         value: feedStats.milkFeedCount.toString(),
+        metricKey: 'milkFeedCount',
+        metricKind: 'count',
         icon: <Icon iconNode={bottleBaby} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#7dd3fc]', // sky-300 - matches timeline
@@ -417,6 +273,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'food',
         label: formattedSolidsAmounts || t('Foods'),
         value: feedStats.solidsCount.toString(),
+        metricKey: 'solidsCount',
+        metricKind: 'count',
         icon: <Apple className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#BBD444]', // matches food timeline entries
@@ -431,6 +289,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'diaper',
         label: t('Diaper'),
         value: diaperCount.toString(),
+        metricKey: 'diaperCount',
+        metricKind: 'count',
         icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-gray-600',
@@ -445,6 +305,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'wet',
         label: t('Wet Diapers'),
         value: wetCount.toString(),
+        metricKey: 'wetCount',
+        metricKind: 'count',
         icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#0d9488]', // teal-600 (green) - matches timeline for wet
@@ -459,6 +321,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'poop',
         label: t('Poops'),
         value: poopCount.toString(),
+        metricKey: 'poopCount',
+        metricKind: 'count',
         icon: <Icon iconNode={diaper} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-amber-700', // amber-700 for poops
@@ -476,6 +340,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           filter: 'medicine',
           label: `${medicineName}: ${stats.count}x (${formatAmount(stats.total)} ${stats.unit})`,
           value: stats.count.toString(),
+          metricKey: 'medicineTotalCount',
+          metricKind: 'count',
           icon: <PillBottle className="h-full w-full" aria-hidden="true" />,
           bgColor: 'bg-gray-50',
           iconColor: 'text-[#43B755]', // green - matches timeline
@@ -491,6 +357,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           filter: 'medicine',
           label: label,
           value: totalCount.toString(),
+          metricKey: 'medicineTotalCount',
+          metricKind: 'count',
           icon: <PillBottle className="h-full w-full" aria-hidden="true" />,
           bgColor: 'bg-gray-50',
           iconColor: 'text-[#43B755]', // green - matches timeline
@@ -509,6 +377,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           filter: 'medicine',
           label: `${supplementName}: ${stats.count}x (${formatAmount(stats.total)} ${stats.unit})`,
           value: stats.count.toString(),
+          metricKey: 'medicineTotalCount',
+          metricKind: 'count',
           icon: <Pill className="h-full w-full" aria-hidden="true" />,
           bgColor: 'bg-gray-50',
           iconColor: 'text-[#43B755]', // green - matches timeline
@@ -524,6 +394,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           filter: 'medicine',
           label: label,
           value: totalCount.toString(),
+          metricKey: 'medicineTotalCount',
+          metricKind: 'count',
           icon: <Pill className="h-full w-full" aria-hidden="true" />,
           bgColor: 'bg-gray-50',
           iconColor: 'text-[#43B755]', // green - matches timeline
@@ -539,6 +411,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'note',
         label: t('Notes'),
         value: noteCount.toString(),
+        metricKey: 'noteCount',
+        metricKind: 'count',
         icon: <Edit className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#fef08a]', // yellow-200 - matches timeline
@@ -553,6 +427,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'bath',
         label: t('Baths'),
         value: bathCount.toString(),
+        metricKey: 'bathCount',
+        metricKind: 'count',
         icon: <Bath className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#fb923c]', // orange-400 - matches timeline
@@ -570,6 +446,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'pump',
         label: formattedPumpAmounts || t('Pump'),
         value: pumpCount.toString(),
+        metricKey: 'pumpCount',
+        metricKind: 'count',
         icon: <LampWallDown className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#c084fc]', // purple-400 - matches timeline
@@ -598,6 +476,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'vaccine',
         label: t('Vaccines'),
         value: vaccineCount.toString(),
+        metricKey: 'vaccineCount',
+        metricKind: 'count',
         icon: <Syringe className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#EF4444]',
@@ -612,6 +492,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'milestone',
         label: t('Milestones'),
         value: milestoneCount.toString(),
+        metricKey: 'milestoneCount',
+        metricKind: 'count',
         icon: <Trophy className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#4875EC]', // blue - matches timeline
@@ -626,6 +508,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'measurement',
         label: t('Measurements'),
         value: measurementCount.toString(),
+        metricKey: 'measurementCount',
+        metricKind: 'count',
         icon: <Ruler className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#EA6A5E]', // red - matches timeline
@@ -641,6 +525,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'play',
         label: playLabel,
         value: playCount.toString(),
+        metricKey: 'playCount',
+        metricKind: 'count',
         icon: <Baby className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#F3C4A2]', // peach - matches play activity
@@ -655,6 +541,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'photo',
         label: t('Photos Today'),
         value: photosTodayCount.toString(),
+        metricKey: 'photoCount',
+        metricKind: 'count',
         icon: <Camera className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#e11d48]', // rose - matches photo timeline entries
@@ -663,8 +551,11 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       });
     }
 
-    return tiles;
-  }, [activities, windowActivities, date, t, photosEnabled]);
+    return tiles.map((tile) => ({
+      ...tile,
+      trend: tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
+    }));
+  }, [stats, historyDayStats, t, photosEnabled]);
 
   const formatDateDisplay = (date: Date): string => {
     return formatDateLong(date, dateFormat);
@@ -831,7 +722,11 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           <>
             {statTiles.length > 0 ? (
               <div className="flex flex-wrap gap-0.5">
-                {statTiles.map((tile, index) => (
+                {statTiles.map((tile, index) => {
+                  const trend = tile.trend ?? null;
+                  const sparkMax = trend ? Math.max(...trend.spark, 1) : 1;
+                  const avgLabel = t('vs {days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
+                  return (
                   <button
                     key={tile.filter ? `${tile.filter}-${tile.label.toLowerCase().replace(/\s+/g, '-')}` : tile.label.toLowerCase().replace(/\s+/g, '-')}
                     onClick={() => {
@@ -866,10 +761,38 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                       <div className="flex flex-col min-w-0">
                         <div className="text-base font-bold text-gray-800 leading-tight">{tile.value}</div>
                         <div className="text-xs text-gray-600 font-medium leading-tight">{tile.label}</div>
+                        {trend && tile.metricKey && (
+                          <div
+                            className="flex items-center gap-0.5 text-[10px] leading-tight text-gray-400"
+                            title={`${t('Today')}: ${formatMetricValue(tile.metricKind, stats[tile.metricKey])} · ${t('Yesterday')}: ${trend.yesterday !== null ? formatMetricValue(tile.metricKind, trend.yesterday) : '—'} · ${avgLabel}: ${formatMetricValue(tile.metricKind, trend.avg)}${trend.pctDelta !== null ? ` (${trend.pctDelta > 0 ? '+' : ''}${Math.round(trend.pctDelta)}%)` : ''}`}
+                          >
+                            {trend.dir === 'up' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
+                            {trend.dir === 'down' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
+                            {trend.dir === 'flat' && <Minus className="h-3 w-3" aria-hidden="true" />}
+                            <span>
+                              {trend.dir === 'flat'
+                                ? '≈'
+                                : `${trend.dir === 'up' ? '+' : '-'}${formatMetricValue(tile.metricKind, Math.abs(trend.absDelta))}`}
+                            </span>
+                            <span className="text-gray-300">{avgLabel}</span>
+                          </div>
+                        )}
+                        {trend && (
+                          <div className="flex items-end gap-[2px] h-3 mt-0.5" aria-hidden="true">
+                            {trend.spark.map((value, i) => (
+                              <span
+                                key={i}
+                                className={`w-[3px] rounded-[1px] ${i === trend.spark.length - 1 ? 'bg-gray-500' : 'bg-gray-300'}`}
+                                style={{ height: `${2 + 10 * (value / sparkMax)}px` }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-sm text-gray-500 text-center py-4">

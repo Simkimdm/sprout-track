@@ -58,6 +58,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   // Selected day ±1 so daily stats can group breast-feed sessions across midnight
   const [windowActivities, setWindowActivities] = useState<ActivityType[]>([]);
   const [heatmapActivities, setHeatmapActivities] = useState<ActivityType[]>([]);
+  // Activities of the days before the selected day — comparison baseline for the daily-stats tiles
+  const [statsHistoryActivities, setStatsHistoryActivities] = useState<ActivityType[]>([]);
 
   const [isLoadingActivities, setIsLoadingActivities] = useState<boolean>(false);
   const [isFetchAnimated, setIsFetchAnimated] = useState<boolean>(true);
@@ -243,6 +245,25 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   useEffect(() => {
     fetchFilterHistory(selectedDate, activeFilter);
   }, [fetchFilterHistory, selectedDate, activeFilter]);
+
+  // Fetch the previous days' activities once per selected day; the cache keeps
+  // repeat calls (date navigation back and forth) cheap
+  const fetchStatsHistoryData = useCallback(async (date: Date) => {
+    if (!babyId) {
+      setStatsHistoryActivities([]);
+      return;
+    }
+    try {
+      const activities = await activityCache.fetchStatsHistory(babyId, date, 7);
+      setStatsHistoryActivities(activities);
+    } catch (error) {
+      console.error('Error fetching stats history:', error);
+    }
+  }, [babyId, activityCache]);
+
+  useEffect(() => {
+    fetchStatsHistoryData(selectedDate);
+  }, [fetchStatsHistoryData, selectedDate]);
 
   // Fetch the calendar events starting on `date` (for the optional timeline merge)
   const fetchCalendarEvents = useCallback(async (date: Date) => {
@@ -603,6 +624,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         activities={dateFilteredActivities}
         windowActivities={windowActivities}
         heatmapActivities={heatmapActivities}
+        historyActivities={statsHistoryActivities}
         date={selectedDate}
         isLoading={isLoadingActivities}
         activeFilter={activeFilter}
