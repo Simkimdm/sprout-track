@@ -49,7 +49,7 @@ import { formatAmountsByUnit } from '@/src/utils/foodLogUtils';
 import { useUnit } from '@/src/hooks/useUnit';
 import { fetchPhotosEnabled } from '@/src/utils/photoClientApi';
 import { formatAmount } from '@/src/utils/formatAmount';
-import { computeDailyStats, computeDayTrend, DayTrend, HistoryDayStats, MetricKey, TREND_HISTORY_DAYS } from '@/src/utils/dailyStats';
+import { computeDailyStats, computeDayTrend, DayTrend, HistoryDayStats, MetricKey, TREND_HISTORY_DAYS, TREND_SPARK_DAYS } from '@/src/utils/dailyStats';
 import { bucketByDate, toDateKey } from './useActivityCache';
 
 import './TimelineV2DailyStats.css';
@@ -132,9 +132,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   };
 
   const formatMetricValue = (kind: 'count' | 'minutes' | undefined, value: number): string => {
-    const rounded = Math.round(value * 100) / 100;
-    if (kind === 'minutes') return formatMinutes(rounded);
-    return String(rounded);
+    if (kind === 'minutes') return formatMinutes(Math.round(value));
+    return String(Math.round(value * 10) / 10);
   };
 
   const stats = useMemo(
@@ -145,7 +144,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   const historyDayStats = useMemo<HistoryDayStats[]>(() => {
     const buckets = bucketByDate(historyActivities);
     const days: HistoryDayStats[] = [];
-    for (let i = TREND_HISTORY_DAYS; i >= 1; i--) {
+    for (let i = TREND_SPARK_DAYS; i >= 1; i--) {
       const day = new Date(date);
       day.setHours(0, 0, 0, 0);
       day.setDate(day.getDate() - i);

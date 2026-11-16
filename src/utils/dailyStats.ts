@@ -287,6 +287,7 @@ export interface DayTrend {
 }
 
 export const TREND_HISTORY_DAYS = 7;
+export const TREND_SPARK_DAYS = 14;
 export const TREND_FLAT_PCT = 10;
 
 export function computeDayTrend(
@@ -296,15 +297,15 @@ export function computeDayTrend(
 ): DayTrend | null {
   if (historyDays.length === 0) return null;
   const values = historyDays.map((d) => (d.hasData ? d.metrics[key] : null));
-  const used = values.filter((v): v is number => v !== null);
+  const used = values.slice(-TREND_HISTORY_DAYS).filter((v): v is number => v !== null);
   if (used.length === 0) return null;
-  const avg = used.reduce((sum, v) => sum + v, 0) / used.length;
+  const avg = Math.round((used.reduce((sum, v) => sum + v, 0) / used.length) * 10) / 10;
   const todayValue = today[key];
-  const absDelta = todayValue - avg;
+  const absDelta = Math.round((todayValue - avg) * 10) / 10;
   const pctDelta = avg !== 0 ? (absDelta / avg) * 100 : null;
   const flat = pctDelta === null ? absDelta === 0 : Math.abs(pctDelta) < TREND_FLAT_PCT;
   const dir: DayTrend['dir'] = flat ? 'flat' : absDelta > 0 ? 'up' : 'down';
-  const spark = [...values.slice(-(TREND_HISTORY_DAYS - 1)).map((v) => v ?? 0), todayValue];
+  const spark = [...values.slice(-(TREND_SPARK_DAYS - 1)).map((v) => v ?? 0), todayValue];
   return {
     dir,
     absDelta,
