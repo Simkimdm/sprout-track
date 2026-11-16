@@ -5,8 +5,8 @@ import jwt from 'jsonwebtoken';
 import { verifyPassword } from '../../utils/password-utils';
 import { checkIpLockout, recordFailedAttempt, resetFailedAttempts } from '../../utils/ip-lockout';
 import { logApiCall, getClientInfo } from '../../utils/api-logger';
-import { ACCESS_TOKEN_LIFE, createRefreshToken, setRefreshTokenCookie, getJwtSecret } from '../../utils/auth';
-const TOKEN_EXPIRATION = ACCESS_TOKEN_LIFE;
+import { getAccessTokenLife, createRefreshToken, setRefreshTokenCookie, getJwtSecret } from '../../utils/auth';
+
 
 interface AccountLoginRequest {
   email: string;
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<A
       trialEnds: account.trialEnds?.toISOString(),
       planExpires: account.planExpires?.toISOString(),
       planType: account.planType,
-    }, getJwtSecret(), { expiresIn: `${TOKEN_EXPIRATION}s` });
+    }, getJwtSecret(), { expiresIn: `${getAccessTokenLife()}s` });
 
     const response: AccountLoginResponse = {
       success: true,
