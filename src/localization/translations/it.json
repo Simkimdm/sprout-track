@@ -2734,6 +2734,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Sì. Niente pubblicità, niente tracker, nessuna vendita di dati. Il codice è pubblico su GitHub, quindi non devi fidarti sulla parola.",
   "Yesterday": "Ieri",
   "{days}-day avg": "media di {days} giorni",
+  "Show trend on daily summary tiles": "Mostra il trend nelle tessere del riepilogo giornaliero",
+  "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Se abilitato, le tessere del riepilogo giornaliero mostrano la differenza rispetto alla media di 7 giorni più una sparkline di 14 giorni",
   "You": "Tu",
   "You (Admin)": "Tu (Admin)",
   "You can access the Family Manager at": "Puoi accedere al Gestore Famiglia a",

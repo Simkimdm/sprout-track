@@ -2734,6 +2734,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Da. Fără reclame, fără instrumente de urmărire, fără vânzare de date. Codul este public pe GitHub, așa că nu trebuie să ne crezi doar pe cuvânt.",
   "Yesterday": "Ieri",
   "{days}-day avg": "media pe {days} zile",
+  "Show trend on daily summary tiles": "Afișează tendința pe plăcuțele rezumatului zilnic",
+  "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Când este activată, plăcuțele rezumatului zilnic arată abaterea față de media pe 7 zile plus un sparkline pe 14 zile",
   "You": "Tu",
   "You (Admin)": "Tu (Admin)",
   "You can access the Family Manager at": "Puteți accesa Managerul Familiei la",

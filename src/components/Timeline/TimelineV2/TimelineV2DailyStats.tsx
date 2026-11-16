@@ -61,6 +61,8 @@ interface TimelineV2DailyStatsProps {
   heatmapActivities: ActivityType[];
   /** Activities of the days before the selected day — trend baseline for the tiles. */
   historyActivities?: ActivityType[];
+  /** Family setting: render the trend (delta + sparkline) on the tiles. */
+  trendEnabled?: boolean;
   date: Date;
   isLoading?: boolean;
   activeFilter: FilterType;
@@ -96,6 +98,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   windowActivities,
   heatmapActivities,
   historyActivities = [],
+  trendEnabled = true,
   date,
   isLoading = false,
   activeFilter,
@@ -142,6 +145,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   );
 
   const historyDayStats = useMemo<HistoryDayStats[]>(() => {
+    if (!trendEnabled) return [];
     const buckets = bucketByDate(historyActivities);
     const days: HistoryDayStats[] = [];
     for (let i = TREND_SPARK_DAYS; i >= 1; i--) {
@@ -156,7 +160,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       });
     }
     return days;
-  }, [historyActivities, date, defaultBottleUnit, t]);
+  }, [historyActivities, date, defaultBottleUnit, t, trendEnabled]);
 
   // Calculate stats and create dynamic tiles
   const statTiles = useMemo(() => {
@@ -551,9 +555,9 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
 
     return tiles.map((tile) => ({
       ...tile,
-      trend: tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
+      trend: trendEnabled && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
     }));
-  }, [stats, historyDayStats, t, photosEnabled]);
+  }, [stats, historyDayStats, t, photosEnabled, trendEnabled]);
 
   const formatDateDisplay = (date: Date): string => {
     return formatDateLong(date, dateFormat);

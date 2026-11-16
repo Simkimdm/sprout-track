@@ -117,6 +117,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'autoEndSleepOnFeed',
       'showCalendarEventsInTimeline',
       'showPreviousEntryInFilteredTimeline',
+      'showDailyStatsTrend',
       'photoQuotaMB',
     ];
 

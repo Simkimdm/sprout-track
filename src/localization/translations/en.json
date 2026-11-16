@@ -2737,6 +2737,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.",
   "Yesterday": "Yesterday",
   "{days}-day avg": "{days}-day avg",
+  "Show trend on daily summary tiles": "Show trend on daily summary tiles",
+  "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline",
   "You": "You",
   "You (Admin)": "You (Admin)",
   "You can access the Family Manager at": "You can access the Family Manager at",

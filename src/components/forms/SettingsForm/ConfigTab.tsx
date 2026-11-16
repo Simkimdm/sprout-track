@@ -360,6 +360,17 @@ export default function ConfigTab({
               onCheckedChange={(checked) => onSettingsChange({ showPreviousEntryInFilteredTimeline: checked } as any)}
             />
           </label>
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="form-label">{t('Show trend on daily summary tiles')}</span>
+              <p className="text-sm text-gray-500">{t('When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline')}</p>
+            </div>
+            <Checkbox
+              variant="primary"
+              checked={(settings as any)?.showDailyStatsTrend ?? true}
+              onCheckedChange={(checked) => onSettingsChange({ showDailyStatsTrend: checked } as any)}
+            />
+          </label>
         </div>
       </div>
 
