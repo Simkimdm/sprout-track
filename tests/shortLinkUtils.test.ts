@@ -96,8 +96,9 @@ describe('utcDayString / extractReferrerDomain / bytesToSlug', () => {
 });
 
 describe('getClientIp / getCountry', () => {
-  it('reads forwarded-for first hop', () => {
-    expect(getClientIp(new Headers({ 'x-forwarded-for': '9.9.9.9, 10.0.0.1' }))).toBe('9.9.9.9');
+  it('reads forwarded-for rightmost hop (anti-spoofing: client entries sit left)', () => {
+    expect(getClientIp(new Headers({ 'x-forwarded-for': '9.9.9.9, 10.0.0.1' }))).toBe('10.0.0.1');
+    expect(getClientIp(new Headers({ 'x-forwarded-for': '10.0.0.1' }))).toBe('10.0.0.1');
     expect(getClientIp(new Headers({ 'x-real-ip': '8.8.8.8' }))).toBe('8.8.8.8');
     expect(getClientIp(new Headers())).toBeNull();
   });

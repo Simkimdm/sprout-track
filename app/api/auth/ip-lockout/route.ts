@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '../../types';
+import { extractClientIp } from '../../utils/api-logger';
 import { checkIpLockout } from '../../utils/ip-lockout';
 
 /**
@@ -11,10 +12,8 @@ import { checkIpLockout } from '../../utils/ip-lockout';
  * or clear the lockout and brute-force PINs without limit.
  */
 export async function GET(req: NextRequest) {
-  // Get the client IP
-  const ip = req.headers.get('x-forwarded-for') ||
-             req.headers.get('x-real-ip') ||
-             'unknown';
+  // Get the client IP (rightmost X-Forwarded-For entry, anti-spoofing)
+  const ip = extractClientIp(req.headers);
 
   const { locked, remainingTime } = checkIpLockout(ip);
 

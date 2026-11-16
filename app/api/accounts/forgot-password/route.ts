@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractClientIp } from '../../utils/api-logger';
 import prisma from '../../db';
 import { ApiResponse } from '../../types';
 import { checkIpLockout, recordFailedAttempt, resetFailedAttempts } from '../../utils/ip-lockout';
@@ -15,18 +16,7 @@ interface ForgotPasswordResponse {
 }
 
 function getClientIP(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  
-  if (realIp) {
-    return realIp;
-  }
-  
-  return 'unknown';
+  return extractClientIp(req.headers);
 }
 
 function isValidEmail(email: string): boolean {

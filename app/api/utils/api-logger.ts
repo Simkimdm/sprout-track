@@ -43,9 +43,26 @@ export async function logApiCall(entry: ApiLogEntry): Promise<void> {
   }
 }
 
+/**
+ * Extracts the client IP from proxy headers. Uses the RIGHTMOST X-Forwarded-For
+ * entry: a reverse proxy appends the address it sees, so client-supplied
+ * entries (which sit to the left and are trivially spoofable) cannot forge it.
+ * Without a proxy in front, any header value is client-controlled — run behind
+ * a trusted reverse proxy (or accept that IP-based limits are best-effort).
+ */
+export function extractClientIp(headers: Headers): string {
+  const forwardedFor = headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    const entries = forwardedFor.split(',').map((s) => s.trim()).filter(Boolean);
+    const rightmost = entries[entries.length - 1];
+    if (rightmost) return rightmost;
+  }
+  return headers.get('x-real-ip') || 'unknown';
+}
+
 export function getClientInfo(req: NextRequest) {
   return {
-    ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+    ip: extractClientIp(req.headers),
     userAgent: req.headers.get('user-agent') || 'unknown',
   };
 }
