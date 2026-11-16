@@ -61,6 +61,10 @@ interface TimelineV2DailyStatsProps {
   heatmapActivities: ActivityType[];
   /** Activities of the days before the selected day — trend baseline for the tiles. */
   historyActivities?: ActivityType[];
+  /** Family setting: render the trend (delta + sparkline) on the tiles. */
+  trendEnabled?: boolean;
+  /** Family setting: feed tile trend compares breastfeeding time (L/R) instead of the feed count. */
+  feedTrendByDuration?: boolean;
   date: Date;
   isLoading?: boolean;
   activeFilter: FilterType;
@@ -96,6 +100,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   windowActivities,
   heatmapActivities,
   historyActivities = [],
+  trendEnabled = true,
+  feedTrendByDuration = true,
   date,
   isLoading = false,
   activeFilter,
@@ -142,6 +148,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   );
 
   const historyDayStats = useMemo<HistoryDayStats[]>(() => {
+    if (!trendEnabled) return [];
     const buckets = bucketByDate(historyActivities);
     const days: HistoryDayStats[] = [];
     for (let i = TREND_SPARK_DAYS; i >= 1; i--) {
@@ -156,7 +163,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       });
     }
     return days;
-  }, [historyActivities, date, defaultBottleUnit, t]);
+  }, [historyActivities, date, defaultBottleUnit, t, trendEnabled]);
 
   // Calculate stats and create dynamic tiles
   const statTiles = useMemo(() => {
@@ -252,8 +259,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'feed',
         label: combinedLabel,
         value: feedStats.milkFeedCount.toString(),
-        metricKey: 'milkFeedCount',
-        metricKind: 'count',
+        metricKey: feedTrendByDuration ? 'breastFeedMinutes' : 'milkFeedCount',
+        metricKind: feedTrendByDuration ? 'minutes' : 'count',
         icon: <Icon iconNode={bottleBaby} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#7dd3fc]', // sky-300 - matches timeline
@@ -551,9 +558,9 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
 
     return tiles.map((tile) => ({
       ...tile,
-      trend: tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
+      trend: trendEnabled && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
     }));
-  }, [stats, historyDayStats, t, photosEnabled]);
+  }, [stats, historyDayStats, t, photosEnabled, trendEnabled, feedTrendByDuration]);
 
   const formatDateDisplay = (date: Date): string => {
     return formatDateLong(date, dateFormat);

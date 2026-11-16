@@ -96,6 +96,18 @@ describe('computeDailyStats', () => {
     expect(stats.solidsCount).toBe(1);
   });
 
+  it('sums left/right breast session minutes into breastFeedMinutes', () => {
+    const activities = [
+      { id: 'b1', type: 'BREAST', time: at(9), side: 'LEFT', feedDuration: 600, sessionId: 's1' },
+      { id: 'b2', type: 'BREAST', time: at(9, 5), side: 'RIGHT', feedDuration: 300, sessionId: 's1' },
+    ];
+    const stats = computeDailyStats(activities, undefined, DAY, { ...opts, now: DAY });
+    expect(stats.milkFeedCount).toBe(1);
+    expect(stats.leftBreastMinutes).toBe(10);
+    expect(stats.rightBreastMinutes).toBe(5);
+    expect(stats.breastFeedMinutes).toBe(15);
+  });
+
   it('aggregates medicine and supplement doses into a total count', () => {
     const activities = [
       { id: 'm1', time: at(8), doseAmount: 5, medicineId: 'med1', unitAbbr: 'ML', medicine: { name: 'Vitamin D', isSupplement: false } },

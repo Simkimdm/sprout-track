@@ -35,6 +35,7 @@ export interface DailyStatMetrics {
   bottleFeedTotal: number;
   leftBreastMinutes: number;
   rightBreastMinutes: number;
+  breastFeedMinutes: number;
   solidsCount: number;
   preferredUnit: string;
   isToday: boolean;
@@ -264,6 +265,7 @@ export function computeDailyStats(
     bottleFeedTotal: feedStats.bottleFeedTotal,
     leftBreastMinutes: feedStats.leftBreastMinutes,
     rightBreastMinutes: feedStats.rightBreastMinutes,
+    breastFeedMinutes: feedStats.leftBreastMinutes + feedStats.rightBreastMinutes,
     solidsCount: feedStats.solidsCount,
     preferredUnit,
     isToday,
