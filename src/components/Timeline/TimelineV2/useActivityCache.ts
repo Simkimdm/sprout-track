@@ -18,7 +18,7 @@ function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function bucketByDate(activities: ActivityType[]): Map<string, ActivityType[]> {
+export function bucketByDate(activities: ActivityType[]): Map<string, ActivityType[]> {
   const buckets = new Map<string, ActivityType[]>();
   for (const activity of activities) {
     const timeStr = getActivityTime(activity);
@@ -64,6 +64,7 @@ export function useActivityCache() {
   const cache = useRef<Map<string, CacheEntry>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
   const heatmapCache = useRef<{ activities: ActivityType[]; fetchedAt: number; windowKey: string } | null>(null);
+  const statsHistoryCache = useRef<{ activities: ActivityType[]; fetchedAt: number; windowKey: string } | null>(null);
 
   const isCached = useCallback((dateKey: string): boolean => {
     const entry = cache.current.get(dateKey);
@@ -208,7 +209,46 @@ export function useActivityCache() {
   const invalidateAll = useCallback(() => {
     cache.current.clear();
     heatmapCache.current = null;
+    statsHistoryCache.current = null;
   }, []);
+
+  // Activities for the `days` before (and including) selectedDate, all types —
+  // comparison baseline for the daily-stats tiles (trend vs average). The selected
+  // day itself is included so overnight entries that end on it still bucket into
+  // the previous day; consumers only read the days before the selected one.
+  const fetchStatsHistory = useCallback(async (
+    babyId: string,
+    selectedDate: Date,
+    days: number = 7
+  ): Promise<ActivityType[]> => {
+    const startOfWindow = new Date(selectedDate);
+    startOfWindow.setHours(0, 0, 0, 0);
+    startOfWindow.setDate(startOfWindow.getDate() - days);
+
+    const endOfWindow = new Date(selectedDate);
+    endOfWindow.setHours(23, 59, 59, 999);
+
+    const windowKey = `${toDateKey(startOfWindow)}_${toDateKey(endOfWindow)}`;
+
+    if (statsHistoryCache.current &&
+        statsHistoryCache.current.windowKey === windowKey &&
+        (Date.now() - statsHistoryCache.current.fetchedAt) < STALE_MS) {
+      return statsHistoryCache.current.activities;
+    }
+
+    try {
+      const activities = await fetchFromApi(babyId, startOfWindow, endOfWindow);
+      statsHistoryCache.current = {
+        activities,
+        fetchedAt: Date.now(),
+        windowKey
+      };
+      return activities;
+    } catch (error) {
+      console.error('Error fetching stats history:', error);
+      return statsHistoryCache.current?.activities || [];
+    }
+  }, [fetchFromApi]);
 
   const fetchHeatmap = useCallback(async (
     babyId: string,
@@ -252,6 +292,7 @@ export function useActivityCache() {
     invalidateAll,
     isCached,
     fetchHeatmap,
+    fetchStatsHistory,
     toDateKey,
   };
 }
