@@ -1340,6 +1340,22 @@ enum EmailProviderType {
 }
 
 // Application configuration settings
+// Persistent store for security state that used to live in process memory
+// (IP lockouts, JWT blacklist). Survives restarts and works across multiple
+// app instances, unlike in-memory Maps.
+model SecurityEvent {
+  id        String   @id @default(uuid())
+  kind      String // 'ip_lockout' | 'token_blacklist'
+  key       String // IP address or SHA-256 hash of the token
+  count     Int      @default(0) // failed-attempt counter (ip_lockout)
+  locked    Boolean  @default(false) // true while the lockout is active
+  expiresAt DateTime // lockout end / counter window end
+  createdAt DateTime @default(now())
+
+  @@unique([kind, key])
+  @@index([expiresAt])
+}
+
 model AppConfig {
   id          String   @id @default(cuid())
   adminPass   String // Sitewide admin password

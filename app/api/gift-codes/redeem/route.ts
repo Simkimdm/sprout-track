@@ -36,7 +36,7 @@ async function handler(
 
     // Brute-force protection on top of the code entropy.
     const { ip } = getClientInfo(req);
-    const { locked, remainingTime } = checkIpLockout(ip);
+    const { locked, remainingTime } = await checkIpLockout(ip);
     if (locked) {
       return NextResponse.json(
         {
@@ -50,7 +50,7 @@ async function handler(
     const body = await req.json();
     const normalized = normalizeGiftCode(typeof body?.code === 'string' ? body.code : '');
     if (!normalized) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       return NextResponse.json(
         { success: false, error: 'Invalid or already used code' },
         { status: 400 }
@@ -75,14 +75,14 @@ async function handler(
           { status: 400 }
         );
       }
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       return NextResponse.json(
         { success: false, error: 'Invalid or already used code' },
         { status: 400 }
       );
     }
 
-    resetFailedAttempts(ip);
+    await resetFailedAttempts(ip);
 
     // Atomically claim the code (guards concurrent redemption) and grant
     // lifetime access. Mirrors the webhook's lifetime purchase branch.
@@ -105,7 +105,7 @@ async function handler(
     });
 
     if (!claimed) {
-      recordFailedAttempt(ip);
+      await recordFailedAttempt(ip);
       return NextResponse.json(
         { success: false, error: 'Invalid or already used code' },
         { status: 400 }

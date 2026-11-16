@@ -1,92 +1,104 @@
-// In-memory store for tracking failed login attempts
-// In a production environment, this should be replaced with a persistent store like Redis
-interface FailedAttempt {
-  count: number;
-  lockoutUntil: number | null;
-}
+import prisma from '../db';
 
-const failedAttempts: Record<string, FailedAttempt> = {};
+// Persistent, DB-backed store for failed login attempts (survives restarts
+// and works across multiple app instances, unlike an in-memory Map).
+// Rows carry their own expiry via expiresAt.
+
+const KIND = 'ip_lockout';
 
 // Maximum number of failed attempts before lockout
 const MAX_ATTEMPTS = 3;
 // Lockout duration in milliseconds (5 minutes)
 const LOCKOUT_DURATION = 5 * 60 * 1000;
 
+async function cleanupExpired(): Promise<void> {
+  try {
+    await prisma.securityEvent.deleteMany({
+      where: { kind: KIND, expiresAt: { lte: new Date() } },
+    });
+  } catch {
+    // Best effort — a failed cleanup must not break lockout logic
+  }
+}
+
 /**
  * Check if an IP is currently locked out
- * @param ip The IP address to check
- * @returns Object containing lockout status and time remaining
  */
-export function checkIpLockout(ip: string): { locked: boolean; remainingTime: number } {
-  const attempt = failedAttempts[ip];
-  
-  // If no record exists for this IP, it's not locked
-  if (!attempt) {
+export async function checkIpLockout(ip: string): Promise<{ locked: boolean; remainingTime: number }> {
+  try {
+    const row = await prisma.securityEvent.findUnique({
+      where: { kind_key: { kind: KIND, key: ip } },
+    });
+
+    if (!row) {
+      return { locked: false, remainingTime: 0 };
+    }
+
+    if (row.locked && row.expiresAt.getTime() > Date.now()) {
+      return { locked: true, remainingTime: row.expiresAt.getTime() - Date.now() };
+    }
+
+    // Lockout window or counter window elapsed — reset the counter
+    if (row.expiresAt.getTime() <= Date.now()) {
+      await prisma.securityEvent.update({
+        where: { kind_key: { kind: KIND, key: ip } },
+        data: { count: 0, locked: false },
+      }).catch(() => {});
+    }
+    return { locked: false, remainingTime: 0 };
+  } catch (error) {
+    console.error('checkIpLockout error:', error);
+    // Fail open: a DB hiccup must not lock out every user
     return { locked: false, remainingTime: 0 };
   }
-  
-  // If there's a lockout time and it's in the future, the IP is locked
-  if (attempt.lockoutUntil && attempt.lockoutUntil > Date.now()) {
-    return { 
-      locked: true, 
-      remainingTime: attempt.lockoutUntil - Date.now() 
-    };
-  }
-  
-  // If the lockout time has passed, reset the record and return not locked
-  if (attempt.lockoutUntil && attempt.lockoutUntil <= Date.now()) {
-    attempt.count = 0;
-    attempt.lockoutUntil = null;
-    return { locked: false, remainingTime: 0 };
-  }
-  
-  // If there's no lockout time but there are failed attempts, return not locked
-  return { locked: false, remainingTime: 0 };
 }
 
 /**
  * Record a failed login attempt for an IP
- * @param ip The IP address to record the failed attempt for
- * @returns Object containing lockout status and time remaining
  */
-export function recordFailedAttempt(ip: string): { locked: boolean; remainingTime: number } {
-  // Get or create the record for this IP
-  const attempt = failedAttempts[ip] || { count: 0, lockoutUntil: null };
-  
-  // If the IP is already locked, return the current status
-  if (attempt.lockoutUntil && attempt.lockoutUntil > Date.now()) {
-    return { 
-      locked: true, 
-      remainingTime: attempt.lockoutUntil - Date.now() 
-    };
+export async function recordFailedAttempt(ip: string): Promise<{ locked: boolean; remainingTime: number }> {
+  await cleanupExpired();
+  try {
+    const existing = await prisma.securityEvent.findUnique({
+      where: { kind_key: { kind: KIND, key: ip } },
+    });
+
+    // Already locked and lockout still active
+    if (existing?.locked && existing.expiresAt.getTime() > Date.now()) {
+      return { locked: true, remainingTime: existing.expiresAt.getTime() - Date.now() };
+    }
+
+    const count = (existing?.count ?? 0) + 1;
+
+    if (count >= MAX_ATTEMPTS) {
+      const expiresAt = new Date(Date.now() + LOCKOUT_DURATION);
+      await prisma.securityEvent.upsert({
+        where: { kind_key: { kind: KIND, key: ip } },
+        create: { kind: KIND, key: ip, count: 0, locked: true, expiresAt },
+        update: { count: 0, locked: true, expiresAt },
+      });
+      return { locked: true, remainingTime: LOCKOUT_DURATION };
+    }
+
+    await prisma.securityEvent.upsert({
+      where: { kind_key: { kind: KIND, key: ip } },
+      create: { kind: KIND, key: ip, count, locked: false, expiresAt: new Date(Date.now() + LOCKOUT_DURATION) },
+      update: { count, locked: false },
+    });
+    return { locked: false, remainingTime: 0 };
+  } catch (error) {
+    console.error('recordFailedAttempt error:', error);
+    return { locked: false, remainingTime: 0 };
   }
-  
-  // Increment the failed attempt count
-  attempt.count += 1;
-  
-  // If the count exceeds the maximum, lock the IP
-  if (attempt.count >= MAX_ATTEMPTS) {
-    attempt.lockoutUntil = Date.now() + LOCKOUT_DURATION;
-    attempt.count = 0; // Reset count for next window
-  }
-  
-  // Update the record
-  failedAttempts[ip] = attempt;
-  
-  // Return the current status
-  return { 
-    locked: attempt.lockoutUntil !== null && attempt.lockoutUntil > Date.now(), 
-    remainingTime: attempt.lockoutUntil ? attempt.lockoutUntil - Date.now() : 0 
-  };
 }
 
 /**
  * Reset failed attempts for an IP after successful login
- * @param ip The IP address to reset
  */
-export function resetFailedAttempts(ip: string): void {
-  if (failedAttempts[ip]) {
-    failedAttempts[ip].count = 0;
-    failedAttempts[ip].lockoutUntil = null;
+export async function resetFailedAttempts(ip: string): Promise<void> {
+  try {
+    await prisma.securityEvent.deleteMany({ where: { kind: KIND, key: ip } });
+  } catch (error) {
+    console.error('resetFailedAttempts error:', error);
   }
 }
