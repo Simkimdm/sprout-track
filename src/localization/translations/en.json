@@ -2736,7 +2736,7 @@
   "Yes, close it": "Yes, close it",
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.",
   "Yesterday": "Yesterday",
-  "vs {days}-day avg": "vs {days}-day avg",
+  "{days}-day avg": "{days}-day avg",
   "You": "You",
   "You (Admin)": "You (Admin)",
   "You can access the Family Manager at": "You can access the Family Manager at",

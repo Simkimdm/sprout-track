@@ -2737,7 +2737,7 @@
   "Yes, close it": "Tak, zamknij",
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Tak. Bez reklam, bez trackerów, bez sprzedawania danych. Kod jest publicznie dostępny na GitHubie, więc nie musisz wierzyć nam na słowo.",
   "Yesterday": "Wczoraj",
-  "vs {days}-day avg": "vs średnia z {days} dni",
+  "{days}-day avg": "średnia z {days} dni",
   "You": "Ty",
   "You (Admin)": "Ty (Admin)",
   "You can access the Family Manager at": "Możesz wejść do Menedżera rodziny pod adresem",
