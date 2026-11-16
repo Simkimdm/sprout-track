@@ -63,6 +63,8 @@ interface TimelineV2DailyStatsProps {
   historyActivities?: ActivityType[];
   /** Family setting: render the trend (delta + sparkline) on the tiles. */
   trendEnabled?: boolean;
+  /** Family setting: feed tile trend compares breastfeeding time (L/R) instead of the feed count. */
+  feedTrendByDuration?: boolean;
   date: Date;
   isLoading?: boolean;
   activeFilter: FilterType;
@@ -99,6 +101,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   heatmapActivities,
   historyActivities = [],
   trendEnabled = true,
+  feedTrendByDuration = true,
   date,
   isLoading = false,
   activeFilter,
@@ -256,8 +259,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         filter: 'feed',
         label: combinedLabel,
         value: feedStats.milkFeedCount.toString(),
-        metricKey: 'milkFeedCount',
-        metricKind: 'count',
+        metricKey: feedTrendByDuration ? 'breastFeedMinutes' : 'milkFeedCount',
+        metricKind: feedTrendByDuration ? 'minutes' : 'count',
         icon: <Icon iconNode={bottleBaby} className="h-full w-full" aria-hidden="true" />,
         bgColor: 'bg-gray-50',
         iconColor: 'text-[#7dd3fc]', // sky-300 - matches timeline
@@ -557,7 +560,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       ...tile,
       trend: trendEnabled && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
     }));
-  }, [stats, historyDayStats, t, photosEnabled, trendEnabled]);
+  }, [stats, historyDayStats, t, photosEnabled, trendEnabled, feedTrendByDuration]);
 
   const formatDateDisplay = (date: Date): string => {
     return formatDateLong(date, dateFormat);

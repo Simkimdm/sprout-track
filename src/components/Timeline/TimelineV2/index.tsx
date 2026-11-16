@@ -77,6 +77,8 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   const showPreviousEntry = (settings as any)?.showPreviousEntryInFilteredTimeline ?? true;
   // Family setting: show trend (delta vs average + sparkline) on the daily summary tiles
   const showDailyStatsTrend = (settings as any)?.showDailyStatsTrend ?? true;
+  // Family setting: feed tile trend uses left/right breastfeeding time instead of the feed count
+  const feedTileTrendByDuration = (settings as any)?.feedTileTrendByDuration ?? true;
 
   // Gap since the previous same-type entry for every feed/sleep row of the day
   // (feeds anchor across midnight via historyFeeds; sleep anchors at the previous sleep's end)
@@ -629,6 +631,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         heatmapActivities={heatmapActivities}
         historyActivities={statsHistoryActivities}
         trendEnabled={showDailyStatsTrend}
+        feedTrendByDuration={feedTileTrendByDuration}
         date={selectedDate}
         isLoading={isLoadingActivities}
         activeFilter={activeFilter}

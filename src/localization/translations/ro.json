@@ -2735,6 +2735,8 @@
   "Yesterday": "Ieri",
   "{days}-day avg": "media pe {days} zile",
   "Show trend on daily summary tiles": "Afișează tendința pe plăcuțele rezumatului zilnic",
+  "Feed tile trend by breastfeeding duration": "Plăcuța de hrănire: tendință după durata alăptării (S/D)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Când este activată, plăcuța de hrănire compară durata totală a alăptării stânga/dreapta în loc de numărul de alăptări",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Când este activată, plăcuțele rezumatului zilnic arată abaterea față de media pe 7 zile plus un sparkline pe 14 zile",
   "You": "Tu",
   "You (Admin)": "Tu (Admin)",

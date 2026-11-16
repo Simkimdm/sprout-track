@@ -2738,6 +2738,8 @@
   "Yesterday": "Gestern",
   "{days}-day avg": "Ø {days} Tage",
   "Show trend on daily summary tiles": "Trend in den Tagesübersichts-Kacheln anzeigen",
+  "Feed tile trend by breastfeeding duration": "Fütterungs-Kachel: Trend über die Stillzeit (L/R)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Wenn aktiviert, vergleicht die Fütterungs-Kachel die gesamte Stillzeit links/rechts statt der Anzahl der Fütterungen",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Wenn aktiviert, zeigen die Kacheln der Tagesübersicht die Abweichung zum 7-Tage-Durchschnitt plus eine 14-Tage-Sparkline",
   "You": "Du",
   "You (Admin)": "Du (Admin)",

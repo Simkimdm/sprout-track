@@ -118,6 +118,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       'showCalendarEventsInTimeline',
       'showPreviousEntryInFilteredTimeline',
       'showDailyStatsTrend',
+      'feedTileTrendByDuration',
       'photoQuotaMB',
     ];
 

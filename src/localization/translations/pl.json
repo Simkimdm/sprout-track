@@ -2739,6 +2739,8 @@
   "Yesterday": "Wczoraj",
   "{days}-day avg": "średnia z {days} dni",
   "Show trend on daily summary tiles": "Pokaż trend na kafelkach podsumowania dnia",
+  "Feed tile trend by breastfeeding duration": "Kafelek karmienia: trend wg czasu karmienia piersią (L/P)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Po włączeniu kafelek karmienia porównuje całkowity czas karmienia piersią lewo/pravo zamiast liczby karmień",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Po włączeniu kafelki podsumowania dnia pokazują odchylenie od średniej 7-dniowej oraz sparkline z 14 dni",
   "You": "Ty",
   "You (Admin)": "Ty (Admin)",

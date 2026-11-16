@@ -2735,6 +2735,8 @@
   "Yesterday": "कल",
   "{days}-day avg": "{days} din ka औसत",
   "Show trend on daily summary tiles": "दैनिक सारांश टाइल्स पर ट्रेंड दिखाएँ",
+  "Feed tile trend by breastfeeding duration": "फीड टाइल: स्तनपान की अवधि (बाएँ/दाएँ) से ट्रенд",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "सक्षम होने पर, फीड टाइल transformaciones की संख्या के बजाय बाएँ/दाएँ स्तनपान का कुल समय तुलना करती है",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "सक्षम होने पर, दैनिक सारांश की टाइल्स 7-दिन के औसत से अंतर और 14-दिन की स्पार्कलाइन दिखाती हैं",
   "You": "आप",
   "You (Admin)": "आप (एडमिन)",

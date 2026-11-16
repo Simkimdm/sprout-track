@@ -2735,6 +2735,8 @@
   "Yesterday": "Hier",
   "{days}-day avg": "moy. {days} jours",
   "Show trend on daily summary tiles": "Afficher la tendance sur les tuiles du résumé quotidien",
+  "Feed tile trend by breastfeeding duration": "Tuile d'alimentation : tendance selon la durée d'allaitement (G/D)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Si activé, la tuile d'alimentation compare la durée totale d'allaitement gauche/droite plutôt que le nombre de tétées",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Si activé, les tuiles du résumé quotidien affichent l'écart par rapport à la moyenne sur 7 jours plus un mini-graphique sur 14 jours",
   "You": "Vous",
   "You (Admin)": "Vous (Admin)",

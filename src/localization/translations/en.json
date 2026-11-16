@@ -2738,6 +2738,8 @@
   "Yesterday": "Yesterday",
   "{days}-day avg": "{days}-day avg",
   "Show trend on daily summary tiles": "Show trend on daily summary tiles",
+  "Feed tile trend by breastfeeding duration": "Feed tile trend by breastfeeding duration",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline",
   "You": "You",
   "You (Admin)": "You (Admin)",

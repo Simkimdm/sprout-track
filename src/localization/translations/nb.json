@@ -2735,6 +2735,8 @@
   "Yesterday": "I går",
   "{days}-day avg": "snitt over {days} dager",
   "Show trend on daily summary tiles": "Vis trend på flisene i dagoppsummeringen",
+  "Feed tile trend by breastfeeding duration": "Flis for mating: trend etter ammevarighet (V/H)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Når aktivert sammenligner matingflisen total ammevarighet venstre/høyre i stedet for antall matinger",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Når aktivert viser flisene i dagoppsummeringen avviket fra 7-dagerssnittet pluss en sparkline over 14 dager",
   "You": "Du",
   "You (Admin)": "Du (administrator)",

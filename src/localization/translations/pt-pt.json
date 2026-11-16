@@ -2735,6 +2735,8 @@
   "Yesterday": "Ontem",
   "{days}-day avg": "média de {days} dias",
   "Show trend on daily summary tiles": "Mostrar tendência nos blocos do resumo diário",
+  "Feed tile trend by breastfeeding duration": "Bloco de alimentação: tendência pela duração da mamada (E/D)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Quando ativado, o bloco de alimentação compara a duração total da mamada esquerda/direita em vez do número de mamadas",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Quando ativado, os blocos do resumo diário mostram a diferença em relação à média de 7 dias mais um minigráfico de 14 dias",
   "You": "Você",
   "You (Admin)": "Você (Admin)",

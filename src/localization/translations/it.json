@@ -2735,6 +2735,8 @@
   "Yesterday": "Ieri",
   "{days}-day avg": "media di {days} giorni",
   "Show trend on daily summary tiles": "Mostra il trend nelle tessere del riepilogo giornaliero",
+  "Feed tile trend by breastfeeding duration": "Tessera alimentazione: trend per durata dell'allattamento (S/D)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Se abilitato, la tessera di alimentazione confronta la durata totale dell'allattamento sinistro/destro invece del numero di poppate",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Se abilitato, le tessere del riepilogo giornaliero mostrano la differenza rispetto alla media di 7 giorni più una sparkline di 14 giorni",
   "You": "Tu",
   "You (Admin)": "Tu (Admin)",

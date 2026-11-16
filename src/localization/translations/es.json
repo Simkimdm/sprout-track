@@ -2735,6 +2735,8 @@
   "Yesterday": "Ayer",
   "{days}-day avg": "media de {days} días",
   "Show trend on daily summary tiles": "Mostrar tendencia en las tarjetas del resumen diario",
+  "Feed tile trend by breastfeeding duration": "Tarjeta de alimentación: tendencia por duración de lactancia (I/D)",
+  "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Si está activado, la tarjeta de alimentación compara el tiempo total de lactancia izquierda/derecha en lugar del número de tomas",
   "When enabled, the daily summary tiles show the difference to the 7-day average plus a 14-day sparkline": "Si está activado, las tarjetas del resumen diario muestran la diferencia respecto a la media de 7 días y un minigráfico de 14 días",
   "You": "Tú",
   "You (Admin)": "Tú (Admin)",
