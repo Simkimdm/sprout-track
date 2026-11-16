@@ -93,7 +93,34 @@ interface StatTile {
   metricKey?: MetricKey;
   metricKind?: 'count' | 'minutes';
   trend?: DayTrend | null;
+  /** Feed tile only: per-side (left/right) trends for the L/R sparklines. */
+  trendL?: DayTrend | null;
+  trendR?: DayTrend | null;
 }
+
+const SparkRow = ({ label, labelClass, trend, todayClass, historyClass }: {
+  label?: string;
+  labelClass?: string;
+  trend: DayTrend;
+  todayClass: string;
+  historyClass: string;
+}) => {
+  const max = Math.max(...trend.spark, 1);
+  return (
+    <div className="flex items-center gap-1 mt-0.5" aria-hidden="true">
+      {label && <span className={`text-[9px] font-semibold leading-none ${labelClass ?? ''}`}>{label}</span>}
+      <div className="flex items-end gap-[2px] h-3">
+        {trend.spark.map((value, i) => (
+          <span
+            key={i}
+            className={`w-[3px] rounded-[1px] ${i === trend.spark.length - 1 ? todayClass : historyClass}`}
+            style={{ height: `${2 + 10 * (value / max)}px` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   activities,
@@ -146,6 +173,19 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     () => computeDailyStats(activities, windowActivities, date, { defaultBottleUnit, unitSymbol, t }),
     [activities, windowActivities, date, defaultBottleUnit, t]
   );
+
+  const trendTitle = (tile: StatTile, trend: DayTrend): string => {
+    const todayValue = tile.metricKey ? stats[tile.metricKey] : 0;
+    const pct = trend.pctDelta !== null ? ` (${trend.pctDelta > 0 ? '+' : ''}${Math.round(trend.pctDelta)}%)` : '';
+    const avgText = t('{days}-day avg').replace('{days}', String(trend.avgDays));
+    const base = `${t('Today')}: ${formatMetricValue(tile.metricKind, todayValue)} · ${t('Yesterday')}: ${trend.yesterday !== null ? formatMetricValue(tile.metricKind, trend.yesterday) : '—'} · ${avgText}: ${formatMetricValue(tile.metricKind, trend.avg)}${pct}`;
+    if (tile.filter === 'feed' && feedTrendByDuration && tile.trendL && tile.trendR) {
+      const side = (label: string, sideTrend: DayTrend, key: 'leftBreastMinutes' | 'rightBreastMinutes') =>
+        `${label} ${t('Today')}: ${formatMetricValue('minutes', stats[key])}, ${t('{days}-day avg').replace('{days}', String(sideTrend.avgDays))}: ${formatMetricValue('minutes', sideTrend.avg)}`;
+      return `${base} · ${side('L', tile.trendL, 'leftBreastMinutes')} · ${side('R', tile.trendR, 'rightBreastMinutes')}`;
+    }
+    return base;
+  };
 
   const historyDayStats = useMemo<HistoryDayStats[]>(() => {
     if (!trendEnabled) return [];
@@ -559,6 +599,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
     return tiles.map((tile) => ({
       ...tile,
       trend: trendEnabled && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
+      trendL: trendEnabled && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'leftBreastMinutes') : null,
+      trendR: trendEnabled && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'rightBreastMinutes') : null,
     }));
   }, [stats, historyDayStats, t, photosEnabled, trendEnabled, feedTrendByDuration]);
 
@@ -729,7 +771,6 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
               <div className="flex flex-wrap gap-0.5">
                 {statTiles.map((tile, index) => {
                   const trend = tile.trend ?? null;
-                  const sparkMax = trend ? Math.max(...trend.spark, 1) : 1;
                   const avgLabel = t('{days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
                   return (
                   <button
@@ -769,7 +810,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                         {trend && tile.metricKey && (
                           <div
                             className="flex items-center gap-0.5 text-[10px] leading-tight text-gray-400"
-                            title={`${t('Today')}: ${formatMetricValue(tile.metricKind, stats[tile.metricKey])} · ${t('Yesterday')}: ${trend.yesterday !== null ? formatMetricValue(tile.metricKind, trend.yesterday) : '—'} · ${avgLabel}: ${formatMetricValue(tile.metricKind, trend.avg)}${trend.pctDelta !== null ? ` (${trend.pctDelta > 0 ? '+' : ''}${Math.round(trend.pctDelta)}%)` : ''}`}
+                            title={trendTitle(tile, trend)}
                           >
                             {trend.dir === 'up' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
                             {trend.dir === 'down' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
@@ -782,15 +823,13 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                           </div>
                         )}
                         {trend && (
-                          <div className="flex items-end gap-[2px] h-3 mt-0.5" aria-hidden="true">
-                            {trend.spark.map((value, i) => (
-                              <span
-                                key={i}
-                                className={`w-[3px] rounded-[1px] ${i === trend.spark.length - 1 ? 'bg-gray-500' : 'bg-gray-300'}`}
-                                style={{ height: `${2 + 10 * (value / sparkMax)}px` }}
-                              />
-                            ))}
-                          </div>
+                          <SparkRow trend={trend} todayClass="bg-gray-500" historyClass="bg-gray-300" />
+                        )}
+                        {tile.trendL && (
+                          <SparkRow label="L" labelClass="text-sky-600" trend={tile.trendL} todayClass="bg-sky-500" historyClass="bg-sky-200" />
+                        )}
+                        {tile.trendR && (
+                          <SparkRow label="R" labelClass="text-pink-600" trend={tile.trendR} todayClass="bg-pink-500" historyClass="bg-pink-200" />
                         )}
                       </div>
                     </div>
