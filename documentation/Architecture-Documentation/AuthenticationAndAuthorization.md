@@ -58,10 +58,10 @@ Token-based auth for invited users creating a new family:
 - Contains minimal claims: userId, authType, familyId, accountId, tokenType
 
 ### Token Blacklist
-- In-memory `Map<string, number>` (token → expiry timestamp)
+- DB-backed (`SecurityEvent`, kind `token_blacklist`): stores the SHA-256 hash of the token (never the token itself) until the token's original `exp` — survives restarts and works across multiple app instances
 - Populated on logout via `invalidateToken()`
-- Cleaned up hourly (removes expired entries)
-- Checked on every authenticated request
+- Checked on every authenticated request; expired entries are removed lazily
+- Fails open on DB errors (deliberate: availability over revocation during an outage) — see [Security Operations Notes](../Admin-Documentation/security-ops-notes.md)
 
 ## Auth Middleware Wrappers
 
@@ -232,11 +232,13 @@ if (!writeCheck.allowed) return writeCheck.response;
 ## IP Lockout
 
 Brute-force protection via `app/api/utils/ip-lockout.ts`:
-- In-memory store tracks failed login attempts per IP
+- DB-backed store (`SecurityEvent`, kind `ip_lockout`) tracks failed login attempts per IP — survives restarts and works across multiple app instances
 - 3 failed attempts → 5-minute lockout
+- The counter window is anchored at the first failed attempt (later attempts increment the counter but do not extend `expiresAt`); the lockout window starts when the lockout triggers
 - `checkIpLockout(ip)` returns `{ locked, remainingTime }`
 - `recordFailedAttempt(ip)` increments counter
 - `resetFailedAttempts(ip)` clears on successful login
+- Fails open on DB errors (a DB hiccup must not lock out every user) — see [Security Operations Notes](../Admin-Documentation/security-ops-notes.md)
 
 ## Client-Side Auth Integration
 
