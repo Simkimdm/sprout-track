@@ -26,6 +26,7 @@ import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, F
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
 import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
+import { TREND_SPARK_DAYS } from '@/src/utils/dailyStats';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
 const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
@@ -254,7 +255,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
       return;
     }
     try {
-      const activities = await activityCache.fetchStatsHistory(babyId, date, 7);
+      const activities = await activityCache.fetchStatsHistory(babyId, date, TREND_SPARK_DAYS);
       setStatsHistoryActivities(activities);
     } catch (error) {
       console.error('Error fetching stats history:', error);

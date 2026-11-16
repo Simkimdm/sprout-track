@@ -5,6 +5,7 @@ import {
   DailyStatMetrics,
   HistoryDayStats,
   TREND_HISTORY_DAYS,
+  TREND_SPARK_DAYS,
 } from '@/src/utils/dailyStats';
 import { convertVolume } from '@/src/utils/unit-conversion';
 
@@ -117,7 +118,7 @@ describe('computeDailyStats', () => {
 });
 
 describe('computeDayTrend', () => {
-  const sevenDays = (values: (number | null)[], key: 'diaperCount' | 'totalSleepMinutes' = 'diaperCount'): HistoryDayStats[] =>
+  const days = (values: (number | null)[], key: 'diaperCount' | 'totalSleepMinutes' = 'diaperCount'): HistoryDayStats[] =>
     values.map((v, i) => historyDay(values.length - i, baseMetrics({ [key]: v ?? 0 }), v !== null));
 
   it('returns null when there is no history at all', () => {
@@ -125,35 +126,37 @@ describe('computeDayTrend', () => {
   });
 
   it('returns null when no history day has any data', () => {
-    const history = sevenDays([null, null, null, null, null, null, null]);
+    const history = days(Array(TREND_SPARK_DAYS).fill(null));
     expect(computeDayTrend(baseMetrics({ diaperCount: 5 }), history, 'diaperCount')).toBeNull();
   });
 
-  it('averages only days with data and flags an increase vs the average', () => {
-    const history = sevenDays([4, 4, 4, 4, 4, 4, 6]); // yesterday = 6
+  it('averages only the last 7 days with data, rounds to 1 decimal, flags an increase', () => {
+    // 14 history days; only the last 7 count for the average, yesterday = 6
+    const history = days([...Array(7).fill(100), 4, 4, 4, 4, 4, 4, 6]);
     const trend = computeDayTrend(baseMetrics({ diaperCount: 8 }), history, 'diaperCount');
     expect(trend).not.toBeNull();
-    expect(trend!.avg).toBeCloseTo(30 / 7, 6);
-    expect(trend!.avgDays).toBe(7);
+    expect(trend!.avg).toBe(4.3); // 30/7 rounded to 1 decimal
+    expect(trend!.avgDays).toBe(TREND_HISTORY_DAYS);
     expect(trend!.yesterday).toBe(6);
     expect(trend!.dir).toBe('up');
-    expect(trend!.absDelta).toBeCloseTo(8 - 30 / 7, 6);
-    expect(trend!.pctDelta).toBeCloseTo(((8 - 30 / 7) / (30 / 7)) * 100, 4);
+    expect(trend!.absDelta).toBe(3.7);
+    expect(trend!.pctDelta).toBeCloseTo((3.7 / 4.3) * 100, 6);
   });
 
   it('skips data-less days in the average but keeps them as zero in the sparkline', () => {
-    const history = sevenDays([null, null, null, null, null, null, 6]);
+    const history = days([...Array(TREND_SPARK_DAYS - 1).fill(null), 6]);
     const trend = computeDayTrend(baseMetrics({ diaperCount: 8 }), history, 'diaperCount');
     expect(trend!.avg).toBe(6);
     expect(trend!.avgDays).toBe(1);
     expect(trend!.yesterday).toBe(6);
-    expect(trend!.spark).toHaveLength(TREND_HISTORY_DAYS);
-    expect(trend!.spark[TREND_HISTORY_DAYS - 1]).toBe(8); // today is the last bar
+    expect(trend!.spark).toHaveLength(TREND_SPARK_DAYS);
+    expect(trend!.spark[TREND_SPARK_DAYS - 1]).toBe(8); // today is the last bar
+    expect(trend!.spark[TREND_SPARK_DAYS - 2]).toBe(6); // yesterday
     expect(trend!.spark[0]).toBe(0); // data-less day renders as an empty bar
   });
 
   it('treats small deviations as flat (≈)', () => {
-    const history = sevenDays([10, 10, 10, 10, 10, 10, 10]);
+    const history = days(Array(TREND_SPARK_DAYS).fill(10));
     const flat = computeDayTrend(baseMetrics({ diaperCount: 10 }), history, 'diaperCount');
     expect(flat!.dir).toBe('flat');
     expect(flat!.absDelta).toBe(0);
@@ -164,12 +167,12 @@ describe('computeDayTrend', () => {
   });
 
   it('flags a decrease and handles a zero average (pct undefined)', () => {
-    const history = sevenDays([8, 8, 8, 8, 8, 8, 8]);
+    const history = days(Array(TREND_SPARK_DAYS).fill(8));
     const down = computeDayTrend(baseMetrics({ diaperCount: 4 }), history, 'diaperCount');
     expect(down!.dir).toBe('down');
     expect(down!.pctDelta).toBeCloseTo(-50, 6);
 
-    const zeroHistory = sevenDays([0, 0, 0, 0, 0, 0, 0]);
+    const zeroHistory = days(Array(TREND_SPARK_DAYS).fill(0));
     const fromZero = computeDayTrend(baseMetrics({ diaperCount: 3 }), zeroHistory, 'diaperCount');
     expect(fromZero!.dir).toBe('up');
     expect(fromZero!.pctDelta).toBeNull();
@@ -177,7 +180,7 @@ describe('computeDayTrend', () => {
   });
 
   it('reads any numeric metric key', () => {
-    const history = sevenDays([60, 60, 60, 60, 60, 60, 60], 'totalSleepMinutes');
+    const history = days(Array(TREND_SPARK_DAYS).fill(60), 'totalSleepMinutes');
     const trend = computeDayTrend(baseMetrics({ totalSleepMinutes: 90 }), history, 'totalSleepMinutes');
     expect(trend!.dir).toBe('up');
     expect(trend!.absDelta).toBe(30);
