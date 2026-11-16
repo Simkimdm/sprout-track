@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../db';
 import { generateSecurityPin } from '../utils/security-pin';
+import { hashPin } from '../utils/pin-utils';
 import { ApiResponse, ActivitySettings } from '../types';
 import { withAuthContext, AuthResult } from '../utils/auth';
 import {
@@ -342,7 +343,7 @@ async function saveActivitySettings(req: NextRequest, authContext: AuthResult): 
         data: {
           familyId: userFamilyId,
           familyName: 'My Family',
-          securityPin: generateSecurityPin(),
+          securityPin: hashPin(generateSecurityPin()),
           defaultBottleUnit: 'OZ',
           defaultSolidsUnit: 'TBSP',
           defaultHeightUnit: 'IN',

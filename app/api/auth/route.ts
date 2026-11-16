@@ -7,6 +7,7 @@ import { decrypt, isEncrypted } from '../utils/encryption';
 import { randomUUID } from 'crypto';
 import { logApiCall, getClientInfo } from '../utils/api-logger';
 import { ACCESS_TOKEN_LIFE, createRefreshToken, setRefreshTokenCookie, getJwtSecret } from '../utils/auth';
+import { hashPin, isHashedPin, verifyPin } from '../utils/pin-utils';
 
 const TOKEN_EXPIRATION = ACCESS_TOKEN_LIFE;
 
@@ -233,7 +234,7 @@ export async function POST(req: NextRequest) {
 
     // Handle SYSTEM authentication type
     if (authType === 'SYSTEM') {
-      if (settings.securityPin === securityPin) {
+      if (verifyPin(securityPin, settings.securityPin)) {
         // Find the system caretaker to get family information
         let systemCaretaker = await prisma.caretaker.findFirst({
           where: {
@@ -256,7 +257,7 @@ export async function POST(req: NextRequest) {
               name: 'system',
               type: 'System Administrator',
               role: 'ADMIN',
-              securityPin: settings.securityPin,
+              securityPin: isHashedPin(settings.securityPin) ? settings.securityPin : hashPin(settings.securityPin),
               familyId: targetFamily.id,
               inactive: false,
             },
@@ -329,6 +330,12 @@ export async function POST(req: NextRequest) {
 
           // Reset failed attempts on successful login
           resetFailedAttempts(ip);
+
+          // Migrate a legacy plaintext PIN to a hash on successful login
+          if (!isHashedPin(settings.securityPin)) {
+            prisma.settings.update({ where: { id: settings.id }, data: { securityPin: hashPin(securityPin) } })
+              .catch((err) => console.error('Failed to hash legacy settings PIN:', err));
+          }
 
           // Set refresh token cookie for system caretaker
           const systemRefreshToken = createRefreshToken({
@@ -432,7 +439,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (caretaker && caretaker.securityPin === securityPin) {
+      if (caretaker && verifyPin(securityPin, caretaker.securityPin)) {
         // Create JWT token for caretaker
         // Include subscription data for family context checking
         let tokenData: any = {
@@ -495,6 +502,12 @@ export async function POST(req: NextRequest) {
 
         // Reset failed attempts on successful login
         resetFailedAttempts(ip);
+
+        // Migrate a legacy plaintext PIN to a hash on successful login
+        if (!isHashedPin(caretaker.securityPin)) {
+          prisma.caretaker.update({ where: { id: caretaker.id }, data: { securityPin: hashPin(securityPin) } })
+            .catch((err) => console.error('Failed to hash legacy caretaker PIN:', err));
+        }
 
         // Set refresh token cookie for caretaker
         const caretakerRefreshToken = createRefreshToken({

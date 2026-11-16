@@ -6,6 +6,7 @@
 import fs from 'fs';
 import prisma from '../db';
 import { generateSecurityPin } from './security-pin';
+import { hashPin } from './pin-utils';
 
 /**
  * Get the actual system timezone directly from the OS
@@ -83,7 +84,7 @@ export async function getSettings() {
     settings = await prisma.settings.create({
       data: {
         familyName: 'My Family', // Default family name
-        securityPin: generateSecurityPin(),
+        securityPin: hashPin(generateSecurityPin()),
         defaultBottleUnit: 'OZ',
         defaultSolidsUnit: 'TBSP',
         defaultHeightUnit: 'IN',
