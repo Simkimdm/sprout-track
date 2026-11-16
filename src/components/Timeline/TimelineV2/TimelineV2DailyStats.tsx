@@ -23,8 +23,7 @@ import {
   Apple,
   Droplets,
   ArrowUp,
-  ArrowDown,
-  Minus
+  ArrowDown
 } from 'lucide-react';
 import { diaper, bottleBaby } from '@lucide/lab';
 import { Button } from '@/src/components/ui/button';
@@ -725,7 +724,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                 {statTiles.map((tile, index) => {
                   const trend = tile.trend ?? null;
                   const sparkMax = trend ? Math.max(...trend.spark, 1) : 1;
-                  const avgLabel = t('vs {days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
+                  const avgLabel = t('{days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
                   return (
                   <button
                     key={tile.filter ? `${tile.filter}-${tile.label.toLowerCase().replace(/\s+/g, '-')}` : tile.label.toLowerCase().replace(/\s+/g, '-')}
@@ -768,13 +767,12 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                           >
                             {trend.dir === 'up' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
                             {trend.dir === 'down' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
-                            {trend.dir === 'flat' && <Minus className="h-3 w-3" aria-hidden="true" />}
                             <span>
                               {trend.dir === 'flat'
                                 ? '≈'
                                 : `${trend.dir === 'up' ? '+' : '-'}${formatMetricValue(tile.metricKind, Math.abs(trend.absDelta))}`}
                             </span>
-                            <span className="text-gray-300">{avgLabel}</span>
+                            <span className="text-gray-300">{avgLabel}: {formatMetricValue(tile.metricKind, trend.avg)}</span>
                           </div>
                         )}
                         {trend && (

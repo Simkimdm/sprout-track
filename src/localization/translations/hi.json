@@ -2733,7 +2733,7 @@
   "Yes, close it": "हाँ, इसे बंद करें",
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "हाँ। कोई विज्ञापन नहीं, कोई ट्रैकर नहीं, डेटा की कोई बिक्री नहीं। कोड GitHub पर सार्वजनिक है, इसलिए आपको सिर्फ़ हमारी बात पर भरोसा नहीं करना पड़ेगा।",
   "Yesterday": "कल",
-  "vs {days}-day avg": "vs {days} din ka औसत",
+  "{days}-day avg": "{days} din ka औसत",
   "You": "आप",
   "You (Admin)": "आप (एडमिन)",
   "You can access the Family Manager at": "आप परिवार प्रबंधक यहाँ एक्सेस कर सकते हैं",

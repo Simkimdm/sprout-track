@@ -2733,7 +2733,7 @@
   "Yes, close it": "Ja, avslutt den",
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Ja. Ingen annonser, ingen sporing, ingen salg av data. Koden er offentlig på GitHub, så du trenger ikke ta vårt ord for det.",
   "Yesterday": "I går",
-  "vs {days}-day avg": "vs snitt over {days} dager",
+  "{days}-day avg": "snitt over {days} dager",
   "You": "Du",
   "You (Admin)": "Du (administrator)",
   "You can access the Family Manager at": "Du kan få tilgang til familieadministratoren på",
