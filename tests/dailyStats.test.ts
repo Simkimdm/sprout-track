@@ -4,6 +4,7 @@ import {
   computeDayTrend,
   DailyStatMetrics,
   HistoryDayStats,
+  MetricKey,
   TREND_HISTORY_DAYS,
   TREND_SPARK_DAYS,
 } from '@/src/utils/dailyStats';
@@ -130,7 +131,7 @@ describe('computeDailyStats', () => {
 });
 
 describe('computeDayTrend', () => {
-  const days = (values: (number | null)[], key: 'diaperCount' | 'totalSleepMinutes' = 'diaperCount'): HistoryDayStats[] =>
+  const days = (values: (number | null)[], key: MetricKey = 'diaperCount'): HistoryDayStats[] =>
     values.map((v, i) => historyDay(values.length - i, baseMetrics({ [key]: v ?? 0 }), v !== null));
 
   it('returns null when there is no history at all', () => {
@@ -196,5 +197,14 @@ describe('computeDayTrend', () => {
     const trend = computeDayTrend(baseMetrics({ totalSleepMinutes: 90 }), history, 'totalSleepMinutes');
     expect(trend!.dir).toBe('up');
     expect(trend!.absDelta).toBe(30);
+  });
+
+  it('supports per-side breast metrics (leftBreastMinutes/rightBreastMinutes) for the feed tile L/R rows', () => {
+    const history = days(Array(TREND_SPARK_DAYS).fill(10), 'leftBreastMinutes');
+    const trend = computeDayTrend(baseMetrics({ leftBreastMinutes: 20, rightBreastMinutes: 5 }), history, 'leftBreastMinutes');
+    expect(trend!.dir).toBe('up');
+    expect(trend!.absDelta).toBe(10);
+    expect(trend!.spark).toHaveLength(TREND_SPARK_DAYS);
+    expect(trend!.spark[TREND_SPARK_DAYS - 1]).toBe(20);
   });
 });
