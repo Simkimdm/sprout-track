@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         // until a password is set (app configuration or scripts/reset-admin-password.js).
         // Falling back to a well-known default here would be a default-credential hole.
         if (!appConfig.adminPass || appConfig.adminPass.trim() === '') {
-          recordFailedAttempt(ip);
+          await recordFailedAttempt(ip);
           return NextResponse.json<ApiResponse<null>>(
             {
               success: false,

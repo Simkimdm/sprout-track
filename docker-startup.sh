@@ -245,9 +245,14 @@ if [ "$ENABLE_NOTIFICATIONS" = "true" ]; then
     # every-minute loop instead (same schedule as the crontab entry).
     echo "Running as non-root: starting notification cron loop instead of crond..."
     (
+      CRON_LOG=/app/logs/notification-cron.log
+      CRON_LOG_MAX_BYTES=1048576
       while true; do
         sleep 60
-        /bin/sh /app/scripts/run-notification-cron.sh >> /app/logs/notification-cron.log 2>&1
+        if [ -f "$CRON_LOG" ] && [ "$(wc -c < "$CRON_LOG")" -gt "$CRON_LOG_MAX_BYTES" ]; then
+          : > "$CRON_LOG"
+        fi
+        /bin/sh /app/scripts/run-notification-cron.sh >> "$CRON_LOG" 2>&1
       done
     ) &
     echo "✓ Notification cron loop started (PID: $!)"
