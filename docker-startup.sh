@@ -16,15 +16,29 @@ fix_volume_ownership() {
 fix_volume_ownership
 
 # Verify writable mounts early: the container runs as non-root (node, uid 1000).
-# Existing volumes created by older root-based images are root-owned — when running
-# as root, ownership was fixed above; otherwise fail fast with instructions.
+# Existing volumes from older root-based images are root-owned — when running as
+# root, ownership was fixed above. Otherwise WAIT instead of exiting: a hard exit
+# puts the container into a restart loop (restart: unless-stopped), which makes
+# `docker exec --user root <container> chown ...` impossible. Staying up lets the
+# one-time manual fix succeed; we re-check every 30s and continue once writable.
 for d in /db /app/env /app/Files /app/logs; do
   mkdir -p "$d" 2>/dev/null
   if ! touch "$d/.writetest" 2>/dev/null; then
-    echo "ERROR: $d is not writable by uid $(id -u). If you upgraded from an older image, fix the volume ownership once, e.g.:"
-    echo "  docker exec --user root <container> chown -R 1000:1000 $d"
-    echo "Newer images fix this automatically when the container runs once as root (compose: user: \"0\")."
-    exit 1
+    if [ "$(id -u)" = "0" ]; then
+      echo "Volume $d not writable — running as root, fixing ownership to 1000:1000..."
+      chown -R 1000:1000 "$d" 2>/dev/null
+    fi
+    if ! touch "$d/.writetest" 2>/dev/null; then
+      echo "ERROR: $d is not writable by uid $(id -u)."
+      echo "Fix once while this container stays up:"
+      echo "  docker exec --user root $(hostname) chown -R 1000:1000 $d"
+      echo "Newer images also fix this automatically when the container runs once as root (compose: user: \"0\")."
+      echo "Waiting (re-check every 30s)..."
+      until touch "$d/.writetest" 2>/dev/null; do
+        sleep 30
+      done
+      echo "OK: $d is now writable."
+    fi
   fi
   rm -f "$d/.writetest"
 done
