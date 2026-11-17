@@ -122,6 +122,37 @@ const SparkRow = ({ label, labelClass, trend, todayClass, historyClass }: {
   );
 };
 
+const SparkRowLR = ({ trendL, trendR }: { trendL: DayTrend; trendR: DayTrend }) => {
+  const totals = trendL.spark.map((v, i) => v + (trendR.spark[i] ?? 0));
+  const max = Math.max(...totals, 1);
+  return (
+    <div className="flex items-center gap-1 mt-0.5" aria-hidden="true">
+      <span className="text-[9px] font-semibold leading-none text-sky-600">L</span>
+      <span className="text-[9px] font-semibold leading-none text-pink-600 -ml-0.5">R</span>
+      <div className="flex items-end gap-[2px] h-3">
+        {totals.map((total, i) => {
+          const isToday = i === totals.length - 1;
+          const h = 2 + 10 * (total / max);
+          const lVal = trendL.spark[i] ?? 0;
+          const lH = total > 0 ? (lVal / total) * h : 0;
+          return (
+            <span key={i} className="relative w-[3px] rounded-[1px] bg-gray-200" style={{ height: `${h}px` }}>
+              <span
+                className={`absolute bottom-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-sky-500' : 'bg-sky-200'}`}
+                style={{ height: `${lH}px` }}
+              />
+              <span
+                className={`absolute top-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-pink-500' : 'bg-pink-200'}`}
+                style={{ height: `${Math.max(h - lH, 0)}px` }}
+              />
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   activities,
   windowActivities,
@@ -822,15 +853,11 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                             <span className="text-gray-300">{avgLabel}: {formatMetricValue(tile.metricKind, trend.avg)}</span>
                           </div>
                         )}
-                        {trend && (
+                        {trend && tile.trendL && tile.trendR ? (
+                          <SparkRowLR trendL={tile.trendL} trendR={tile.trendR} />
+                        ) : trend ? (
                           <SparkRow trend={trend} todayClass="bg-gray-500" historyClass="bg-gray-300" />
-                        )}
-                        {tile.trendL && (
-                          <SparkRow label="L" labelClass="text-sky-600" trend={tile.trendL} todayClass="bg-sky-500" historyClass="bg-sky-200" />
-                        )}
-                        {tile.trendR && (
-                          <SparkRow label="R" labelClass="text-pink-600" trend={tile.trendR} todayClass="bg-pink-500" historyClass="bg-pink-200" />
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </button>
