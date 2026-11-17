@@ -285,6 +285,10 @@ export interface DayTrend {
   avg: number;
   avgDays: number;
   yesterday: number | null;
+  /** Same comparison against yesterday instead of the average (null when yesterday has no data). */
+  yDir: 'up' | 'down' | 'flat' | null;
+  yAbsDelta: number | null;
+  yPctDelta: number | null;
   spark: number[];
 }
 
@@ -308,13 +312,26 @@ export function computeDayTrend(
   const flat = pctDelta === null ? absDelta === 0 : Math.abs(pctDelta) < TREND_FLAT_PCT;
   const dir: DayTrend['dir'] = flat ? 'flat' : absDelta > 0 ? 'up' : 'down';
   const spark = [...values.slice(-(TREND_SPARK_DAYS - 1)).map((v) => v ?? 0), todayValue];
+  const yesterday = values[values.length - 1];
+  let yDir: DayTrend['yDir'] = null;
+  let yAbsDelta: number | null = null;
+  let yPctDelta: number | null = null;
+  if (yesterday !== null) {
+    yAbsDelta = Math.round((todayValue - yesterday) * 10) / 10;
+    yPctDelta = yesterday !== 0 ? (yAbsDelta / yesterday) * 100 : null;
+    const yFlat = yPctDelta === null ? yAbsDelta === 0 : Math.abs(yPctDelta) < TREND_FLAT_PCT;
+    yDir = yFlat ? 'flat' : yAbsDelta > 0 ? 'up' : 'down';
+  }
   return {
     dir,
     absDelta,
     pctDelta,
     avg,
     avgDays: used.length,
-    yesterday: values[values.length - 1],
+    yesterday,
+    yDir,
+    yAbsDelta,
+    yPctDelta,
     spark,
   };
 }

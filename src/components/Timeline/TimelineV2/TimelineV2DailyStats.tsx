@@ -177,6 +177,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   const { dateFormat } = useTimezone();
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  // Which reference the tile delta lines compare against: 7-day average or yesterday
+  const [trendRef, setTrendRef] = useState<'avg' | 'yesterday'>('avg');
   const [photosEnabled, setPhotosEnabled] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 
@@ -729,7 +731,28 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Filters Dropdown */}
+            {trendEnabled ? (
+              /* Stats reference toggle replaces the filters dropdown; tile taps still filter */
+              <div className="flex items-center rounded-md border border-gray-200 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTrendRef('avg')}
+                  aria-pressed={trendRef === 'avg'}
+                  className={`px-2 py-0.5 rounded ${trendRef === 'avg' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {t('{days}-day avg').replace('{days}', String(TREND_HISTORY_DAYS))}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrendRef('yesterday')}
+                  aria-pressed={trendRef === 'yesterday'}
+                  className={`px-2 py-0.5 rounded ${trendRef === 'yesterday' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {t('Yesterday')}
+                </button>
+              </div>
+            ) : (
+            /* Filters Dropdown (shown when the stats trend is disabled) */
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -754,6 +777,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            )}
 
             {/* Mobile toggle */}
             <button
@@ -803,6 +827,13 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                 {statTiles.map((tile, index) => {
                   const trend = tile.trend ?? null;
                   const avgLabel = t('{days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
+                  const dir = trend ? (trendRef === 'avg' ? trend.dir : trend.yDir ?? 'flat') : 'flat';
+                  const delta = trend ? (trendRef === 'avg' ? trend.absDelta : trend.yAbsDelta ?? 0) : 0;
+                  const refLabel = trend
+                    ? trendRef === 'avg'
+                      ? `${avgLabel}: ${formatMetricValue(tile.metricKind, trend.avg)}`
+                      : `${t('Yesterday')}: ${trend.yesterday !== null ? formatMetricValue(tile.metricKind, trend.yesterday) : '—'}`
+                    : '';
                   return (
                   <button
                     key={tile.filter ? `${tile.filter}-${tile.label.toLowerCase().replace(/\s+/g, '-')}` : tile.label.toLowerCase().replace(/\s+/g, '-')}
@@ -843,14 +874,14 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                             className="flex items-center gap-0.5 text-[10px] leading-tight text-gray-400"
                             title={trendTitle(tile, trend)}
                           >
-                            {trend.dir === 'up' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
-                            {trend.dir === 'down' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
+                            {dir === 'up' && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
+                            {dir === 'down' && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
                             <span>
-                              {trend.dir === 'flat'
+                              {dir === 'flat'
                                 ? '≈'
-                                : `${trend.dir === 'up' ? '+' : '-'}${formatMetricValue(tile.metricKind, Math.abs(trend.absDelta))}`}
+                                : `${dir === 'up' ? '+' : '-'}${formatMetricValue(tile.metricKind, Math.abs(delta))}`}
                             </span>
-                            <span className="text-gray-300">{avgLabel}: {formatMetricValue(tile.metricKind, trend.avg)}</span>
+                            <span className="text-gray-300">{refLabel}</span>
                           </div>
                         )}
                         {trend && tile.trendL && tile.trendR ? (
