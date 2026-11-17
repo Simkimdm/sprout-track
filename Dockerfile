@@ -8,14 +8,21 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
+# Package files first, so the expensive npm ci layer only re-runs when they
+# actually change (a prisma/ change must not invalidate it).
 COPY package.json package-lock.json ./
+
+ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
+# Persistent npm cache across builds: tarballs and native build results are
+# reused, so a re-run of this layer is much cheaper than a cold npm ci.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund --prefer-offline
+
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 COPY scripts/prisma-provider.js ./scripts/
 
-ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
-RUN npm ci --no-audit --no-fund && \
-    npm run prisma:generate && \
+RUN npm run prisma:generate && \
     npm run prisma:generate:log
 
 # Stage 2: build the Next.js application
@@ -29,21 +36,27 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV DATABASE_PROVIDER=${DATABASE_PROVIDER}
+ENV NEXT_TELEMETRY_DISABLED=1
 # Build-time placeholder database URLs (also the runtime SQLite defaults).
 # docker-startup.sh treats these exact values as placeholders, so runtime env
 # and the persisted env file always win over them.
 ENV DATABASE_URL="file:/db/baby-tracker.db"
 ENV LOG_DATABASE_URL="file:/db/baby-tracker-logs.db"
 
-# Build the application; drop the build cache, it is not needed at runtime
-RUN npm run build && rm -rf .next/cache
+# Build the application. The Turbopack/tsc cache lives in a BuildKit cache
+# mount: it survives across builds (incremental rebuilds after source changes
+# are much faster) but is never written into an image layer, so the runner
+# still gets a cache-free .next without an explicit rm.
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # Shrink node_modules BEFORE the runner copies it: pruning in the runner would
 # only delete files in a later layer, the copied layer itself would still count
 # towards the image size. The script keeps only the runtime dependency closure
 # (next, Prisma stack, tsx, ...) and drops dead weight like the glibc variants
 # of swc/libvips (never loaded on Alpine/musl).
-RUN npm prune --omit=dev --no-audit --no-fund && \
+RUN --mount=type=cache,target=/root/.npm \
+    npm prune --omit=dev --no-audit --no-fund && \
     node scripts/docker-prune-runner-modules.js
 
 # Stage 3: production runner without devDependencies and build cache
