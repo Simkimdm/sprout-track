@@ -2734,6 +2734,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "हाँ। कोई विज्ञापन नहीं, कोई ट्रैकर नहीं, डेटा की कोई बिक्री नहीं। कोड GitHub पर सार्वजनिक है, इसलिए आपको सिर्फ़ हमारी बात पर भरोसा नहीं करना पड़ेगा।",
   "Yesterday": "कल",
   "{days}-day avg": "{days} din ka औसत",
+  "Show stats": "आंकड़े दिखाएँ",
+  "Hide stats": "आंकड़े छुपाएँ",
   "Show trend on daily summary tiles": "दैनिक सारांश टाइल्स पर ट्रेंड दिखाएँ",
   "Feed tile trend by breastfeeding duration": "फीड टाइल: स्तनपान की अवधि (बाएँ/दाएँ) से ट्रенд",
   "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "सक्षम होने पर, फीड टाइल transformaciones की संख्या के बजाय बाएँ/दाएँ स्तनपान का कुल समय तुलना करती है",
