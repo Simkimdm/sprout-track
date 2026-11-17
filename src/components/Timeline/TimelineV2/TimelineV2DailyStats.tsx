@@ -143,8 +143,8 @@ const SparkRowLR = ({ trendL, trendR }: { trendL: DayTrend; trendR: DayTrend }) 
             >
               {total > 0 && (
                 <>
-                  <span className={isToday ? 'bg-pink-500' : 'bg-pink-200'} style={{ height: `${(rVal / total) * 100}%` }} />
-                  <span className={isToday ? 'bg-sky-500' : 'bg-sky-200'} style={{ height: `${(lVal / total) * 100}%` }} />
+                  <span className={isToday ? 'bg-pink-500' : 'bg-pink-300'} style={{ height: `${(rVal / total) * 100}%` }} />
+                  <span className={isToday ? 'bg-sky-500' : 'bg-sky-300'} style={{ height: `${(lVal / total) * 100}%` }} />
                 </>
               )}
             </span>
@@ -835,7 +835,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
         {!isCollapsed && (
           <>
             {statTiles.length > 0 ? (
-              <div className="flex flex-wrap gap-0.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
                 {statTiles.map((tile, index) => {
                   const trend = tile.trend ?? null;
                   const avgLabel = t('{days}-day avg').replace('{days}', String(trend?.avgDays ?? TREND_HISTORY_DAYS));
@@ -859,7 +859,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                         onFilterChange(tile.filter === activeFilter ? null : tile.filter);
                       }
                     }}
-                    className={`relative rounded-xl text-left transition-all duration-200 overflow-hidden ${
+                    className={`relative w-full h-full rounded-xl text-left transition-all duration-200 overflow-hidden ${
                       // Never show awake time tile as selected, only show selected state for filterable/clickable tiles
                       tile.filter !== null && activeFilter === tile.filter
                         ? 'bg-gray-100 cursor-pointer scale-105'
@@ -869,7 +869,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                     }`}
                   >
                     {/* Horizontal layout: icon left, text right */}
-                    <div className="flex items-center gap-2.5 px-2 py-1">
+                    <div className="flex items-start gap-2.5 px-2 py-1 w-full">
                       {/* Icon */}
                       <div className={`flex-shrink-0 ${tile.iconColor}`}>
                         <div className="w-5 h-5">
