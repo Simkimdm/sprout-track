@@ -2738,6 +2738,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Tak. Bez reklam, bez trackerów, bez sprzedawania danych. Kod jest publicznie dostępny na GitHubie, więc nie musisz wierzyć nam na słowo.",
   "Yesterday": "Wczoraj",
   "{days}-day avg": "średnia z {days} dni",
+  "Show stats": "Pokaż statystyki",
+  "Hide stats": "Ukryj statystyki",
   "Show trend on daily summary tiles": "Pokaż trend na kafelkach podsumowania dnia",
   "Feed tile trend by breastfeeding duration": "Kafelek karmienia: trend wg czasu karmienia piersią (L/P)",
   "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Po włączeniu kafelek karmienia porównuje całkowity czas karmienia piersią lewo/pravo zamiast liczby karmień",

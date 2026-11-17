@@ -133,18 +133,24 @@ const SparkRowLR = ({ trendL, trendR }: { trendL: DayTrend; trendR: DayTrend }) 
         {totals.map((total, i) => {
           const isToday = i === totals.length - 1;
           const h = 2 + 10 * (total / max);
-          const lVal = trendL.spark[i] ?? 0;
-          const lH = total > 0 ? (lVal / total) * h : 0;
+          const rVal = trendR.spark[i] ?? 0;
+          const rH = total > 0 ? (rVal / total) * h : 0;
           return (
-            <span key={i} className="relative w-[3px] rounded-[1px] bg-gray-200" style={{ height: `${h}px` }}>
-              <span
-                className={`absolute bottom-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-sky-500' : 'bg-sky-200'}`}
-                style={{ height: `${lH}px` }}
-              />
-              <span
-                className={`absolute top-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-pink-500' : 'bg-pink-200'}`}
-                style={{ height: `${Math.max(h - lH, 0)}px` }}
-              />
+            <span key={i} className="relative w-[3px]" style={{ height: `${h}px` }}>
+              {total > 0 ? (
+                <>
+                  <span
+                    className={`absolute bottom-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-sky-500' : 'bg-sky-200'}`}
+                    style={{ height: `${h}px` }}
+                  />
+                  <span
+                    className={`absolute top-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-pink-500' : 'bg-pink-200'}`}
+                    style={{ height: `${rH}px` }}
+                  />
+                </>
+              ) : (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-[1px] bg-gray-300" />
+              )}
             </span>
           );
         })}
@@ -179,6 +185,9 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Which reference the tile delta lines compare against: 7-day average or yesterday
   const [trendRef, setTrendRef] = useState<'avg' | 'yesterday'>('avg');
+  // Local show/hide for the added tile statistics (delta line + sparklines)
+  const [statsVisible, setStatsVisible] = useState(true);
+  const showTrend = trendEnabled && statsVisible;
   const [photosEnabled, setPhotosEnabled] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 
@@ -221,7 +230,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   };
 
   const historyDayStats = useMemo<HistoryDayStats[]>(() => {
-    if (!trendEnabled) return [];
+    if (!showTrend) return [];
     const buckets = bucketByDate(historyActivities);
     const days: HistoryDayStats[] = [];
     for (let i = TREND_SPARK_DAYS; i >= 1; i--) {
@@ -236,7 +245,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       });
     }
     return days;
-  }, [historyActivities, date, defaultBottleUnit, t, trendEnabled]);
+  }, [historyActivities, date, defaultBottleUnit, t, showTrend]);
 
   // Calculate stats and create dynamic tiles
   const statTiles = useMemo(() => {
@@ -631,11 +640,11 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
 
     return tiles.map((tile) => ({
       ...tile,
-      trend: trendEnabled && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
-      trendL: trendEnabled && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'leftBreastMinutes') : null,
-      trendR: trendEnabled && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'rightBreastMinutes') : null,
+      trend: showTrend && tile.metricKey ? computeDayTrend(stats, historyDayStats, tile.metricKey) : null,
+      trendL: showTrend && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'leftBreastMinutes') : null,
+      trendR: showTrend && feedTrendByDuration && tile.filter === 'feed' ? computeDayTrend(stats, historyDayStats, 'rightBreastMinutes') : null,
     }));
-  }, [stats, historyDayStats, t, photosEnabled, trendEnabled, feedTrendByDuration]);
+  }, [stats, historyDayStats, t, photosEnabled, showTrend, feedTrendByDuration]);
 
   const formatDateDisplay = (date: Date): string => {
     return formatDateLong(date, dateFormat);
@@ -732,6 +741,27 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
 
           <div className="flex items-center gap-2">
             {trendEnabled ? (
+              <>
+              {/* Main control: hide/show the added tile statistics */}
+              <button
+                type="button"
+                onClick={() => setStatsVisible((v) => !v)}
+                aria-pressed={statsVisible}
+                className="text-xs inline-flex items-center gap-1 text-teal-600 hover:text-teal-700"
+              >
+                {statsVisible ? (
+                  <>
+                    <EyeOff className="h-3 w-3" aria-hidden="true" />
+                    <span>{t('Hide stats')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-3 w-3" aria-hidden="true" />
+                    <span>{t('Show stats')}</span>
+                  </>
+                )}
+              </button>
+              {statsVisible && (
               /* Stats reference toggle replaces the filters dropdown; tile taps still filter */
               <div className="flex items-center rounded-md border border-gray-200 p-0.5 text-xs">
                 <button
@@ -751,6 +781,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                   {t('Yesterday')}
                 </button>
               </div>
+              )}
+              </>
             ) : (
             /* Filters Dropdown (shown when the stats trend is disabled) */
             <DropdownMenu>

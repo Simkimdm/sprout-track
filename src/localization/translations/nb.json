@@ -2734,6 +2734,8 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Ja. Ingen annonser, ingen sporing, ingen salg av data. Koden er offentlig på GitHub, så du trenger ikke ta vårt ord for det.",
   "Yesterday": "I går",
   "{days}-day avg": "snitt over {days} dager",
+  "Show stats": "Vis statistikk",
+  "Hide stats": "Skjul statistikk",
   "Show trend on daily summary tiles": "Vis trend på flisene i dagoppsummeringen",
   "Feed tile trend by breastfeeding duration": "Flis for mating: trend etter ammevarighet (V/H)",
   "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Når aktivert sammenligner matingflisen total ammevarighet venstre/høyre i stedet for antall matinger",
