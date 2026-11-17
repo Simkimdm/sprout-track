@@ -2734,8 +2734,6 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Ja. Geen advertenties, geen trackers, geen verkoop van gegevens. De code is openbaar op GitHub, dus u hoeft ons niet op ons woord te geloven.",
   "Yesterday": "Gisteren",
   "{days}-day avg": "gem. {days} dagen",
-  "Show stats": "Statistieken tonen",
-  "Hide stats": "Statistieken verbergen",
   "Show trend on daily summary tiles": "Trend tonen op de tegels van het dagoverzicht",
   "Feed tile trend by breastfeeding duration": "Voedingstegel: trend op borstvoedingsduur (L/R)",
   "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Indien ingeschakeld vergelijkt de voedingstegel de totale borstvoedingsduur links/rechts in plaats van het aantal voedingen",

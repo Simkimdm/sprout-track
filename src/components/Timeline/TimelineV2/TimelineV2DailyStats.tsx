@@ -133,23 +133,19 @@ const SparkRowLR = ({ trendL, trendR }: { trendL: DayTrend; trendR: DayTrend }) 
         {totals.map((total, i) => {
           const isToday = i === totals.length - 1;
           const h = 2 + 10 * (total / max);
+          const lVal = trendL.spark[i] ?? 0;
           const rVal = trendR.spark[i] ?? 0;
-          const rH = total > 0 ? (rVal / total) * h : 0;
           return (
-            <span key={i} className="relative w-[3px]" style={{ height: `${h}px` }}>
-              {total > 0 ? (
+            <span
+              key={i}
+              className={`flex flex-col justify-end w-[3px] rounded-[1px] overflow-hidden ${total === 0 ? 'bg-gray-300' : ''}`}
+              style={{ height: `${h}px` }}
+            >
+              {total > 0 && (
                 <>
-                  <span
-                    className={`absolute bottom-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-sky-500' : 'bg-sky-200'}`}
-                    style={{ height: `${h}px` }}
-                  />
-                  <span
-                    className={`absolute top-0 left-0 right-0 rounded-[1px] ${isToday ? 'bg-pink-500' : 'bg-pink-200'}`}
-                    style={{ height: `${rH}px` }}
-                  />
+                  <span className={isToday ? 'bg-pink-500' : 'bg-pink-200'} style={{ height: `${(rVal / total) * 100}%` }} />
+                  <span className={isToday ? 'bg-sky-500' : 'bg-sky-200'} style={{ height: `${(lVal / total) * 100}%` }} />
                 </>
-              ) : (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-[1px] bg-gray-300" />
               )}
             </span>
           );
@@ -184,10 +180,9 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Which reference the tile delta lines compare against: 7-day average or yesterday
-  const [trendRef, setTrendRef] = useState<'avg' | 'yesterday'>('avg');
-  // Local show/hide for the added tile statistics (delta line + sparklines)
-  const [statsVisible, setStatsVisible] = useState(true);
-  const showTrend = trendEnabled && statsVisible;
+  // Default 'off': the added statistics stay hidden until the user picks a reference
+  const [trendRef, setTrendRef] = useState<'avg' | 'yesterday' | 'off'>('off');
+  const showTrend = trendEnabled && trendRef !== 'off';
   const [photosEnabled, setPhotosEnabled] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 
@@ -741,28 +736,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
 
           <div className="flex items-center gap-2">
             {trendEnabled ? (
-              <>
-              {/* Main control: hide/show the added tile statistics */}
-              <button
-                type="button"
-                onClick={() => setStatsVisible((v) => !v)}
-                aria-pressed={statsVisible}
-                className="text-xs inline-flex items-center gap-1 text-teal-600 hover:text-teal-700"
-              >
-                {statsVisible ? (
-                  <>
-                    <EyeOff className="h-3 w-3" aria-hidden="true" />
-                    <span>{t('Hide stats')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-3 w-3" aria-hidden="true" />
-                    <span>{t('Show stats')}</span>
-                  </>
-                )}
-              </button>
-              {statsVisible && (
-              /* Stats reference toggle replaces the filters dropdown; tile taps still filter */
+              /* Stats reference toggle (incl. off) replaces the filters dropdown; tile taps still filter */
               <div className="flex items-center rounded-md border border-gray-200 p-0.5 text-xs">
                 <button
                   type="button"
@@ -780,9 +754,15 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
                 >
                   {t('Yesterday')}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setTrendRef('off')}
+                  aria-pressed={trendRef === 'off'}
+                  className={`px-2 py-0.5 rounded ${trendRef === 'off' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {t('Off')}
+                </button>
               </div>
-              )}
-              </>
             ) : (
             /* Filters Dropdown (shown when the stats trend is disabled) */
             <DropdownMenu>
