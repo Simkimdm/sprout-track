@@ -154,6 +154,21 @@ describe('computeDayTrend', () => {
     expect(trend!.dir).toBe('up');
     expect(trend!.absDelta).toBe(3.7);
     expect(trend!.pctDelta).toBeCloseTo((3.7 / 4.3) * 100, 6);
+    // yesterday comparison (yesterday = 6, today = 8)
+    expect(trend!.yDir).toBe('up');
+    expect(trend!.yAbsDelta).toBe(2);
+    expect(trend!.yPctDelta).toBeCloseTo((2 / 6) * 100, 6);
+  });
+
+  it('reports a null yesterday comparison when yesterday has no data', () => {
+    // 14 days: one day with data inside the 7-day avg window, yesterday (last entry) empty
+    const history = days([...Array(7).fill(null), 6, ...Array(TREND_SPARK_DAYS - 8).fill(null)]);
+    const trend = computeDayTrend(baseMetrics({ diaperCount: 8 }), history, 'diaperCount');
+    expect(trend!.yesterday).toBeNull();
+    expect(trend!.yDir).toBeNull();
+    expect(trend!.yAbsDelta).toBeNull();
+    expect(trend!.yPctDelta).toBeNull();
+    expect(trend!.avg).toBe(6); // only the one day with data counts for the average
   });
 
   it('skips data-less days in the average but keeps them as zero in the sparkline', () => {
