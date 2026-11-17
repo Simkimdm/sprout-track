@@ -2734,8 +2734,6 @@
   "Yes. No ads, no trackers, no selling data. The code is public on GitHub, so you don’t have to take our word for it.": "Sì. Niente pubblicità, niente tracker, nessuna vendita di dati. Il codice è pubblico su GitHub, quindi non devi fidarti sulla parola.",
   "Yesterday": "Ieri",
   "{days}-day avg": "media di {days} giorni",
-  "Show stats": "Mostra statistiche",
-  "Hide stats": "Nascondi statistiche",
   "Show trend on daily summary tiles": "Mostra il trend nelle tessere del riepilogo giornaliero",
   "Feed tile trend by breastfeeding duration": "Tessera alimentazione: trend per durata dell'allattamento (S/D)",
   "When enabled, the feed tile compares the total left/right breastfeeding time instead of the feed count": "Se abilitato, la tessera di alimentazione confronta la durata totale dell'allattamento sinistro/destro invece del numero di poppate",
