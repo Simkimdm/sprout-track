@@ -71,12 +71,25 @@ describe('groupBreastFeedSessions', () => {
     expect(sessions[0].rightDuration).toBe(360);
   });
 
-  it('does not merge same-side feeds even when close together', () => {
+  it('chains same-side feeds within the interval too (a repeated side is a re-latch, not a new feeding)', () => {
     const rows = [
       { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 300 },
       { type: 'BREAST', time: at('2026-07-10T10:00:30Z'), side: 'LEFT', feedDuration: 300 },
     ];
-    expect(countBreastFeedSessions(rows)).toBe(2);
+    // pause between them clamps at 0 -> within the default tolerance they chain
+    expect(countBreastFeedSessions(rows)).toBe(1);
+    // ...but not when the interval is smaller than the gap
+    expect(countBreastFeedSessions(rows, 0)).toBe(2);
+  });
+
+  it('still does not merge feeds whose pause exceeds the interval', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 300 },
+      { type: 'BREAST', time: at('2026-07-10T10:06:00Z'), side: 'LEFT', feedDuration: 300 },
+    ];
+    // 10:00 + 5 min ends at 10:05 -> pause to 10:06 is 1 min
+    expect(countBreastFeedSessions(rows, 30 * 60_000)).toBe(1);
+    expect(countBreastFeedSessions(rows, 30_000)).toBe(2);
   });
 
   it('counts a single-side feed as one session', () => {
@@ -241,6 +254,49 @@ describe('configurable grouping interval (feedSessionGroupingMinutes)', () => {
     ];
     expect(countBreastFeedSessions(rows, 0)).toBe(2);
     expect(countBreastFeedSessions(rows)).toBe(1);
+  });
+
+  it("groups the night example: R 22:39 6s + L 22:39 5s + R 22:41 2s + L 22:41 2s into ONE session within 15 min", () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'RIGHT', feedDuration: 2 },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'LEFT', feedDuration: 2 },
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'RIGHT', feedDuration: 6 },
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'LEFT', feedDuration: 5 },
+    ];
+    const sessions = groupBreastFeedSessions(rows, 15 * 60_000);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].rows).toHaveLength(4);
+    expect(sessions[0].totalDuration).toBe(15);
+    expect(sessions[0].leftDuration).toBe(7);
+    expect(sessions[0].rightDuration).toBe(8);
+    // pause between the 22:39 pair and the 22:41 pair is ~1m54s -> not within 1 min
+    expect(countBreastFeedSessions(rows, 60_000)).toBe(2);
+  });
+
+  it('merges two linked (sessionId) sessions of 2+ rows when the pause between them is within the interval', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'RIGHT', feedDuration: 6, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'LEFT', feedDuration: 5, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'RIGHT', feedDuration: 2, sessionId: 's2' },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'LEFT', feedDuration: 2, sessionId: 's2' },
+    ];
+    const sessions = groupBreastFeedSessions(rows, 15 * 60_000);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].rows).toHaveLength(4);
+    expect(sessions[0].totalDuration).toBe(15);
+    // beyond the interval they stay two linked sessions
+    expect(countBreastFeedSessions(rows, 60_000)).toBe(2);
+    // disabled entirely -> linked grouping still applies per sessionId, but no time-merge
+    expect(countBreastFeedSessions(rows, 0)).toBe(2);
+  });
+
+  it('a singleton sessionId (unlinked row) never time-merges, even next to a linked pair within the interval', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'RIGHT', feedDuration: 6, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'LEFT', feedDuration: 5, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'LEFT', feedDuration: 2, sessionId: 'solo' },
+    ];
+    expect(countBreastFeedSessions(rows, 15 * 60_000)).toBe(2);
   });
 
   it('sessionId linking still wins over a disabled heuristic', () => {
