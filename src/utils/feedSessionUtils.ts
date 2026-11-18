@@ -10,12 +10,17 @@
  * 1. Explicit `sessionId` — rows sharing a sessionId are one session (any
  *    number of rows, any sides). A row whose sessionId is unique to it is a
  *    deliberate singleton: the user unlinked it, so it never merges.
- * 2. Heuristic fallback for rows without a sessionId — different-side rows
- *    whose pause (previous row's end → this row's start, clamped at 0) is
- *    within the tolerance pair up (at most one LEFT and one RIGHT; sideless
- *    rows never pair). The tolerance comes from the baby's
+ * 2. Heuristic fallback for rows without a sessionId — rows whose pause
+ *    (previous row's end → this row's start, clamped at 0) is within the
+ *    tolerance chain into one session, whatever side they used (a repeated
+ *    side within the interval is a re-latch, not a new feeding); sideless
+ *    rows never pair. The tolerance comes from the baby's
  *    feedSessionGroupingMinutes setting (default SESSION_TOLERANCE_MS; 0
  *    disables the heuristic entirely).
+ * 3. Linked sessions (a shared sessionId over 2+ rows, e.g. two timer runs)
+ *    also merge with each other when the pause between them is within the
+ *    tolerance — a unique sessionId on a single row stays a deliberate
+ *    singleton (the user unlinked it) and never merges.
  */
 
 /** Minimal shape of a feed log row needed for session grouping. */
@@ -100,10 +105,11 @@ function buildSession<T extends BreastFeedLike>(
 
 /**
  * Group BREAST rows into nursing sessions: by shared `sessionId` when present,
- * otherwise by the pause heuristic — a row joins the current group when its
- * side differs and the pause since the previous row's end is within
- * `toleranceMs` (0 disables the heuristic). Non-BREAST rows are ignored.
- * Sessions are returned sorted by start time.
+ * otherwise by the pause heuristic — a row joins the current group when the
+ * pause since the previous row's end is within `toleranceMs` (0 disables the
+ * heuristic). Linked sessions of 2+ rows additionally merge with each other
+ * within the tolerance. Non-BREAST rows are ignored. Sessions are returned
+ * sorted by start time.
  */
 export function groupBreastFeedSessions<T extends BreastFeedLike>(
   feeds: T[],
@@ -134,10 +140,12 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
     sessions.push(buildSession(group.rows, group.firstTs, sessionId));
   });
 
-  // Heuristic pairing for rows without a sessionId. The gap between two rows
+  // Heuristic chaining for rows without a sessionId. The gap between two rows
   // is the pause: this row's start minus the previous row's end (start +
   // duration), clamped at 0 — the feeding's own duration must not count as a
-  // break between sides. A tolerance of 0 disables the heuristic entirely.
+  // break between sides. Any side may join (a repeated side within the
+  // interval is a re-latch, not a new feeding); sideless rows never join.
+  // A tolerance of 0 disables the heuristic entirely.
   let current: { rows: T[]; sides: Set<string>; firstTs: number; lastEndTs: number } | null = null;
 
   const flush = () => {
@@ -156,7 +164,6 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
       toleranceMs > 0 &&
       side !== null &&
       current.sides.size > 0 &&
-      !current.sides.has(side) &&
       pauseMs <= toleranceMs;
 
     if (joins && current) {
@@ -170,7 +177,39 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
   }
   flush();
 
-  return sessions.sort((a, b) => a.time.getTime() - b.time.getTime());
+  sessions.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+  // Merge adjacent linked sessions (shared sessionId, 2+ rows each — e.g. two
+  // timer runs a couple of minutes apart) when the pause between them is within
+  // the tolerance. A sessionId unique to a single row is a deliberate unlink
+  // and never merges; heuristic groups never merge with linked ones.
+  if (toleranceMs > 0) {
+    const rowTs = (r: T) => new Date(breastFeedDisplayTime({ time: r.time, startTime: (r as { startTime?: string | Date | null }).startTime })).getTime();
+    const sessionEndTs = (s: BreastFeedSession<T>) =>
+      Math.max(...s.rows.map(r => rowTs(r) + feedRowDurationSeconds(r) * 1000));
+    const merged: BreastFeedSession<T>[] = [];
+    let open: { rows: T[]; firstTs: number; sessionId: string | null; linked: boolean; lastEndTs: number } | null = null;
+    for (const session of sessions) {
+      const linked = session.sessionId !== null && session.rows.length >= 2;
+      const endTs = sessionEndTs(session);
+      const canMerge =
+        open !== null &&
+        linked &&
+        open.linked &&
+        Math.max(0, session.time.getTime() - open.lastEndTs) <= toleranceMs;
+      if (canMerge && open) {
+        open.rows.push(...session.rows);
+        open.lastEndTs = Math.max(open.lastEndTs, endTs);
+      } else {
+        if (open) merged.push(buildSession(open.rows, open.firstTs, open.sessionId));
+        open = { rows: [...session.rows], firstTs: session.time.getTime(), sessionId: session.sessionId, linked, lastEndTs: endTs };
+      }
+    }
+    if (open) merged.push(buildSession(open.rows, open.firstTs, open.sessionId));
+    return merged;
+  }
+
+  return sessions;
 }
 
 /**
