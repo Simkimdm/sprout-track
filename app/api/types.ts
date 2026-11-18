@@ -155,6 +155,7 @@ export interface FeedLogCreate {
   bottleType?: string;
   breastMilkAmount?: number;
   sessionId?: string; // Links breast feeds belonging to the same nursing session
+  unlinked?: boolean; // Set by "unlink": the row never takes part in time-based auto-grouping
   quality?: FeedQuality; // How well the baby drank (EXCELLENT..POOR, POOR = only suckled)
 }
 

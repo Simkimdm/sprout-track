@@ -175,7 +175,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
         ? { reactionCause: body.reactionCause && body.reactionCause.trim() ? body.reactionCause : null }
         : {}),
       ...(body.quality !== undefined ? { quality: body.quality || null } : {}),
-      ...pickFields(body, ['babyId', 'type', 'amount', 'unitAbbr', 'side', 'food', 'sessionId']),
+      ...pickFields(body, ['babyId', 'type', 'amount', 'unitAbbr', 'side', 'food', 'sessionId', 'unlinked']),
     };
 
     const feedLog = await prisma.feedLog.update({
