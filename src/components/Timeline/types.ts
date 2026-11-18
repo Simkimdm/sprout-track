@@ -74,6 +74,8 @@ export interface TimelineProps {
   feedTimerTypes?: string | null;
   /** Whether the feed timer (and the filtered timeline's +/- x:yy gap) counts from the feed start or end. */
   feedTimerFrom?: string | null;
+  /** Auto-group breast feeds without a sessionId when the pause between them is within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
   onLatestStatusReady?: (data: LatestStatusData) => void;
   onActivityDeleted?: (dateFilter?: Date) => void;
 }
@@ -106,6 +108,8 @@ export interface TimelineActivityListProps {
   activeFilter?: FilterType;
   /** Gap anchor for the +/- x:yy suffix: 'start' (previous feeding start) or 'end' (previous feeding end) */
   feedTimerFrom?: string | null;
+  /** Auto-group breast feeds without a sessionId when the pause between them is within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
   /** Unfiltered activities of the selected day, used to compute the gap to the previous feeding */
   allActivities?: ActivityType[];
   /** Feed entries before the selected day, used as gap anchor for the day's first feeding */

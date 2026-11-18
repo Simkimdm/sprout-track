@@ -35,6 +35,7 @@ import {
   parseNightSleepWindow,
   serializeNightSleepWindow,
 } from '@/src/utils/nightSleepWindow';
+import { FEED_SESSION_GROUPING_OPTIONS } from '@/src/utils/feedSessionUtils';
 
 interface BabyFormProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ const defaultFormData = {
   bathWarningTime: '24:00',
   feedTimerFrom: 'start',
   feedTimerTypes: [...FEED_TIMER_CATEGORIES] as FeedTimerCategory[],
+  feedSessionGroupingMinutes: 30,
   nightSleepWindowEnabled: false,
   nightSleepWindowStart: '22:00',
   nightSleepWindowEnd: '07:00',
@@ -97,6 +99,7 @@ export default function BabyForm({
         bathWarningTime: baby.bathWarningTime || '24:00',
         feedTimerFrom: (baby as any).feedTimerFrom || 'start',
         feedTimerTypes: parseFeedTimerTypes((baby as any).feedTimerTypes) ?? [...FEED_TIMER_CATEGORIES],
+        feedSessionGroupingMinutes: baby.feedSessionGroupingMinutes ?? 30,
         ...(() => {
           const nw = parseNightSleepWindow(baby.nightSleepWindow ?? null);
           return {
@@ -304,6 +307,18 @@ export default function BabyForm({
               </select>
             </div>
             <div style={{ marginTop: 14 }}>
+              <label className="sb-fl" htmlFor="sbBabyGrouping">{t('Auto-group breast feeds within')}</label>
+              <select id="sbBabyGrouping" className="sb-fi" value={String(formData.feedSessionGroupingMinutes)}
+                onChange={(e) => setFormData({ ...formData, feedSessionGroupingMinutes: Number(e.target.value) })}>
+                {FEED_SESSION_GROUPING_OPTIONS.map((minutes) => (
+                  <option key={minutes} value={String(minutes)}>
+                    {minutes === 0 ? t('Off') : `${minutes} ${t('min')}`}
+                  </option>
+                ))}
+              </select>
+              <p className="sb-fh">{t('Breast feeds not saved in a session count as one feeding when the pause between them is within this interval.')}</p>
+            </div>
+            <div style={{ marginTop: 14 }}>
               <label className="sb-fl" htmlFor="sbBabyNightWindow">{t('Night Sleep Window')}</label>
               <select id="sbBabyNightWindow" className="sb-fi"
                 value={formData.nightSleepWindowEnabled ? 'enabled' : 'disabled'}
@@ -503,6 +518,27 @@ export default function BabyForm({
                 <SelectItem value="end">{t('End of feeding')}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <label htmlFor={`${formId}-feed-session-grouping`} className="form-label">{t('Auto-group breast feeds within')}</label>
+            <Select
+              value={String(formData.feedSessionGroupingMinutes)}
+              onValueChange={(value) =>
+                setFormData({ ...formData, feedSessionGroupingMinutes: Number(value) })
+              }
+            >
+              <SelectTrigger id={`${formId}-feed-session-grouping`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FEED_SESSION_GROUPING_OPTIONS.map((minutes) => (
+                  <SelectItem key={minutes} value={String(minutes)}>
+                    {minutes === 0 ? t('Off') : `${minutes} ${t('min')}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-500 mt-1">{t('Breast feeds not saved in a session count as one feeding when the pause between them is within this interval.')}</p>
           </div>
           <div>
             <label htmlFor={`${formId}-night-sleep-window`} className="form-label">{t('Night Sleep Window')}</label>

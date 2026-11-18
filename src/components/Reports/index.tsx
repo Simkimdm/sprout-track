@@ -189,7 +189,7 @@ const Reports: React.FC<ReportsProps> = ({ className }) => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'stats':
-        return <StatsTab activities={activities} dateRange={dateRange} isLoading={isLoading} />;
+        return <StatsTab activities={activities} dateRange={dateRange} isLoading={isLoading} feedSessionGroupingMinutes={selectedBaby?.feedSessionGroupingMinutes ?? null} />;
       case 'milestones':
         return <MilestonesTab />;
       case 'growth':
@@ -197,7 +197,7 @@ const Reports: React.FC<ReportsProps> = ({ className }) => {
       case 'activity':
         return <ActivityTab activities={activities} dateRange={dateRange} isLoading={isLoading} />;
       case 'heatmaps':
-        return <HeatmapsTab activities={activities} dateRange={dateRange} isLoading={isLoading} />;
+        return <HeatmapsTab activities={activities} dateRange={dateRange} isLoading={isLoading} feedSessionGroupingMinutes={selectedBaby?.feedSessionGroupingMinutes ?? null} />;
       case 'health':
         return <HealthTab activities={activities} dateRange={dateRange} isLoading={isLoading} />;
       case 'report-card':

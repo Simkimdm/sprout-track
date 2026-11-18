@@ -9,6 +9,8 @@ import {
   formatSignedElapsedHM,
   formatDurationHM,
   formatDurationWords,
+  feedSessionGroupingToleranceMs,
+  SESSION_TOLERANCE_MS,
 } from '@/src/utils/feedSessionUtils';
 
 // Issue #198: a nursing session using both sides is stored as two FeedLog rows
@@ -37,10 +39,11 @@ describe('groupBreastFeedSessions', () => {
     expect(countBreastFeedSessions(rows)).toBe(1);
   });
 
-  it('does not merge feeds more than 30 minutes apart', () => {
+  it('does not merge feeds whose pause is more than 30 minutes', () => {
     const rows = [
+      // 10:00 + 8 min ends at 10:08; 10:39 starts 31 min after that end
       { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 480 },
-      { type: 'BREAST', time: at('2026-07-10T10:31:00Z'), side: 'RIGHT', feedDuration: 360 },
+      { type: 'BREAST', time: at('2026-07-10T10:39:00Z'), side: 'RIGHT', feedDuration: 360 },
     ];
     expect(countBreastFeedSessions(rows)).toBe(2);
   });
@@ -195,6 +198,70 @@ describe('explicit sessionId linking', () => {
     const sessions = groupBreastFeedSessions(rows);
     expect(sessions[0].sessionId).toBe('早');
     expect(sessions[1].sessionId).toBeNull();
+  });
+});
+
+describe('configurable grouping interval (feedSessionGroupingMinutes)', () => {
+  // The request's example: 06:41 RIGHT 9m43s, then 06:58 LEFT 7m04s, both
+  // logged separately (no sessionId). Start-to-start is 17 min, but the pause
+  // between them is only 06:58:00 - (06:41:00 + 9:43) = 7m17s.
+  const exampleRows = () => [
+    { type: 'BREAST', time: at('2026-07-10T06:41:00Z'), side: 'RIGHT', feedDuration: 583 },
+    { type: 'BREAST', time: at('2026-07-10T06:58:00Z'), side: 'LEFT', feedDuration: 424 },
+  ];
+
+  it('groups the example pair within a 15-minute interval (pause 7m17s <= 15 min)', () => {
+    expect(countBreastFeedSessions(exampleRows(), 15 * 60_000)).toBe(1);
+  });
+
+  it('does not group the example pair within a 5-minute interval (pause 7m17s > 5 min)', () => {
+    expect(countBreastFeedSessions(exampleRows(), 5 * 60_000)).toBe(2);
+  });
+
+  it('still groups the pair at the default 30-minute tolerance', () => {
+    expect(countBreastFeedSessions(exampleRows())).toBe(1);
+    expect(countBreastFeedSessions(exampleRows(), SESSION_TOLERANCE_MS)).toBe(1);
+  });
+
+  it('a long first side does not count as a break: 25-min feed + other side 15 min later groups at 30 min', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 25 * 60 },
+      { type: 'BREAST', time: at('2026-07-10T10:40:00Z'), side: 'RIGHT', feedDuration: 360 },
+    ];
+    // pause = 10:40 - (10:00 + 25 min) = 15 min <= 30 min
+    expect(countBreastFeedSessions(rows)).toBe(1);
+    // ...but not within a 10-minute interval
+    expect(countBreastFeedSessions(rows, 10 * 60_000)).toBe(2);
+  });
+
+  it('tolerance 0 disables the heuristic: even adjacent different-side rows stay separate', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 480 },
+      { type: 'BREAST', time: at('2026-07-10T10:01:00Z'), side: 'RIGHT', feedDuration: 360 },
+    ];
+    expect(countBreastFeedSessions(rows, 0)).toBe(2);
+    expect(countBreastFeedSessions(rows)).toBe(1);
+  });
+
+  it('sessionId linking still wins over a disabled heuristic', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 120, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T11:30:00Z'), side: 'RIGHT', feedDuration: 600, sessionId: 's1' },
+    ];
+    expect(countBreastFeedSessions(rows, 0)).toBe(1);
+  });
+});
+
+describe('feedSessionGroupingToleranceMs', () => {
+  it('falls back to the default when unset', () => {
+    expect(feedSessionGroupingToleranceMs(undefined)).toBe(SESSION_TOLERANCE_MS);
+    expect(feedSessionGroupingToleranceMs(null)).toBe(SESSION_TOLERANCE_MS);
+  });
+
+  it('converts minutes to ms and keeps 0 as "off"', () => {
+    expect(feedSessionGroupingToleranceMs(15)).toBe(900_000);
+    expect(feedSessionGroupingToleranceMs(30)).toBe(1_800_000);
+    expect(feedSessionGroupingToleranceMs(0)).toBe(0);
   });
 });
 

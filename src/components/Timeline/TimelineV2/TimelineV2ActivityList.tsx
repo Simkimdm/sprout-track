@@ -2,7 +2,7 @@ import { Baby as BabyIcon, History, Timer } from 'lucide-react';
 import { Fragment, useRef, useMemo, useState, useEffect } from 'react';
 import { ActivityType, TimelineActivityListProps } from '../types';
 import { getActivityIcon, getActivityStyle, getActivityDescription, getActivityTime, formatWeightDisplay, feedQualityLabel, matchesFilterType } from '../utils';
-import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, buildGapMap, buildGapDividerMap, feedSessionGroupingToleranceMs, formatDurationWords, BreastFeedSession, FeedGapRow, FeedGapInfo } from '@/src/utils/feedSessionUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/src/components/ui/label';
 import { useLocalization } from '@/src/context/localization';
@@ -75,6 +75,7 @@ const TimelineV2ActivityList = ({
   filterHistory,
   showPreviousEntry,
   feedTimerFrom,
+  feedSessionGroupingMinutes,
   gapById,
   dividerGapById,
 }: TimelineActivityListProps) => {
@@ -191,12 +192,12 @@ const TimelineV2ActivityList = ({
     const breastRows = activities.filter(a =>
       'amount' in a && 'type' in a && (a as { type?: string }).type === 'BREAST'
     ) as unknown as FeedGapRow[];
-    for (const session of groupBreastFeedSessions(breastRows)) {
+    for (const session of groupBreastFeedSessions(breastRows, feedSessionGroupingToleranceMs(feedSessionGroupingMinutes))) {
       if (session.rows.length < 2) continue;
       for (const row of session.rows) map.set(row.id, session);
     }
     return map;
-  }, [activities]);
+  }, [activities, feedSessionGroupingMinutes]);
 
 
   // Gap map for other types (diaper, note, ...) when a filter is active: start-anchored,

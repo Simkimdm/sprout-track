@@ -20,6 +20,8 @@ interface FeedingStatsSectionProps {
   stats: FeedingStats;
   activities: ActivityType[];
   dateRange: DateRange;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
 }
 
 // Helper function to format minutes into hours and minutes
@@ -37,7 +39,7 @@ const formatMinutes = (minutes: number): string => {
  *
  * Displays feeding statistics including bottle, breast, and solids feeds.
  */
-const FeedingStatsSection: React.FC<FeedingStatsSectionProps> = ({ stats, activities, dateRange }) => {
+const FeedingStatsSection: React.FC<FeedingStatsSectionProps> = ({ stats, activities, dateRange, feedSessionGroupingMinutes }) => {
   const { t } = useLocalization();
   const { unitSymbol } = useUnit();
   const [chartModalOpen, setChartModalOpen] = useState(false);
@@ -137,6 +139,7 @@ const FeedingStatsSection: React.FC<FeedingStatsSectionProps> = ({ stats, activi
         metric={chartMetric}
         activities={activities}
         dateRange={dateRange}
+        feedSessionGroupingMinutes={feedSessionGroupingMinutes}
       />
     </>
   );

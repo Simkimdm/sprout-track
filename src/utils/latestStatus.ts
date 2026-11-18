@@ -6,7 +6,7 @@
 import type { LatestStatusData } from '@/src/components/Timeline/types';
 import type { SleepLogResponse } from '@/app/api/types';
 import { FeedTimerCategory, feedCountsForTimer, foodCountsForTimer } from './feedTimerConfig';
-import { groupBreastFeedSessions, feedRowDurationSeconds } from './feedSessionUtils';
+import { groupBreastFeedSessions, feedRowDurationSeconds, SESSION_TOLERANCE_MS } from './feedSessionUtils';
 import { findLatestPumpTime } from './pumpTimer';
 
 /** Status bubbles/timers hide anything 24 h old or more (a likely-forgotten log). */
@@ -18,10 +18,13 @@ const byTimeDesc = (key: string) => (a: any, b: any) => new Date(b[key]).getTime
  * Extract the latest feed / diaper / pump / sleep status from a mixed list of
  * activity rows (FeedLog, FoodLog, DiaperLog, PumpLog, SleepLog shapes).
  * `feedTimerCategories` is the baby's parsed feedTimerTypes (null = all feeds count).
+ * `sessionToleranceMs` is the baby's feedSessionGroupingMinutes in ms (0 = never
+ * auto-group breast feeds without a sessionId).
  */
 export function computeLatestStatus(
   activities: readonly object[],
-  feedTimerCategories: readonly FeedTimerCategory[] | null | undefined
+  feedTimerCategories: readonly FeedTimerCategory[] | null | undefined,
+  sessionToleranceMs: number = SESSION_TOLERANCE_MS
 ): LatestStatusData {
   const status: LatestStatusData = {};
 
@@ -47,7 +50,7 @@ export function computeLatestStatus(
       const breastFeeds = activities.filter((a) =>
         'amount' in a && (a as any).type === 'BREAST' && 'time' in a
       ) as any[];
-      const session = groupBreastFeedSessions(breastFeeds)
+      const session = groupBreastFeedSessions(breastFeeds, sessionToleranceMs)
         .find(s => s.rows.some((r: any) => r.id === feedAny.id));
       const rows: any[] = session?.rows ?? [feedAny];
       // Prefer explicit startTime/endTime; `time` only equals the session end

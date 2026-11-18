@@ -10,6 +10,19 @@ import { parseNightSleepWindow } from '@/src/utils/nightSleepWindow';
 import { pickFields } from '../utils/pick-fields';
 import { resolveFamilyScope } from '../utils/family-scope';
 
+/** Validates an optional feedSessionGroupingMinutes field: integer minutes 0..1440 (0 = never auto-group). */
+function validateFeedSessionGroupingMinutes(data: Record<string, any>): NextResponse | null {
+  if (!('feedSessionGroupingMinutes' in data)) return null;
+  const value = data.feedSessionGroupingMinutes;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 1440) {
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: 'feedSessionGroupingMinutes must be an integer between 0 and 1440' },
+      { status: 400 }
+    );
+  }
+  return null;
+}
+
 // Validates an optional nightSleepWindow field in place; '' normalizes to null (disabled).
 function validateNightSleepWindow(data: Record<string, any>): NextResponse | null {
   if (!('nightSleepWindow' in data)) return null;
@@ -47,6 +60,9 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
       );
     }
 
+    const groupingError = validateFeedSessionGroupingMinutes(babyData);
+    if (groupingError) return groupingError;
+
     const nightWindowError = validateNightSleepWindow(babyData);
     if (nightWindowError) return nightWindowError;
 
@@ -64,7 +80,7 @@ async function handlePost(req: NextRequest, authContext: AuthResult) {
         ...pickFields(body, [
           'firstName', 'lastName', 'gender', 'inactive',
           'feedWarningTime', 'diaperWarningTime', 'pumpWarningTime', 'bathWarningTime',
-          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow',
+          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow', 'feedSessionGroupingMinutes',
         ]),
         birthDate: toUTC(body.birthDate),
         familyId: targetFamilyId, // Set family ID from trusted context or setup auth
@@ -124,6 +140,9 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
       );
     }
 
+    const groupingError = validateFeedSessionGroupingMinutes(updateData);
+    if (groupingError) return groupingError;
+
     const nightWindowError = validateNightSleepWindow(updateData);
     if (nightWindowError) return nightWindowError;
 
@@ -156,7 +175,7 @@ async function handlePut(req: NextRequest, authContext: AuthResult) {
         ...pickFields(updateData, [
           'firstName', 'lastName', 'gender', 'inactive',
           'feedWarningTime', 'diaperWarningTime', 'pumpWarningTime', 'bathWarningTime',
-          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow',
+          'feedTimerFrom', 'feedTimerTypes', 'nightSleepWindow', 'feedSessionGroupingMinutes',
         ]),
         birthDate: updateData.birthDate ? toUTC(updateData.birthDate) : existingBaby.birthDate,
       },

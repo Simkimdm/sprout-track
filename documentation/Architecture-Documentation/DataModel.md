@@ -77,6 +77,7 @@ The subject of all activity tracking.
 | `pumpWarningTime` | Threshold for the "time since last pump" status bubble (default "03:00"; migration `20260922000000_add_pump_warning_time`). UI-only — no cron notification |
 | `feedTimerFrom` | Count feed timer from "start" or "end" of feeding (default "start") |
 | `feedTimerTypes` | JSON array of feed categories that reset the feed timer (null = all feeds count) |
+| `feedSessionGroupingMinutes` | Auto-group breast feeds without a `sessionId` when the pause between them (previous end → next start) is within this many minutes; 0 = never group automatically (default 30) |
 | `familyId` | Family scope |
 
 ## The Activity Log Pattern

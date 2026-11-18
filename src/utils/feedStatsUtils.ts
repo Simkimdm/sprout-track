@@ -7,7 +7,7 @@
  */
 
 import { convertVolume } from './unit-conversion';
-import { groupBreastFeedSessions, BreastFeedLike } from './feedSessionUtils';
+import { groupBreastFeedSessions, BreastFeedLike, SESSION_TOLERANCE_MS } from './feedSessionUtils';
 import { foodLogAmountsByUnit } from './foodLogUtils';
 
 /** Minimal shape of a feed activity needed for daily-stats aggregation. */
@@ -47,13 +47,16 @@ export interface FeedStats {
  * `windowActivities` (the surrounding days too) is used for breast-session
  * grouping so sessions that span midnight group correctly; each session is
  * attributed to the day it started. Falls back to `activities`.
+ * `sessionToleranceMs` is the baby's feedSessionGroupingMinutes in ms (0 = never
+ * auto-group breast feeds without a sessionId).
  */
 export function aggregateFeedStats(
   activities: unknown[],
   windowActivities: unknown[] | undefined,
   startOfDay: Date,
   endOfDay: Date,
-  preferredUnit: string
+  preferredUnit: string,
+  sessionToleranceMs: number = SESSION_TOLERANCE_MS
 ): FeedStats {
   let milkFeedCount = 0;
   let bottleFeedTotal = 0;
@@ -99,7 +102,7 @@ export function aggregateFeedStats(
   // and attribute each session (count and minutes) to the day it started.
   const breastRows = ((windowActivities ?? activities) as BreastFeedLike[])
     .filter(a => a && 'type' in a && a.type === 'BREAST');
-  for (const session of groupBreastFeedSessions(breastRows)) {
+  for (const session of groupBreastFeedSessions(breastRows, sessionToleranceMs)) {
     if (session.time >= startOfDay && session.time <= endOfDay) {
       milkFeedCount++;
       leftBreastMinutes += Math.floor(session.leftDuration / 60);

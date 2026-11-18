@@ -10,9 +10,12 @@
  * 1. Explicit `sessionId` — rows sharing a sessionId are one session (any
  *    number of rows, any sides). A row whose sessionId is unique to it is a
  *    deliberate singleton: the user unlinked it, so it never merges.
- * 2. Heuristic fallback for legacy rows without a sessionId — different-side
- *    rows within SESSION_TOLERANCE_MS of each other pair up (at most one LEFT
- *    and one RIGHT; sideless rows never pair).
+ * 2. Heuristic fallback for rows without a sessionId — different-side rows
+ *    whose pause (previous row's end → this row's start, clamped at 0) is
+ *    within the tolerance pair up (at most one LEFT and one RIGHT; sideless
+ *    rows never pair). The tolerance comes from the baby's
+ *    feedSessionGroupingMinutes setting (default SESSION_TOLERANCE_MS; 0
+ *    disables the heuristic entirely).
  */
 
 /** Minimal shape of a feed log row needed for session grouping. */
@@ -28,12 +31,27 @@ export interface BreastFeedLike {
 }
 
 /**
- * Heuristic window for legacy rows without a sessionId: two different-side
- * feeds within this gap count as one nursing session, even when logged
- * separately — a break between sides is still one session. A plain time gap,
- * so it spans midnight.
+ * Default heuristic window for rows without a sessionId: two different-side
+ * feeds whose pause (previous end → next start) is within this window count
+ * as one nursing session, even when logged separately — a break between sides
+ * is still one session. A plain time gap, so it spans midnight. Overridable
+ * per baby via feedSessionGroupingMinutes (0 = never group automatically).
  */
 export const SESSION_TOLERANCE_MS = 30 * 60_000;
+
+/**
+ * Convert the baby's feedSessionGroupingMinutes setting into the heuristic
+ * tolerance in ms. null/undefined falls back to SESSION_TOLERANCE_MS; 0 stays
+ * 0 and disables automatic grouping (groupBreastFeedSessions skips pairing
+ * when the tolerance is not positive).
+ */
+export function feedSessionGroupingToleranceMs(minutes: number | null | undefined): number {
+  if (minutes === null || minutes === undefined) return SESSION_TOLERANCE_MS;
+  return Math.max(0, Math.round(minutes)) * 60_000;
+}
+
+/** Selectable values (minutes) for the feedSessionGroupingMinutes setting; 0 = off. */
+export const FEED_SESSION_GROUPING_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
 
 export interface BreastFeedSession<T extends BreastFeedLike = BreastFeedLike> {
   /** The rows that make up this session. */
@@ -82,8 +100,10 @@ function buildSession<T extends BreastFeedLike>(
 
 /**
  * Group BREAST rows into nursing sessions: by shared `sessionId` when present,
- * otherwise by the time heuristic. Non-BREAST rows are ignored. Sessions are
- * returned sorted by start time.
+ * otherwise by the pause heuristic — a row joins the current group when its
+ * side differs and the pause since the previous row's end is within
+ * `toleranceMs` (0 disables the heuristic). Non-BREAST rows are ignored.
+ * Sessions are returned sorted by start time.
  */
 export function groupBreastFeedSessions<T extends BreastFeedLike>(
   feeds: T[],
@@ -114,8 +134,11 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
     sessions.push(buildSession(group.rows, group.firstTs, sessionId));
   });
 
-  // Heuristic pairing for rows without a sessionId
-  let current: { rows: T[]; sides: Set<string>; firstTs: number; lastTs: number } | null = null;
+  // Heuristic pairing for rows without a sessionId. The gap between two rows
+  // is the pause: this row's start minus the previous row's end (start +
+  // duration), clamped at 0 — the feeding's own duration must not count as a
+  // break between sides. A tolerance of 0 disables the heuristic entirely.
+  let current: { rows: T[]; sides: Set<string>; firstTs: number; lastEndTs: number } | null = null;
 
   const flush = () => {
     if (!current) return;
@@ -126,20 +149,23 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
   for (const { row, ts } of sorted) {
     if (row.sessionId) continue;
     const side = row.side || null;
+    const endTs = ts + feedRowDurationSeconds(row) * 1000;
+    const pauseMs = current ? Math.max(0, ts - current.lastEndTs) : Infinity;
     const joins =
       current !== null &&
+      toleranceMs > 0 &&
       side !== null &&
       current.sides.size > 0 &&
       !current.sides.has(side) &&
-      ts - current.lastTs <= toleranceMs;
+      pauseMs <= toleranceMs;
 
     if (joins && current) {
       current.rows.push(row);
       current.sides.add(side!);
-      current.lastTs = ts;
+      current.lastEndTs = Math.max(current.lastEndTs, endTs);
     } else {
       flush();
-      current = { rows: [row], sides: new Set(side ? [side] : []), firstTs: ts, lastTs: ts };
+      current = { rows: [row], sides: new Set(side ? [side] : []), firstTs: ts, lastEndTs: endTs };
     }
   }
   flush();

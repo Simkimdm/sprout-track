@@ -1,5 +1,5 @@
 import { ActivityType } from '../types';
-import { groupBreastFeedSessions } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, SESSION_TOLERANCE_MS } from '@/src/utils/feedSessionUtils';
 import type { TimeFormatSetting } from '@/src/utils/dateFormat';
 
 // Shared heatmap configuration
@@ -120,7 +120,10 @@ export interface HeatmapSeriesData {
 
 export type HeatmapData = Record<HeatmapType, HeatmapSeriesData>;
 
-export const buildHeatmapDataForActivities = (activities: ActivityType[]): HeatmapData => {
+export const buildHeatmapDataForActivities = (
+  activities: ActivityType[],
+  sessionToleranceMs: number = SESSION_TOLERANCE_MS
+): HeatmapData => {
   const slotCounts: Record<HeatmapType, number[]> = {
     wakeTime: new Array(TIME_SLOTS).fill(0),
     bedtime: new Array(TIME_SLOTS).fill(0),
@@ -136,7 +139,8 @@ export const buildHeatmapDataForActivities = (activities: ActivityType[]): Heatm
   const isBreastFeed = (a: ActivityType) =>
     'amount' in a && 'type' in a && (a as any).type === 'BREAST' && 'time' in a;
   const sessionReps = groupBreastFeedSessions(
-    activities.filter(isBreastFeed) as any
+    activities.filter(isBreastFeed) as any,
+    sessionToleranceMs
   ).map(session => session.rows[0] as unknown as ActivityType);
   const effectiveActivities = [...activities.filter(a => !isBreastFeed(a)), ...sessionReps];
 

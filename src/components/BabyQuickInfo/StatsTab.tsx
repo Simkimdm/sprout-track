@@ -17,7 +17,7 @@ import { Button } from '@/src/components/ui/button';
 import { Label } from '@/src/components/ui/label';
 import CardVisual from '@/src/components/reporting/CardVisual';
 import { useLocalization } from '@/src/context/localization';
-import { countBreastFeedSessions } from '@/src/utils/feedSessionUtils';
+import { countBreastFeedSessions, feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 import { isDirtyDiaper } from '@/src/utils/diaperStats';
 
 /**
@@ -319,7 +319,8 @@ const StatsTab: React.FC<StatsTabProps> = ({
       const feedingsForDay = dayActivities.filter(a =>
         ('type' in a && (a.type === 'BOTTLE' || a.type === 'SOLIDS'))
       ).length + countBreastFeedSessions(
-        dayActivities.filter(a => 'type' in a && a.type === 'BREAST') as any
+        dayActivities.filter(a => 'type' in a && a.type === 'BREAST') as any,
+        feedSessionGroupingToleranceMs(selectedBaby?.feedSessionGroupingMinutes)
       );
 
       feedingCount += feedingsForDay;

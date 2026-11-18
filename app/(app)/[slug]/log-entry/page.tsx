@@ -636,6 +636,7 @@ function HomeContent(): React.ReactElement {
             initialDate={initialTimelineDate}
             feedTimerTypes={selectedBaby.feedTimerTypes}
             feedTimerFrom={selectedBaby.feedTimerFrom}
+            feedSessionGroupingMinutes={selectedBaby.feedSessionGroupingMinutes}
             onLatestStatusReady={handleLatestStatusReady}
           />
         </Card>

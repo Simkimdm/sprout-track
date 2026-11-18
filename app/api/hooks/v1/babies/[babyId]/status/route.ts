@@ -3,7 +3,7 @@ import prisma from '../../../../../db';
 import { withApiKeyAuth, ApiKeyContext, validateBabyAccess } from '../../../auth';
 import { checkRateLimit } from '../../../rate-limiter';
 import { hookSuccess, hookError } from '../../../response';
-import { groupBreastFeedSessions, SESSION_TOLERANCE_MS } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 
 function minutesAgo(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / 60000);
@@ -65,10 +65,12 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
 
   const baby = await prisma.baby.findUnique({
     where: { id: babyId },
-    select: { id: true, firstName: true, birthDate: true, feedWarningTime: true, diaperWarningTime: true },
+    select: { id: true, firstName: true, birthDate: true, feedWarningTime: true, diaperWarningTime: true, feedSessionGroupingMinutes: true },
   });
 
   const today = startOfTodayInTimezone(timezone);
+  // Auto-grouping interval for breast feeds without a sessionId (0 = off)
+  const sessionToleranceMs = feedSessionGroupingToleranceMs(baby?.feedSessionGroupingMinutes);
 
   // Fetch last activities in parallel
   const [lastFeed, lastDiaper, lastSleep, lastBath, lastMedicine, lastSupplement, lastPump, activeBreastFeed] = await Promise.all([
@@ -86,7 +88,7 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
   const [todaysFeeds, diapers, sleepLogs, bathCount, medicineCount, supplementCount] = await Promise.all([
     // Pre-buffered so a breast session straddling midnight groups with its
     // pre-midnight sibling row (and is then attributed to yesterday)
-    prisma.feedLog.findMany({ where: { babyId, deletedAt: null, time: { gte: new Date(today.getTime() - SESSION_TOLERANCE_MS) } }, select: { type: true, time: true, side: true } }),
+    prisma.feedLog.findMany({ where: { babyId, deletedAt: null, time: { gte: new Date(today.getTime() - sessionToleranceMs) } }, select: { type: true, time: true, startTime: true, side: true, feedDuration: true, amount: true, sessionId: true } }),
     prisma.diaperLog.findMany({ where: { babyId, deletedAt: null, time: { gte: today } }, select: { type: true } }),
     prisma.sleepLog.findMany({
       where: {
@@ -216,7 +218,7 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
       // A left+right nursing session is stored as two rows but is one feed;
       // sessions belong to the day they started
       feeds: todaysFeeds.filter(f => f.type !== 'BREAST' && f.time >= today).length +
-        groupBreastFeedSessions(todaysFeeds).filter(s => s.time >= today).length,
+        groupBreastFeedSessions(todaysFeeds, sessionToleranceMs).filter(s => s.time >= today).length,
       diapers: diapers.length,
       diapersByType,
       sleepMinutes,

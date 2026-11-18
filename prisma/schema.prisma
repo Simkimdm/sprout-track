@@ -262,6 +262,7 @@ model Baby {
   bathWarningTime   String    @default("24:00") // Bath timer threshold; "hh:mm", hours may exceed 24 for days
   feedTimerFrom     String    @default("start") // "start" | "end" - count feed timer from start or end of feeding
   feedTimerTypes    String? // JSON array of feed categories that reset the feed timer (issue #225); null = all feeds count
+  feedSessionGroupingMinutes Int @default(30) // Auto-group breast feeds without a sessionId when the pause between them is within this many minutes; 0 = never group automatically
   nightSleepWindow  String? // JSON {"start":"HH:mm","end":"HH:mm"}; naps starting inside this daily window are stored as NIGHT_SLEEP; null = disabled (previous behavior)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
