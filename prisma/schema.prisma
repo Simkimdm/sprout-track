@@ -425,7 +425,8 @@ model FeedLog {
   bottleType   String? // Type of bottle feed: formula, breast milk, formula/breast, milk, other
   breastMilkAmount Float? // Breast milk amount used (for Formula/Breast mixed feeds)
   quality      FeedQuality? // How well the baby drank (EXCELLENT..POOR, POOR = only suckled)
-  sessionId    String? // Groups breast feeds into one nursing session; a unique value opts a feed out of heuristic grouping
+  sessionId    String? // Groups breast feeds into one nursing session (shared id = deliberate link, groups across any gap)
+  unlinked     Boolean     @default(false) // Set by "unlink": the row never takes part in time-based auto-grouping (a unique sessionId alone no longer opts out — single-side timer runs get one too)
   sourcePumpId String? @unique // Links an automatic breast-milk feed to the pump session that created it
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

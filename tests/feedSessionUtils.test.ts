@@ -179,13 +179,30 @@ describe('explicit sessionId linking', () => {
     expect(sessions[0].rightDuration).toBe(600);
   });
 
-  it('a unique sessionId is a deliberate singleton: an unlinked feed never re-merges heuristically', () => {
+  it('an unlinked row (unlinked flag) never re-merges, even within the interval', () => {
     const rows = [
-      // These two would merge under the 30-min heuristic, but the user unlinked them
-      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 480, sessionId: 'solo-1' },
-      { type: 'BREAST', time: at('2026-07-10T10:05:00Z'), side: 'RIGHT', feedDuration: 360, sessionId: 'solo-2' },
+      // These two would chain under the 30-min heuristic, but the user unlinked the second one
+      { type: 'BREAST', time: at('2026-07-10T10:00:00Z'), side: 'LEFT', feedDuration: 480, sessionId: 's1' },
+      { type: 'BREAST', time: at('2026-07-10T10:05:00Z'), side: 'RIGHT', feedDuration: 360, sessionId: 'solo-2', unlinked: true },
     ];
-    expect(countBreastFeedSessions(rows)).toBe(2);
+    const sessions = groupBreastFeedSessions(rows);
+    expect(sessions).toHaveLength(2);
+    expect(sessions.map(s => s.rows.length).sort()).toEqual([1, 1]);
+  });
+
+  it('a sessionId unique to a single row (e.g. a single-side timer run) is NOT an unlink — it chains within the interval', () => {
+    const rows = [
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'RIGHT', feedDuration: 6, sessionId: 't1' },
+      { type: 'BREAST', time: at('2026-07-10T22:39:00Z'), side: 'LEFT', feedDuration: 5, sessionId: 't2' },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'RIGHT', feedDuration: 2, sessionId: 't3' },
+      { type: 'BREAST', time: at('2026-07-10T22:41:00Z'), side: 'LEFT', feedDuration: 2, sessionId: 't4' },
+    ];
+    const sessions = groupBreastFeedSessions(rows, 15 * 60_000);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].rows).toHaveLength(4);
+    expect(sessions[0].totalDuration).toBe(15);
+    expect(countBreastFeedSessions(rows, 60_000)).toBe(2);
+    expect(countBreastFeedSessions(rows, 0)).toBe(4);
   });
 
   it('linked rows never absorb nearby unlinked rows; unlinked rows still pair heuristically', () => {
@@ -207,9 +224,11 @@ describe('explicit sessionId linking', () => {
     const rows = [
       { type: 'BREAST', time: at('2026-07-10T14:00:00Z'), side: 'LEFT', feedDuration: 300 },
       { type: 'BREAST', time: at('2026-07-10T08:00:00Z'), side: 'RIGHT', feedDuration: 300, sessionId: '早' },
+      { type: 'BREAST', time: at('2026-07-10T08:02:00Z'), side: 'LEFT', feedDuration: 300, sessionId: '早' },
     ];
     const sessions = groupBreastFeedSessions(rows);
     expect(sessions[0].sessionId).toBe('早');
+    expect(sessions[0].rows).toHaveLength(2);
     expect(sessions[1].sessionId).toBeNull();
   });
 });

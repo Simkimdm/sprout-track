@@ -22,9 +22,10 @@ import './feed-form.css';
  * nursing session (counted as one feeding) and the nearest breast feeds before
  * and after it, with link/unlink actions.
  *
- * Linking assigns all involved rows a shared sessionId. Unlinking gives the row
- * its own fresh sessionId, which also opts it out of the time-based grouping
- * heuristic so it stays separate.
+ * Linking assigns all involved rows a shared sessionId (they then group across
+ * any gap). Unlinking gives the row its own fresh sessionId AND sets
+ * `unlinked`, which opts it out of time-based auto-grouping so it stays
+ * separate even when it lies within the baby's grouping interval.
  */
 
 // How far around the edited feed to look for linkable neighbors
@@ -81,9 +82,9 @@ export default function LinkedFeedsSection({
     fetchNearbyFeeds();
   }, [fetchNearbyFeeds]);
 
-  // Persist a row's sessionId. The PUT handler nulls notes when absent from the
-  // body, so the row's existing notes are re-sent alongside.
-  const putSessionId = async (row: FeedLogResponse, sessionId: string) => {
+  // Persist a row's sessionId/unlinked flag. The PUT handler nulls notes when
+  // absent from the body, so the row's existing notes are re-sent alongside.
+  const putRow = async (row: FeedLogResponse, patch: { sessionId?: string | null; unlinked?: boolean }) => {
     const authToken = localStorage.getItem('authToken');
     const response = await fetch(`/api/feed-log?id=${row.id}`, {
       method: 'PUT',
@@ -91,7 +92,7 @@ export default function LinkedFeedsSection({
         'Content-Type': 'application/json',
         'Authorization': authToken ? `Bearer ${authToken}` : '',
       },
-      body: JSON.stringify({ sessionId, ...(row.notes ? { notes: row.notes } : {}) }),
+      body: JSON.stringify({ ...patch, ...(row.notes ? { notes: row.notes } : {}) }),
     });
     if (!response.ok) throw new Error('Failed to update linked feeds');
   };
@@ -122,9 +123,9 @@ export default function LinkedFeedsSection({
       if (!sid) {
         // Heuristic-only session: give all current members an explicit shared id first
         sid = newFeedSessionId();
-        await Promise.all(members.map(m => putSessionId(m, sid!)));
+        await Promise.all(members.map(m => putRow(m, { sessionId: sid!, unlinked: false })));
       }
-      await putSessionId(neighbor, sid);
+      await putRow(neighbor, { sessionId: sid, unlinked: false });
       await fetchNearbyFeeds();
     } catch (error) {
       console.error('Error linking feed:', error);
@@ -137,8 +138,9 @@ export default function LinkedFeedsSection({
   const handleUnlink = async (member: FeedLogResponse) => {
     setBusyId(member.id);
     try {
-      // A fresh unique sessionId detaches the row and opts it out of heuristic grouping
-      await putSessionId(member, newFeedSessionId());
+      // A fresh unique sessionId detaches the row from the shared link, and the
+      // unlinked flag opts it out of time-based auto-grouping within the interval
+      await putRow(member, { sessionId: newFeedSessionId(), unlinked: true });
       await fetchNearbyFeeds();
     } catch (error) {
       console.error('Error unlinking feed:', error);
