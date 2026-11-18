@@ -88,7 +88,7 @@ async function handleGet(req: NextRequest, ctx: ApiKeyContext, routeContext: any
   const [todaysFeeds, diapers, sleepLogs, bathCount, medicineCount, supplementCount] = await Promise.all([
     // Pre-buffered so a breast session straddling midnight groups with its
     // pre-midnight sibling row (and is then attributed to yesterday)
-    prisma.feedLog.findMany({ where: { babyId, deletedAt: null, time: { gte: new Date(today.getTime() - sessionToleranceMs) } }, select: { type: true, time: true, startTime: true, side: true, feedDuration: true, amount: true, sessionId: true } }),
+    prisma.feedLog.findMany({ where: { babyId, deletedAt: null, time: { gte: new Date(today.getTime() - sessionToleranceMs) } }, select: { type: true, time: true, startTime: true, side: true, feedDuration: true, amount: true, sessionId: true, unlinked: true } }),
     prisma.diaperLog.findMany({ where: { babyId, deletedAt: null, time: { gte: today } }, select: { type: true } }),
     prisma.sleepLog.findMany({
       where: {

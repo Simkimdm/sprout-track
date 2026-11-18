@@ -6,21 +6,19 @@
  * one session as ONE feed (issue #198); this module is the single place that
  * defines how rows group.
  *
- * Two mechanisms, in priority order:
- * 1. Explicit `sessionId` — rows sharing a sessionId are one session (any
- *    number of rows, any sides). A row whose sessionId is unique to it is a
- *    deliberate singleton: the user unlinked it, so it never merges.
- * 2. Heuristic fallback for rows without a sessionId — rows whose pause
- *    (previous row's end → this row's start, clamped at 0) is within the
- *    tolerance chain into one session, whatever side they used (a repeated
- *    side within the interval is a re-latch, not a new feeding); sideless
- *    rows never pair. The tolerance comes from the baby's
- *    feedSessionGroupingMinutes setting (default SESSION_TOLERANCE_MS; 0
- *    disables the heuristic entirely).
- * 3. Linked sessions (a shared sessionId over 2+ rows, e.g. two timer runs)
- *    also merge with each other when the pause between them is within the
- *    tolerance — a unique sessionId on a single row stays a deliberate
- *    singleton (the user unlinked it) and never merges.
+ * Grouping mechanisms, in priority order:
+ * 1. `unlinked` rows (the user explicitly detached them) are always singletons
+ *    and never merge with anything.
+ * 2. Explicit links — rows sharing a `sessionId` over 2+ rows are one session
+ *    regardless of gaps or sides (deliberate "link").
+ * 3. Time-based auto-grouping within the baby's feedSessionGroupingMinutes
+ *    interval (default SESSION_TOLERANCE_MS; 0 = off): every remaining row —
+ *    with no sessionId OR a sessionId unique to it (e.g. a single-side timer
+ *    run) — chains into the current session when the pause (previous row's
+ *    end → this row's start, clamped at 0) is within the tolerance, whatever
+ *    side it used (a repeated side within the interval is a re-latch, not a
+ *    new feeding); sideless rows never join. Linked sessions of 2+ rows also
+ *    merge with each other within the tolerance.
  */
 
 /** Minimal shape of a feed log row needed for session grouping. */
@@ -31,8 +29,10 @@ export interface BreastFeedLike {
   feedDuration?: number | null;
   /** Older records store the duration in minutes here instead of feedDuration. */
   amount?: number | null;
-  /** Explicit session link; takes precedence over the time heuristic. */
+  /** Explicit session link; rows sharing it (2+ rows) always group together. */
   sessionId?: string | null;
+  /** Set by "unlink": the row never takes part in time-based auto-grouping. */
+  unlinked?: boolean | null;
 }
 
 /**
@@ -125,10 +125,27 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
 
   const sessions: BreastFeedSession<T>[] = [];
 
-  // Explicitly linked rows group by sessionId, regardless of gaps or sides
+  // Rows the user explicitly unlinked are always singletons
+  const chainable: { row: T; ts: number }[] = [];
+  for (const entry of sorted) {
+    if (entry.row.unlinked) {
+      sessions.push(buildSession([entry.row], entry.ts, entry.row.sessionId ?? null));
+    } else {
+      chainable.push(entry);
+    }
+  }
+
+  // Explicitly linked rows (a sessionId shared by 2+ rows) group together,
+  // regardless of gaps or sides. A sessionId unique to a single row (e.g. a
+  // single-side timer run) is NOT a deliberate unlink — those rows fall through
+  // to the time-based chaining below.
+  const sessionIdCounts = new Map<string, number>();
+  for (const { row } of chainable) {
+    if (row.sessionId) sessionIdCounts.set(row.sessionId, (sessionIdCounts.get(row.sessionId) ?? 0) + 1);
+  }
   const bySessionId = new Map<string, { rows: T[]; firstTs: number }>();
-  for (const { row, ts } of sorted) {
-    if (!row.sessionId) continue;
+  for (const { row, ts } of chainable) {
+    if (!row.sessionId || (sessionIdCounts.get(row.sessionId) ?? 0) < 2) continue;
     const group = bySessionId.get(row.sessionId);
     if (group) {
       group.rows.push(row);
@@ -140,12 +157,12 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
     sessions.push(buildSession(group.rows, group.firstTs, sessionId));
   });
 
-  // Heuristic chaining for rows without a sessionId. The gap between two rows
+  // Time-based chaining for the remaining rows. The gap between two rows
   // is the pause: this row's start minus the previous row's end (start +
   // duration), clamped at 0 — the feeding's own duration must not count as a
   // break between sides. Any side may join (a repeated side within the
   // interval is a re-latch, not a new feeding); sideless rows never join.
-  // A tolerance of 0 disables the heuristic entirely.
+  // A tolerance of 0 disables the chaining entirely.
   let current: { rows: T[]; sides: Set<string>; firstTs: number; lastEndTs: number } | null = null;
 
   const flush = () => {
@@ -154,8 +171,8 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
     current = null;
   };
 
-  for (const { row, ts } of sorted) {
-    if (row.sessionId) continue;
+  for (const { row, ts } of chainable) {
+    if (row.sessionId && (sessionIdCounts.get(row.sessionId) ?? 0) >= 2) continue;
     const side = row.side || null;
     const endTs = ts + feedRowDurationSeconds(row) * 1000;
     const pauseMs = current ? Math.max(0, ts - current.lastEndTs) : Infinity;
@@ -181,8 +198,7 @@ export function groupBreastFeedSessions<T extends BreastFeedLike>(
 
   // Merge adjacent linked sessions (shared sessionId, 2+ rows each — e.g. two
   // timer runs a couple of minutes apart) when the pause between them is within
-  // the tolerance. A sessionId unique to a single row is a deliberate unlink
-  // and never merges; heuristic groups never merge with linked ones.
+  // the tolerance. Unlinked rows and heuristic groups never merge with linked ones.
   if (toleranceMs > 0) {
     const rowTs = (r: T) => new Date(breastFeedDisplayTime({ time: r.time, startTime: (r as { startTime?: string | Date | null }).startTime })).getTime();
     const sessionEndTs = (s: BreastFeedSession<T>) =>
