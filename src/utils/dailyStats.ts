@@ -1,4 +1,5 @@
 import { aggregateFeedStats, FeedStats } from './feedStatsUtils';
+import { feedSessionGroupingToleranceMs } from './feedSessionUtils';
 import { convertVolume } from './unit-conversion';
 import { countUniquePhotoIds } from './photoUtils';
 import { isDirtyDiaper, isWetDiaper } from './diaperStats';
@@ -8,6 +9,8 @@ export interface DailyStatsOptions {
   unitSymbol: (unitAbbr: string) => string;
   t: (key: string) => string;
   now?: Date;
+  /** Baby's feedSessionGroupingMinutes; null/undefined = default 30, 0 = never auto-group. */
+  feedSessionGroupingMinutes?: number | null;
 }
 
 export interface DailyStatMetrics {
@@ -205,7 +208,14 @@ export function computeDailyStats(
     }
   });
 
-  const feedStats = aggregateFeedStats(activities, windowActivities, startOfDay, endOfDay, preferredUnit);
+  const feedStats = aggregateFeedStats(
+    activities,
+    windowActivities,
+    startOfDay,
+    endOfDay,
+    preferredUnit,
+    feedSessionGroupingToleranceMs(opts.feedSessionGroupingMinutes)
+  );
 
   const now = opts.now ?? new Date();
   const isToday = date.toDateString() === now.toDateString();

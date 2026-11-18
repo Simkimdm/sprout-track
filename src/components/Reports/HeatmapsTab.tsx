@@ -19,6 +19,7 @@ import {
   buildHeatmapDataForActivities,
   HeatmapType,
 } from '@/src/components/Timeline/TimelineV2/timeline-heatmap.utils';
+import { feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 
 const CHART_HEIGHT = 1500;
 const LANE_WIDTH = 20;
@@ -59,7 +60,8 @@ const formatHourLabel = (hour: number): string => {
 const HeatmapsTab: React.FC<HeatmapsTabProps> = ({
   activities,
   dateRange,
-  isLoading
+  isLoading,
+  feedSessionGroupingMinutes
 }) => {
   const { t } = useLocalization();
 
@@ -67,8 +69,8 @@ const HeatmapsTab: React.FC<HeatmapsTabProps> = ({
     if (!activities.length || !dateRange.from || !dateRange.to) {
       return null;
     }
-    return buildHeatmapDataForActivities(activities as any);
-  }, [activities, dateRange]);
+    return buildHeatmapDataForActivities(activities as any, feedSessionGroupingToleranceMs(feedSessionGroupingMinutes));
+  }, [activities, dateRange, feedSessionGroupingMinutes]);
 
   const hourLines = useMemo(() => {
     const lines: number[] = [];

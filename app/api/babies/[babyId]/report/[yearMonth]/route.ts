@@ -13,7 +13,7 @@ import {
   type GrowthReferenceMeasurement,
   type GrowthReferenceSegment,
 } from '@/src/utils/growthReferences';
-import { groupBreastFeedSessions, SESSION_TOLERANCE_MS } from '../../../../../../src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, feedSessionGroupingToleranceMs } from '../../../../../../src/utils/feedSessionUtils';
 import {
   buildNewFoodsForRange,
   computeFoodProgress,
@@ -88,6 +88,8 @@ async function handleGet(req: NextRequest, authContext: AuthResult): Promise<Nex
 
   // Calculate age at end of month
   const birthDate = new Date(baby.birthDate);
+  // Auto-grouping interval for breast feeds without a sessionId (0 = off)
+  const sessionToleranceMs = feedSessionGroupingToleranceMs(baby.feedSessionGroupingMinutes);
   const endOfMonth = isCurrentMonth ? now : end;
   const age = ageInMonthsAndDays(birthDate, endOfMonth);
 
@@ -152,7 +154,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult): Promise<Nex
     // Fetched with a pre-buffer so breast sessions starting just before the
     // month boundary group with their in-month sibling row; non-breast metrics
     // filter back to the exact month below
-    prisma.feedLog.findMany({ where: { ...baseWhere, time: { gte: new Date(start.getTime() - SESSION_TOLERANCE_MS), lte: end } } }),
+    prisma.feedLog.findMany({ where: { ...baseWhere, time: { gte: new Date(start.getTime() - sessionToleranceMs), lte: end } } }),
     prisma.feedLog.findMany({ where: { ...baseWhere, time: { gte: prevRange.start, lte: prevRange.end } } }),
 
     // Sleep
@@ -564,7 +566,7 @@ async function handleGet(req: NextRequest, authContext: AuthResult): Promise<Nex
     : 0;
   // Group over the buffered set so a session straddling the month boundary
   // pairs correctly, then count only sessions that started inside the month
-  const totalBreastSessions = groupBreastFeedSessions(feedLogs)
+  const totalBreastSessions = groupBreastFeedSessions(feedLogs, sessionToleranceMs)
     .filter(s => s.time >= start && s.time <= end).length;
   const avgBreastSessionsPerDay = effectiveDays > 0
     ? Math.round((totalBreastSessions / effectiveDays) * 10) / 10

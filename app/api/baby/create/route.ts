@@ -28,6 +28,7 @@ const CreateBabySchema = z.object({
     .nullable()
     .optional()
     .refine((v) => v == null || !!parseNightSleepWindow(v), 'Invalid night sleep window'),
+  feedSessionGroupingMinutes: z.number().int().min(0).max(1440).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<Baby>>> {

@@ -22,14 +22,14 @@ import TimelineV2Heatmap from './TimelineV2Heatmap';
 import TimelineActivityDetails from '../TimelineActivityDetails';
 import { getActivityEndpoint, getActivityTime, matchesFilterType, startedOnOrAfter } from '../utils';
 import { parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
-import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
+import { buildFeedGapMap, buildFeedGapPoints, buildGapMap, buildGapDividerMap, feedSessionGroupingToleranceMs, FeedGapInfo, FeedGapRow } from '@/src/utils/feedSessionUtils';
 import { FeedLogResponse, DiaperLogResponse, PumpLogResponse, BreastMilkAdjustmentResponse, PlayLogResponse, VaccineLogResponse, FoodLogResponse, PhotoResponse } from '@/app/api/types';
 import { fetchPhotos } from '@/src/utils/photoClientApi';
 import { useActivityCache } from './useActivityCache';
 import { TREND_SPARK_DAYS } from '@/src/utils/dailyStats';
 import { cacheDefaultBottleUnit, readCachedDefaultBottleUnit } from '@/src/utils/defaultBottleUnit';
 
-const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
+const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedTimerFrom, feedSessionGroupingMinutes, onLatestStatusReady, onActivityDeleted }: TimelineProps) => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultBottleUnit, setDefaultBottleUnit] = useState(() => readCachedDefaultBottleUnit());
   const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
@@ -136,11 +136,17 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
   // (null = all feeds count)
   const feedTimerCategories = useMemo(() => parseFeedTimerTypes(feedTimerTypes), [feedTimerTypes]);
 
+  // Auto-grouping interval for breast feeds without a sessionId (0 = never)
+  const sessionToleranceMs = useMemo(
+    () => feedSessionGroupingToleranceMs(feedSessionGroupingMinutes),
+    [feedSessionGroupingMinutes]
+  );
+
   // Extract latest status data from activities and notify parent
   const emitLatestStatus = useCallback((activities: ActivityType[]) => {
     if (!onLatestStatusReady) return;
-    onLatestStatusReady(computeLatestStatus(activities, feedTimerCategories));
-  }, [onLatestStatusReady, feedTimerCategories]);
+    onLatestStatusReady(computeLatestStatus(activities, feedTimerCategories, sessionToleranceMs));
+  }, [onLatestStatusReady, feedTimerCategories, sessionToleranceMs]);
 
   const fetchBreastMilkBalance = async (babyId: string) => {
     if (!breastMilkTrackingEnabled) {
@@ -632,6 +638,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
         historyActivities={statsHistoryActivities}
         trendEnabled={showDailyStatsTrend}
         feedTrendByDuration={feedTileTrendByDuration}
+        feedSessionGroupingMinutes={feedSessionGroupingMinutes}
         date={selectedDate}
         isLoading={isLoadingActivities}
         activeFilter={activeFilter}
@@ -666,6 +673,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             filterHistory={filterHistory}
             showPreviousEntry={showPreviousEntry}
             feedTimerFrom={feedTimerFrom}
+            feedSessionGroupingMinutes={feedSessionGroupingMinutes}
             gapById={gapById}
             dividerGapById={dividerGapById}
           />
@@ -677,6 +685,7 @@ const TimelineV2 = ({ babyId, refreshTrigger, initialDate, feedTimerTypes, feedT
             <TimelineV2Heatmap
               activities={heatmapActivities}
               selectedDate={selectedDate}
+              feedSessionGroupingMinutes={feedSessionGroupingMinutes}
               isVisible={isHeatmapVisible}
             />
           </div>

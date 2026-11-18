@@ -100,6 +100,7 @@ export interface BabyCreate {
   feedTimerFrom?: string;
   feedTimerTypes?: string | null;
   nightSleepWindow?: string | null;
+  feedSessionGroupingMinutes?: number;
 }
 
 export interface BabyUpdate extends Partial<BabyCreate> {

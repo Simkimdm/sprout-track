@@ -65,6 +65,8 @@ interface TimelineV2DailyStatsProps {
   trendEnabled?: boolean;
   /** Family setting: feed tile trend compares breastfeeding time (L/R) instead of the feed count. */
   feedTrendByDuration?: boolean;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
   date: Date;
   isLoading?: boolean;
   activeFilter: FilterType;
@@ -162,6 +164,7 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   historyActivities = [],
   trendEnabled = true,
   feedTrendByDuration = true,
+  feedSessionGroupingMinutes,
   date,
   isLoading = false,
   activeFilter,
@@ -207,8 +210,8 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
   };
 
   const stats = useMemo(
-    () => computeDailyStats(activities, windowActivities, date, { defaultBottleUnit, unitSymbol, t }),
-    [activities, windowActivities, date, defaultBottleUnit, t]
+    () => computeDailyStats(activities, windowActivities, date, { defaultBottleUnit, unitSymbol, t, feedSessionGroupingMinutes }),
+    [activities, windowActivities, date, defaultBottleUnit, t, feedSessionGroupingMinutes]
   );
 
   const trendTitle = (tile: StatTile, trend: DayTrend): string => {
@@ -236,11 +239,11 @@ const TimelineV2DailyStats: React.FC<TimelineV2DailyStatsProps> = ({
       days.push({
         date: day,
         hasData: bucket.length > 0,
-        metrics: computeDailyStats(bucket, historyActivities, day, { defaultBottleUnit, unitSymbol, t }),
+        metrics: computeDailyStats(bucket, historyActivities, day, { defaultBottleUnit, unitSymbol, t, feedSessionGroupingMinutes }),
       });
     }
     return days;
-  }, [historyActivities, date, defaultBottleUnit, t, showTrend]);
+  }, [historyActivities, date, defaultBottleUnit, t, showTrend, feedSessionGroupingMinutes]);
 
   // Calculate stats and create dynamic tiles
   const statTiles = useMemo(() => {

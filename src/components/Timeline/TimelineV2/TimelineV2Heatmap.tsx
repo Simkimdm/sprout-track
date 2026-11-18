@@ -13,10 +13,13 @@ import {
   getSlotOpacity,
   interpolateColor,
 } from './timeline-heatmap.utils';
+import { feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 
 interface TimelineV2HeatmapProps {
   activities: ActivityType[];
   selectedDate: Date;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
   isVisible?: boolean;
 }
 
@@ -38,6 +41,7 @@ const HEATMAP_ICONS: Record<string, { icon: any; isLabIcon?: boolean }> = {
 const TimelineV2Heatmap: React.FC<TimelineV2HeatmapProps> = ({
   activities,
   selectedDate,
+  feedSessionGroupingMinutes,
   isVisible = true,
 }) => {
   const { timeFormat } = useTimezone();
@@ -48,8 +52,8 @@ const TimelineV2Heatmap: React.FC<TimelineV2HeatmapProps> = ({
     if (!activities.length) {
       return null;
     }
-    return buildHeatmapDataForActivities(activities as any);
-  }, [activities]);
+    return buildHeatmapDataForActivities(activities as any, feedSessionGroupingToleranceMs(feedSessionGroupingMinutes));
+  }, [activities, feedSessionGroupingMinutes]);
 
   const hourLines = useMemo(() => {
     const lines: number[] = [];

@@ -103,6 +103,7 @@ export interface BabyData {
   bathWarningTime: string;
   feedTimerTypes?: string | null;
   nightSleepWindow?: string | null;
+  feedSessionGroupingMinutes?: number | null;
   age?: string;
 }
 

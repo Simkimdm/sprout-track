@@ -19,6 +19,7 @@ import { useState, useEffect } from 'react';
 import { useLocalization } from '@/src/context/localization';
 import FeedTimerTypesField from '@/src/components/forms/FeedTimerTypesField';
 import { FEED_TIMER_CATEGORIES, FeedTimerCategory, parseFeedTimerTypes } from '@/src/utils/feedTimerConfig';
+import { FEED_SESSION_GROUPING_OPTIONS } from '@/src/utils/feedSessionUtils';
 
 interface BabyModalProps {
   open: boolean;
@@ -39,6 +40,7 @@ const defaultFormData = {
   bathWarningTime: '24:00',
   feedTimerFrom: 'start',
   feedTimerTypes: [...FEED_TIMER_CATEGORIES] as FeedTimerCategory[],
+  feedSessionGroupingMinutes: 30,
 };
 
 export default function BabyModal({
@@ -70,6 +72,7 @@ export default function BabyModal({
         bathWarningTime: baby.bathWarningTime || '24:00',
         feedTimerFrom: (baby as any).feedTimerFrom || 'start',
         feedTimerTypes: parseFeedTimerTypes((baby as any).feedTimerTypes) ?? [...FEED_TIMER_CATEGORIES],
+        feedSessionGroupingMinutes: baby.feedSessionGroupingMinutes ?? 30,
       });
     } else if (!open) {
       setFormData(defaultFormData);
@@ -246,6 +249,27 @@ export default function BabyModal({
                 <SelectItem value="end">{t('End of feeding')}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <label className="form-label">{t('Auto-group breast feeds within')}</label>
+            <Select
+              value={String(formData.feedSessionGroupingMinutes)}
+              onValueChange={(value) =>
+                setFormData({ ...formData, feedSessionGroupingMinutes: Number(value) })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FEED_SESSION_GROUPING_OPTIONS.map((minutes) => (
+                  <SelectItem key={minutes} value={String(minutes)}>
+                    {minutes === 0 ? t('Off') : `${minutes} ${t('min')}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-500 mt-1">{t('Breast feeds not saved in a session count as one feeding when the pause between them is within this interval.')}</p>
           </div>
           <FeedTimerTypesField
             value={formData.feedTimerTypes}

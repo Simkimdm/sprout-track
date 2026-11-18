@@ -12,6 +12,7 @@ import { autoIconColor } from '@/src/utils/nursery/colorMath';
 import { TileEntry, formatTileLogs } from '@/src/utils/nursery/tileLog';
 import { isWithinTileWindow } from '@/src/utils/nursery/activityFreshness';
 import { computeLatestStatus } from '@/src/utils/latestStatus';
+import { feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 import { parseFeedTimerTypes, foodCountsForTimer } from '@/src/utils/feedTimerConfig';
 import type { LatestStatusData } from '@/src/components/Timeline/types';
 import { fetchPhotosEnabled } from '@/src/utils/photoClientApi';
@@ -181,7 +182,8 @@ export function NurseryModeContainer() {
         if (feedData?.success && sleepData?.success && diaperData?.success && (!needFood || foodData?.success)) {
           setTimerStatus(computeLatestStatus(
             [...feedData.data, ...(foodData?.data ?? []), ...sleepData.data, ...diaperData.data],
-            feedTimerCategories
+            feedTimerCategories,
+            feedSessionGroupingToleranceMs(selectedBaby?.feedSessionGroupingMinutes)
           ));
         }
 

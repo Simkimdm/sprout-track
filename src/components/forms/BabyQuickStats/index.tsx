@@ -23,7 +23,7 @@ import { diaper } from '@lucide/lab';
 import { useFamily } from '@/src/context/family';
 import { useLocalization } from '@/src/context/localization';
 import { useTimezone } from '@/app/context/timezone';
-import { countBreastFeedSessions } from '@/src/utils/feedSessionUtils';
+import { countBreastFeedSessions, feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 import { BabyAllergenResponse, FoodProgressResponse } from '@/app/api/types';
 import { mergeAllergens, ALLERGEN_TYPE_LABELS } from '@/src/utils/foodLogUtils';
 
@@ -430,7 +430,8 @@ export const BabyQuickStats: React.FC<BabyQuickStatsProps> = ({
       const feedingsForDay = dayActivities.filter(a =>
         ('type' in a && (a.type === 'BOTTLE' || a.type === 'SOLIDS'))
       ).length + countBreastFeedSessions(
-        dayActivities.filter(a => 'type' in a && a.type === 'BREAST') as any
+        dayActivities.filter(a => 'type' in a && a.type === 'BREAST') as any,
+        feedSessionGroupingToleranceMs(selectedBaby?.feedSessionGroupingMinutes)
       );
 
       feedingCount += feedingsForDay;

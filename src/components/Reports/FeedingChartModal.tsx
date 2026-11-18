@@ -21,7 +21,7 @@ import {
 import { ChartDataTable } from '@/src/components/ui/chart-data-table';
 import { ActivityType, DateRange } from './reports.types';
 import { useLocalization } from '@/src/context/localization';
-import { groupBreastFeedSessions } from '@/src/utils/feedSessionUtils';
+import { groupBreastFeedSessions, feedSessionGroupingToleranceMs } from '@/src/utils/feedSessionUtils';
 import { useTimezone } from '@/app/context/timezone';
 import { formatDateShort, formatDateDisplay } from '@/src/utils/dateFormat';
 
@@ -33,6 +33,8 @@ interface FeedingChartModalProps {
   metric: FeedingChartMetric | null;
   activities: ActivityType[];
   dateRange: DateRange;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
 }
 
 // Helper function to format minutes into hours and minutes
@@ -73,6 +75,7 @@ const FeedingChartModal: React.FC<FeedingChartModalProps> = ({
   metric,
   activities,
   dateRange,
+  feedSessionGroupingMinutes,
 }) => {
   const { t } = useLocalization();
   const { dateFormat } = useTimezone();
@@ -159,7 +162,7 @@ const FeedingChartModal: React.FC<FeedingChartModalProps> = ({
     const breastRows = activities.filter(
       (a) => 'type' in a && 'time' in a && (a as any).type === 'BREAST'
     );
-    groupBreastFeedSessions(breastRows as any).forEach((session) => {
+    groupBreastFeedSessions(breastRows as any, feedSessionGroupingToleranceMs(feedSessionGroupingMinutes)).forEach((session) => {
       if (session.time >= startDate && session.time <= endDate) {
         const dayKey = session.time.toLocaleDateString('en-CA').split('T')[0];
         countsByDay[dayKey] = (countsByDay[dayKey] || 0) + 1;
@@ -209,7 +212,7 @@ const FeedingChartModal: React.FC<FeedingChartModalProps> = ({
         ? rightDurationByDay[dayKey].total / rightDurationByDay[dayKey].count 
         : 0,
     }));
-  }, [activities, dateRange, metric, dateFormat]);
+  }, [activities, dateRange, metric, dateFormat, feedSessionGroupingMinutes]);
 
   // Calculate solids feed data
   const solidsData = useMemo(() => {

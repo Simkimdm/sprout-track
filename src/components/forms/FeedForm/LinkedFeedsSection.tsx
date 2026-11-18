@@ -5,11 +5,13 @@ import { Label } from '@/src/components/ui/label';
 import { Link2, Link2Off, Loader2 } from 'lucide-react';
 import { useTimezone } from '@/app/context/timezone';
 import { useLocalization } from '@/src/context/localization';
+import { useBaby } from '@/app/context/baby';
 import { useToast } from '@/src/components/ui/toast';
 import {
   groupBreastFeedSessions,
   newFeedSessionId,
   breastFeedDisplayTime,
+  feedSessionGroupingToleranceMs,
   BreastFeedSession,
 } from '@/src/utils/feedSessionUtils';
 
@@ -45,6 +47,7 @@ export default function LinkedFeedsSection({
 }: LinkedFeedsSectionProps) {
   const { t } = useLocalization();
   const { formatDateTime } = useTimezone();
+  const { selectedBaby } = useBaby();
   const sessionLabelId = useId();
   const nearbyLabelId = useId();
   const { showToast } = useToast();
@@ -93,7 +96,10 @@ export default function LinkedFeedsSection({
     if (!response.ok) throw new Error('Failed to update linked feeds');
   };
 
-  const sessions = groupBreastFeedSessions(nearbyFeeds);
+  const sessions = groupBreastFeedSessions(
+    nearbyFeeds,
+    feedSessionGroupingToleranceMs(selectedBaby?.feedSessionGroupingMinutes)
+  );
   const mySession: BreastFeedSession<FeedLogResponse> | undefined =
     sessions.find(s => s.rows.some(r => r.id === activity.id));
   const members = mySession?.rows ?? [];

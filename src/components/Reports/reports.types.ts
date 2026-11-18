@@ -234,6 +234,8 @@ export interface StatsTabProps {
   activities: ActivityType[];
   dateRange: DateRange;
   isLoading: boolean;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
 }
 
 // Placeholder tab props
@@ -252,6 +254,8 @@ export interface HeatmapsTabProps {
   activities: ActivityType[];
   dateRange: DateRange;
   isLoading: boolean;
+  /** Baby setting: auto-group breast feeds without a sessionId within this many minutes; 0 = never. */
+  feedSessionGroupingMinutes?: number | null;
 }
 
 // Milestones Tab props (fetches its own data)

@@ -13,7 +13,7 @@ import {
   LocationStat,
   MedicineStat,
 } from './reports.types';
-import { countBreastFeedSessions, BreastFeedLike } from '@/src/utils/feedSessionUtils';
+import { countBreastFeedSessions, feedSessionGroupingToleranceMs, BreastFeedLike } from '@/src/utils/feedSessionUtils';
 import SleepStatsSection from './SleepStatsSection';
 import FeedingStatsSection from './FeedingStatsSection';
 import DiaperStatsSection from './DiaperStatsSection';
@@ -34,7 +34,8 @@ import { isDirtyDiaper, isWetDiaper } from '@/src/utils/diaperStats';
 const StatsTab: React.FC<StatsTabProps> = ({
   activities,
   dateRange,
-  isLoading
+  isLoading,
+  feedSessionGroupingMinutes
 }) => {
   const { t } = useLocalization();
   const { toLocalDate, dateFormat } = useTimezone();
@@ -553,7 +554,7 @@ const StatsTab: React.FC<StatsTabProps> = ({
     })).sort((a, b) => b.count - a.count);
 
     // A left+right nursing session is stored as two rows but is one feed
-    breastFeedCount = countBreastFeedSessions(breastFeedRows);
+    breastFeedCount = countBreastFeedSessions(breastFeedRows, feedSessionGroupingToleranceMs(feedSessionGroupingMinutes));
     totalFeeds += breastFeedCount;
 
     const avgLeftBreastMinutes = leftBreastCount > 0 ? Math.round(leftBreastMinutes / leftBreastCount) : 0;
@@ -833,7 +834,7 @@ const StatsTab: React.FC<StatsTabProps> = ({
         />
 
         {/* Feeding Section */}
-        <FeedingStatsSection stats={stats.feeding} activities={activities} dateRange={dateRange} />
+        <FeedingStatsSection stats={stats.feeding} activities={activities} dateRange={dateRange} feedSessionGroupingMinutes={feedSessionGroupingMinutes} />
 
         {/* Foods Section (issue #203) */}
         <FoodStatsSection dateRange={dateRange} />
