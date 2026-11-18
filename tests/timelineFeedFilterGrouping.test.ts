@@ -537,3 +537,45 @@ describe('TimelineV2ActivityList filtered feed view', () => {
     expect(html).toContain(`${formatDateShort(new Date('2026-07-21T21:26:00.000Z'), 'MM/DD/YYYY')} 9:26 PM - ${formatDateShort(new Date('2026-07-22T00:12:00.000Z'), 'MM/DD/YYYY')} 12:12 AM`);
   });
 });
+
+describe('TimelineV2ActivityList — configurable auto-grouping interval (feedSessionGroupingMinutes)', () => {
+  // The request's example: 06:41 RIGHT 9m43s, then 06:58 LEFT 7m04s, both logged
+  // separately (no sessionId) -> pause between them is 7m17s.
+  const exampleFeeds = [
+    feed('r1', 'BREAST', '2026-07-22T06:41:00.000Z', { side: 'RIGHT', feedDuration: 583 }),
+    feed('l1', 'BREAST', '2026-07-22T06:58:00.000Z', { side: 'LEFT', feedDuration: 424 }),
+  ];
+
+  const renderWithInterval = (feedSessionGroupingMinutes: number | null) =>
+    renderToString(
+      React.createElement(TimelineV2ActivityList as any, {
+        activities: exampleFeeds,
+        settings: null,
+        isLoading: false,
+        isAnimated: false,
+        selectedDate: new Date('2026-07-22T12:00:00'),
+        onActivitySelect: () => {},
+        activeFilter: 'feed',
+        allActivities: exampleFeeds,
+        feedSessionGroupingMinutes,
+        gapById: computeGapById(exampleFeeds, [], 'start'),
+        dividerGapById: computeDividerGapById(exampleFeeds, []),
+      })
+    );
+
+  it('groups the two unlinked sides into one session bracket within 15 min', () => {
+    expect(renderWithInterval(15)).toContain('timeline-feed-session');
+  });
+
+  it('keeps them separate within 5 min (pause 7m17s > 5 min)', () => {
+    expect(renderWithInterval(5)).not.toContain('timeline-feed-session');
+  });
+
+  it('keeps them separate when the interval is 0 (off)', () => {
+    expect(renderWithInterval(0)).not.toContain('timeline-feed-session');
+  });
+
+  it('groups them at the default when no interval is passed', () => {
+    expect(renderWithInterval(null)).toContain('timeline-feed-session');
+  });
+});
